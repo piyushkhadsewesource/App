@@ -55,6 +55,19 @@ nothing looks empty).
 you paste your keys into `src/config.ts`, the app switches from local storage to
 live cloud sync automatically.
 
+### Prefer to look first on a laptop?
+
+You can run the whole app in a desktop browser — no phone needed:
+
+```bash
+npm install
+npm run web
+```
+
+It opens Tether in your browser using on-device storage, so you can click
+through every screen right away. Great for a quick look before installing on
+your phones.
+
 To build a real installable **APK** later, see the EAS Build section in
 [SETUP.md](./SETUP.md).
 
