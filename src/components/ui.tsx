@@ -1,5 +1,7 @@
 import React, { ReactNode } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleProp,
@@ -28,15 +30,16 @@ export function Screen({
   const base: ViewStyle = { flex: 1, backgroundColor: colors.bg, paddingTop: insets.top };
   if (!scroll) return <View style={base}>{children}</View>;
   return (
-    <View style={base}>
+    <KeyboardAvoidingView style={base} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         contentContainerStyle={[styles.scrollContent, contentStyle]}
       >
         {children}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

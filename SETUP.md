@@ -91,19 +91,33 @@ structured to make that a small change.
 
 ---
 
-## C. (Optional) Build a real installable APK
+## C. (Optional) Build real installable apps
 
 When you'd rather install it like a normal app than scan a QR each time:
 
 ```bash
 npm install -g eas-cli
 eas login                 # create a free Expo account
-eas build -p android --profile preview
 ```
 
+**Android (.apk)** — easiest, no paid account:
+```bash
+eas build -p android --profile preview
+```
 EAS builds an APK in the cloud and gives you a download link you can install on
-both phones. (This step needs the Expo build service, which may be restricted on
-some networks — run it from a normal internet connection.)
+either Android phone.
+
+**iPhone (.ipa)** — Apple requires a paid **Apple Developer account**
+($99/year) to install on real devices:
+```bash
+eas build -p ios --profile preview
+```
+EAS builds it in the cloud (**no Mac needed**) and you share it to both iPhones
+through **TestFlight**. Until you're ready for that, **Expo Go** (Part A) is the
+completely free way to run Tether on iPhone — no developer account required.
+
+(These steps use the Expo build service, which may be restricted on some
+networks — run them from a normal internet connection.)
 
 ---
 

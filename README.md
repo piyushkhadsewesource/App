@@ -41,8 +41,12 @@ You don't need to be a developer.
    ```bash
    npm start
    ```
-4. On **both** phones, install the free **Expo Go** app (Android: Play Store).
-   Scan the QR code shown in the terminal. The app opens on each phone.
+4. On **both** phones, install the free **Expo Go** app — **iPhone** from the
+   App Store, **Android** from the Play Store. Then:
+   - **iPhone:** open the **Camera** app and point it at the QR code in the terminal.
+   - **Android:** scan the QR code from inside Expo Go.
+
+   The app opens on each phone and behaves the same on iOS and Android.
 5. On the first screen, enter your names and a **pairing code**. Use the **same
    code on both phones** — that's the private link between you two.
 
@@ -75,7 +79,8 @@ To build a real installable **APK** later, see the EAS Build section in
 
 ## How it's built
 
-- **Expo / React Native + TypeScript** — one codebase, runs on both your phones.
+- **Expo / React Native + TypeScript** — one codebase that runs on **iPhone,
+  Android, and the web**.
 - **Cloud sync** via **Cloud Firestore** (optional, free tier). A single tiny
   data API (`src/services/db.ts`) has two backends — `LocalDb` (AsyncStorage)
   and `FirestoreDb` — and the screens never know which is active.
@@ -100,8 +105,10 @@ src/
 Useful scripts:
 
 ```bash
-npm start          # run in Expo Go
-npm run android    # open on a connected Android device/emulator
+npm start          # run in Expo Go (iPhone + Android)
+npm run web        # open in a desktop browser
+npm run android    # open on an Android device/emulator
+npm run ios        # open in the iOS simulator (requires macOS)
 npm run typecheck  # tsc --noEmit
 ```
 
