@@ -3,9 +3,10 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import SosOverlay from './src/components/SosOverlay';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import { syncReminders } from './src/services/notifications';
+import { refreshReminders } from './src/services/notifications';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
 
@@ -15,12 +16,18 @@ const navTheme: Theme = {
 };
 
 function Root() {
-  const { ready, identity } = useApp();
+  const { ready, identity, moments, meId } = useApp();
 
-  // Re-arm daily photo reminders on launch (if the user enabled them).
+  // Re-arm the smart photo reminders whenever launch happens or the set of
+  // days you've already posted changes (so today's reminders stop once shared).
+  const postedKey = moments
+    .filter((m) => m.authorId === meId)
+    .map((m) => m.date)
+    .sort()
+    .join(',');
   useEffect(() => {
-    syncReminders(identity?.partnerName);
-  }, [identity?.partnerName]);
+    refreshReminders(postedKey ? postedKey.split(',') : [], identity?.partnerName);
+  }, [postedKey, identity?.partnerName]);
 
   if (!ready) {
     return (
@@ -33,9 +40,12 @@ function Root() {
   if (!identity) return <OnboardingScreen />;
 
   return (
-    <NavigationContainer theme={navTheme}>
-      <RootNavigator />
-    </NavigationContainer>
+    <>
+      <NavigationContainer theme={navTheme}>
+        <RootNavigator />
+      </NavigationContainer>
+      <SosOverlay />
+    </>
   );
 }
 

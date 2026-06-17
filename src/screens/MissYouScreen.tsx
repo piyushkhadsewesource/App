@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
   Body,
@@ -62,9 +62,42 @@ export default function MissYouScreen() {
     setTimeout(() => setToast(null), 2600);
   }
 
+  function confirmSos() {
+    Alert.alert(
+      'Send an emergency alert?',
+      `${partnerName}’s phone will sound a loud alarm and vibrate right away.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send alert',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            } catch {
+              /* ignore */
+            }
+            await app.sendSos();
+            setToast(`Emergency alert sent to ${partnerName} 🆘`);
+            setTimeout(() => setToast(null), 2800);
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <Screen scroll>
       <AppHeader title="When I miss you" subtitle={`You & ${partnerName}, closer`} />
+
+      {/* Emergency */}
+      <Pressable onPress={confirmSos} style={({ pressed }) => [styles.sos, pressed ? { opacity: 0.92 } : null]}>
+        <Text style={{ fontSize: 30 }}>🆘</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sosTitle}>Emergency alert</Text>
+          <Text style={styles.sosSub}>Instantly sound {partnerName}’s phone when you need them now</Text>
+        </View>
+      </Pressable>
 
       {toast ? (
         <Card tone="rose" style={styles.toast}>
@@ -208,4 +241,17 @@ const styles = StyleSheet.create({
   pingLabel: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.text, textAlign: 'center' },
   kitButtons: { flexDirection: 'row', gap: spacing.md },
   hugRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  sos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 1.5,
+    borderColor: colors.danger,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sosTitle: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.danger },
+  sosSub: { fontSize: font.size.sm, color: colors.textSoft, marginTop: 2 },
 });

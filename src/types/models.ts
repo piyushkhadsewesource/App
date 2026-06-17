@@ -117,6 +117,24 @@ export interface Moment {
   caption?: string;
 }
 
+/** An urgent "I need you now" alert, delivered through live sync. */
+export interface SosAlert {
+  id: string;
+  fromId: string;
+  createdAt: Millis;
+  message?: string;
+  seenAt?: Millis | null;
+}
+
+/** The shared "next time we meet" date, for the reunion countdown. */
+export interface Meeting {
+  id: string; // always 'next' (a single shared record)
+  authorId: string;
+  at: Millis; // when you'll be together
+  label?: string;
+  createdAt: Millis;
+}
+
 /** Per-device identity + the shared pairing code that links two phones. */
 export interface Identity {
   userId: string;
@@ -137,6 +155,8 @@ export const COLLECTIONS = [
   'future',
   'deck',
   'moments',
+  'alerts',
+  'meetings',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

@@ -96,5 +96,13 @@ export async function maybeSeed(db: Db, identity: Identity): Promise<void> {
     caption: 'Late shift, but the sky was worth a photo.',
   });
 
+  await db.add('meetings', {
+    id: 'next',
+    authorId: P,
+    at: now() + 24 * 24 * 3_600_000 + 5 * 3_600_000,
+    label: 'Airport reunion 🛬',
+    createdAt: t,
+  });
+
   await AsyncStorage.setItem(flagKey, '1');
 }

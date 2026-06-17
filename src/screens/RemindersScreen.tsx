@@ -1,0 +1,158 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { AppHeader, Body, Button, Card, Muted, Screen, Title } from '../components/ui';
+import {
+  DEFAULT_TIMES,
+  formatTime,
+  getReminderConfig,
+  ReminderTime,
+  remindersSupported,
+  setReminderTimes,
+  setRemindersEnabled,
+} from '../services/notifications';
+import { useApp } from '../state/AppContext';
+import { colors, font, radius, spacing } from '../theme';
+
+const MAX_TIMES = 6;
+
+export default function RemindersScreen({ navigation }: any) {
+  const app = useApp();
+  const myDates = useMemo(
+    () => app.moments.filter((m) => m.authorId === app.meId).map((m) => m.date),
+    [app.moments, app.meId],
+  );
+  const partnerName = app.identity?.partnerName;
+
+  const [enabled, setEnabled] = useState(false);
+  const [times, setTimes] = useState<ReminderTime[]>(DEFAULT_TIMES);
+
+  useEffect(() => {
+    getReminderConfig().then((c) => {
+      setEnabled(c.enabled);
+      setTimes(c.times);
+    });
+  }, []);
+
+  async function persist(next: ReminderTime[]) {
+    setTimes(next);
+    await setReminderTimes(next, myDates, partnerName);
+  }
+
+  async function toggle(next: boolean) {
+    const active = await setRemindersEnabled(next, myDates, partnerName);
+    if (next && !active) {
+      setEnabled(false);
+      Alert.alert(
+        remindersSupported ? 'Allow notifications' : 'Phone app only',
+        remindersSupported
+          ? 'Please allow notifications for Tether in your phone’s settings, then turn this on again.'
+          : 'Reminders run on the installed phone app, not the web preview.',
+      );
+      return;
+    }
+    setEnabled(next);
+  }
+
+  function adjust(index: number, field: 'hour' | 'minute', delta: number) {
+    const next = times.map((t, i) => {
+      if (i !== index) return t;
+      if (field === 'hour') return { ...t, hour: (t.hour + delta + 24) % 24 };
+      return { ...t, minute: (t.minute + delta + 60) % 60 };
+    });
+    persist(next);
+  }
+
+  function removeAt(index: number) {
+    if (times.length <= 1) return;
+    persist(times.filter((_, i) => i !== index));
+  }
+
+  function addTime() {
+    if (times.length >= MAX_TIMES) return;
+    persist([...times, { hour: 12, minute: 0 }]);
+  }
+
+  return (
+    <Screen scroll>
+      <AppHeader title="Photo reminders" subtitle="Nudges to share your day" onBack={() => navigation.goBack()} />
+
+      <Card style={{ marginBottom: spacing.lg }}>
+        <View style={styles.row}>
+          <View style={{ flex: 1, paddingRight: spacing.md }}>
+            <Title>Daily reminders</Title>
+            <Muted style={{ marginTop: 4 }}>
+              Get nudged to share a photo. We skip a day once you’ve already posted, so you’re never nagged twice.
+            </Muted>
+          </View>
+          <Switch value={enabled} onValueChange={toggle} trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.white} />
+        </View>
+        {!remindersSupported ? (
+          <Muted style={{ marginTop: spacing.sm }}>These run on the installed phone app.</Muted>
+        ) : null}
+      </Card>
+
+      <Title style={{ marginBottom: spacing.sm }}>Times ({times.length})</Title>
+      <View style={{ gap: spacing.sm }}>
+        {times.map((t, i) => (
+          <Card key={i} style={styles.timeRow}>
+            <Text style={styles.timeText}>{formatTime(t)}</Text>
+            <View style={{ flex: 1 }} />
+            <Stepper label="hr" onMinus={() => adjust(i, 'hour', -1)} onPlus={() => adjust(i, 'hour', 1)} />
+            <Stepper label="min" onMinus={() => adjust(i, 'minute', -5)} onPlus={() => adjust(i, 'minute', 5)} />
+            {times.length > 1 ? (
+              <Pressable hitSlop={8} onPress={() => removeAt(i)} style={{ paddingHorizontal: spacing.sm }}>
+                <Text style={styles.remove}>×</Text>
+              </Pressable>
+            ) : null}
+          </Card>
+        ))}
+      </View>
+
+      {times.length < MAX_TIMES ? (
+        <>
+          <View style={{ height: spacing.md }} />
+          <Button label="＋ Add a time" variant="soft" onPress={addTime} />
+        </>
+      ) : null}
+
+      <Card tone="surface" style={{ marginTop: spacing.lg }}>
+        <Body>
+          Tip: 3 times a day (morning, afternoon, evening) works well. The reminders stop for the
+          day the moment you share a photo.
+        </Body>
+      </Card>
+    </Screen>
+  );
+}
+
+function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => void; onPlus: () => void }) {
+  return (
+    <View style={styles.stepper}>
+      <Pressable hitSlop={6} onPress={onMinus} style={styles.stepBtn}>
+        <Text style={styles.stepSign}>−</Text>
+      </Pressable>
+      <Text style={styles.stepLabel}>{label}</Text>
+      <Pressable hitSlop={6} onPress={onPlus} style={styles.stepBtn}>
+        <Text style={styles.stepSign}>＋</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, gap: spacing.sm },
+  timeText: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text, width: 92 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stepBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepSign: { fontSize: 18, fontWeight: font.weight.bold, color: colors.text },
+  stepLabel: { fontSize: 10, color: colors.textFaint, width: 22, textAlign: 'center' },
+  remove: { fontSize: 26, color: colors.textFaint },
+});

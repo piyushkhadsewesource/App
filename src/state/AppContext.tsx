@@ -26,12 +26,14 @@ import {
   FutureItem,
   Identity,
   Letter,
+  Meeting,
   Memory,
   Moment,
   Mood,
   Ping,
   PingType,
   Reason,
+  SosAlert,
 } from '../types/models';
 
 interface AppValue {
@@ -49,6 +51,8 @@ interface AppValue {
   future: FutureItem[];
   deck: DeckResponse[];
   moments: Moment[];
+  alerts: SosAlert[];
+  meeting: Meeting | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -95,6 +99,10 @@ interface AppValue {
   addDeckResponse(promptId: string, promptText: string, answer: string): Promise<void>;
   addMoment(data: { image: string; caption?: string; date?: string }): Promise<void>;
   removeMoment(id: string): Promise<void>;
+  sendSos(message?: string): Promise<void>;
+  markAlertsSeen(): Promise<void>;
+  setMeeting(at: number, label?: string): Promise<void>;
+  clearMeeting(): Promise<void>;
 }
 
 const Ctx = createContext<AppValue | null>(null);
@@ -111,6 +119,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [future, setFuture] = useState<FutureItem[]>([]);
   const [deck, setDeck] = useState<DeckResponse[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [alerts, setAlerts] = useState<SosAlert[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -143,6 +153,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<FutureItem>('future', setFuture),
         db.watch<DeckResponse>('deck', setDeck),
         db.watch<Moment>('moments', setMoments),
+        db.watch<SosAlert>('alerts', setAlerts),
+        db.watch<Meeting>('meetings', setMeetings),
       ];
     })();
     return () => {
@@ -165,13 +177,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...deck,
       ...pings,
       ...moments,
+      ...alerts,
+      ...meetings,
     ];
     for (const it of pools) {
       const a = it.authorId ?? it.fromId;
       if (a && a !== meId) return a;
     }
     return DEMO_PARTNER_ID;
-  }, [meId, checkins, reasons, memories, letters, future, deck, pings, moments]);
+  }, [meId, checkins, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
 
   const value: AppValue = {
     ready,
@@ -187,6 +201,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     future,
     deck,
     moments,
+    alerts,
+    meeting: meetings.find((m) => m.id === 'next') ?? null,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -216,6 +232,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setFuture([]);
       setDeck([]);
       setMoments([]);
+      setAlerts([]);
+      setMeetings([]);
       setIdentity(null);
     },
 
@@ -334,6 +352,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async removeMoment(id) {
       await dbRef.current?.remove('moments', id);
+    },
+    async sendSos(message) {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('alerts', {
+        id: genId('s_'),
+        fromId: meId,
+        createdAt: now(),
+        message,
+        seenAt: null,
+      });
+    },
+    async markAlertsSeen() {
+      const db = dbRef.current;
+      if (!db) return;
+      const unseen = alerts.filter((a) => a.fromId !== meId && !a.seenAt);
+      await Promise.all(unseen.map((a) => db.update<SosAlert>('alerts', a.id, { seenAt: now() })));
+    },
+    async setMeeting(at, label) {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('meetings', {
+        id: 'next',
+        authorId: meId,
+        at,
+        label: label?.trim() || undefined,
+        createdAt: now(),
+      });
+    },
+    async clearMeeting() {
+      await dbRef.current?.remove('meetings', 'next');
     },
   };
 

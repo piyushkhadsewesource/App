@@ -17,6 +17,7 @@ import { computeHealth } from '../lib/health';
 import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
 import { captureStreak, hasMomentToday } from '../lib/moments';
+import { countdownTo, shortCountdown } from '../lib/countdown';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -37,6 +38,7 @@ export default function HomeScreen({ navigation }: any) {
   const unseenPings = pings.filter((p) => p.fromId !== meId && !p.seenAt);
   const momentDoneToday = hasMomentToday(app.moments, meId);
   const momentStreak = captureStreak(app.moments, meId);
+  const meeting = app.meeting;
 
   const onThisDay = useMemo(() => {
     const md = today.slice(5);
@@ -89,6 +91,27 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </Card>
       ) : null}
+
+      {/* Reunion countdown */}
+      {meeting ? (
+        <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>💞</Text>
+          <View style={{ flex: 1 }}>
+            <Title>
+              {countdownTo(meeting.at).past ? 'You’re together 💞' : `Together in ${shortCountdown(meeting.at)}`}
+            </Title>
+            <Muted>{meeting.label || 'Tap for the live countdown.'}</Muted>
+          </View>
+        </Card>
+      ) : (
+        <Card onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>💞</Text>
+          <View style={{ flex: 1 }}>
+            <Title>Set your reunion date</Title>
+            <Muted>Add when you meet next and watch the countdown.</Muted>
+          </View>
+        </Card>
+      )}
 
       {/* Relationship health */}
       <Card style={{ marginTop: spacing.md }}>
@@ -165,7 +188,9 @@ export default function HomeScreen({ navigation }: any) {
       {/* Quick actions */}
       <SectionTitle>Reach for each other</SectionTitle>
       <View style={styles.grid}>
+        <QuickTile emoji="🆘" label="Emergency" onPress={() => navigation.navigate('MissYou')} />
         <QuickTile emoji="📸" label="Moments" onPress={() => navigation.navigate('Moments')} />
+        <QuickTile emoji="💞" label="Countdown" onPress={() => navigation.navigate('Countdown')} />
         <QuickTile emoji="🤍" label="When I miss you" onPress={() => navigation.navigate('MissYou')} />
         <QuickTile emoji="💌" label="Love letters" onPress={() => navigation.navigate('Letters')} />
         <QuickTile emoji="🃏" label="Intimacy deck" onPress={() => navigation.navigate('Deck')} />

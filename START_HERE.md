@@ -149,6 +149,11 @@ section **"C. Build real installable apps."** Summary:
 
 Once it's open on both phones (with the same pairing code):
 
+- **🆘 Emergency (top of "When I miss you"):** one tap sets off a loud alarm and
+  buzz on your partner's phone when you urgently need them (works instantly while
+  their app is open).
+- **💞 Countdown:** set your next meeting date and watch a live countdown to your
+  reunion, on Home and its own screen.
 - **Every day → tap the ❤️ Pulse tab.** Pick how you feel, write the one thing
   you need today, set the energy/stress/closeness bars, and tap **Share**. Your
   partner sees it, and the app suggests things to say and ways to support you.

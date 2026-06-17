@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { Text } from 'react-native';
+import CountdownScreen from '../screens/CountdownScreen';
 import DeckScreen from '../screens/DeckScreen';
 import FutureScreen from '../screens/FutureScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -12,6 +13,7 @@ import MissYouScreen from '../screens/MissYouScreen';
 import MomentsScreen from '../screens/MomentsScreen';
 import MoreScreen from '../screens/MoreScreen';
 import PulseScreen from '../screens/PulseScreen';
+import RemindersScreen from '../screens/RemindersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import VaultScreen from '../screens/VaultScreen';
 import { colors } from '../theme';
@@ -60,6 +62,8 @@ export default function RootNavigator() {
       <Stack.Screen name="Journal" component={JournalScreen} />
       <Stack.Screen name="Insights" component={InsightsScreen} />
       <Stack.Screen name="Future" component={FutureScreen} />
+      <Stack.Screen name="Countdown" component={CountdownScreen} />
+      <Stack.Screen name="Reminders" component={RemindersScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );

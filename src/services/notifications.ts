@@ -1,29 +1,44 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Local daily reminders to share a photo. Each phone reminds its own owner
-// (there is no push server), three times a day, repeating every day.
+// Smart, customizable daily photo reminders (local notifications).
+//
+// Each phone reminds its own owner to share a photo. Times are user-chosen.
+// "Smart": we schedule a rolling window of one-off reminders and skip any day
+// the user has already posted, so you are not nagged once you have shared.
+// The window is re-scheduled on launch and whenever your posted days change.
 // ─────────────────────────────────────────────────────────────────────────
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-const ENABLED_KEY = '@tether/reminders';
+const CONFIG_KEY = '@tether/reminders.v2';
+const LEGACY_KEY = '@tether/reminders';
 const CHANNEL_ID = 'daily-moments';
+const WINDOW_DAYS = 8;
 const supported = Platform.OS !== 'web';
 
 export interface ReminderTime {
   hour: number;
   minute: number;
-  label: string;
+}
+export interface ReminderConfig {
+  enabled: boolean;
+  times: ReminderTime[];
 }
 
-/** Three nudges a day. */
-export const REMINDER_TIMES: ReminderTime[] = [
-  { hour: 9, minute: 0, label: '9:00 AM' },
-  { hour: 14, minute: 0, label: '2:00 PM' },
-  { hour: 20, minute: 0, label: '8:00 PM' },
+export const DEFAULT_TIMES: ReminderTime[] = [
+  { hour: 9, minute: 0 },
+  { hour: 14, minute: 0 },
+  { hour: 20, minute: 0 },
 ];
 
-// How a reminder behaves while the app is open.
+export const remindersSupported = supported;
+
+export function formatTime(t: ReminderTime): string {
+  const h12 = t.hour % 12 === 0 ? 12 : t.hour % 12;
+  const ampm = t.hour < 12 ? 'AM' : 'PM';
+  return `${h12}:${String(t.minute).padStart(2, '0')} ${ampm}`;
+}
+
 if (supported) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -35,12 +50,25 @@ if (supported) {
   });
 }
 
-export async function remindersEnabled(): Promise<boolean> {
+export async function getReminderConfig(): Promise<ReminderConfig> {
   try {
-    return (await AsyncStorage.getItem(ENABLED_KEY)) === '1';
+    const raw = await AsyncStorage.getItem(CONFIG_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (Array.isArray(c.times) && c.times.length) {
+        return { enabled: !!c.enabled, times: c.times };
+      }
+    }
+    const legacy = await AsyncStorage.getItem(LEGACY_KEY);
+    if (legacy === '1') return { enabled: true, times: DEFAULT_TIMES };
   } catch {
-    return false;
+    /* ignore */
   }
+  return { enabled: false, times: DEFAULT_TIMES };
+}
+
+async function saveConfig(cfg: ReminderConfig) {
+  await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
 }
 
 async function ensureChannel() {
@@ -52,8 +80,11 @@ async function ensureChannel() {
   }
 }
 
-function reminderBody(partnerName?: string): string {
-  const who = partnerName?.trim() || 'your partner';
+function isoOf(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function reminderBody(who: string): string {
   const options = [
     `Snap today's moment and share it with ${who}.`,
     `${who} would love a glimpse of your day. Share a photo.`,
@@ -62,57 +93,85 @@ function reminderBody(partnerName?: string): string {
   return options[Math.floor(Math.random() * options.length)];
 }
 
-async function scheduleAll(partnerName?: string) {
+async function scheduleSmart(cfg: ReminderConfig, postedDates: string[], partnerName?: string) {
   await Notifications.cancelAllScheduledNotificationsAsync();
+  if (!cfg.enabled || cfg.times.length === 0) return;
   await ensureChannel();
-  for (const t of REMINDER_TIMES) {
-    await Notifications.scheduleNotificationAsync({
-      content: { title: '📸 Tether', body: reminderBody(partnerName) },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: t.hour,
-        minute: t.minute,
-        channelId: CHANNEL_ID,
-      },
-    });
+
+  const who = partnerName?.trim() || 'your partner';
+  const posted = new Set(postedDates);
+  const base = new Date();
+
+  for (let d = 0; d < WINDOW_DAYS; d += 1) {
+    const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
+    if (posted.has(isoOf(day))) continue; // smart skip: already shared that day
+    for (const t of cfg.times) {
+      const when = new Date(day.getFullYear(), day.getMonth(), day.getDate(), t.hour, t.minute, 0, 0);
+      if (when.getTime() <= Date.now() + 1000) continue; // skip times already passed
+      await Notifications.scheduleNotificationAsync({
+        content: { title: '📸 Tether', body: reminderBody(who) },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: when,
+          channelId: CHANNEL_ID,
+        },
+      });
+    }
   }
 }
 
-/**
- * Turn reminders on or off. Returns true only if they are now active
- * (permission granted on a real device).
- */
-export async function setReminders(enabled: boolean, partnerName?: string): Promise<boolean> {
+/** Re-schedule the reminder window (call on launch and when posted days change). */
+export async function refreshReminders(postedDates: string[], partnerName?: string): Promise<void> {
+  if (!supported) return;
+  try {
+    const cfg = await getReminderConfig();
+    if (!cfg.enabled) return;
+    const perm = await Notifications.getPermissionsAsync();
+    if (perm.granted) await scheduleSmart(cfg, postedDates, partnerName);
+  } catch {
+    /* notifications unavailable */
+  }
+}
+
+/** Turn reminders on/off. Returns true only if now active (permission granted). */
+export async function setRemindersEnabled(
+  enabled: boolean,
+  postedDates: string[],
+  partnerName?: string,
+): Promise<boolean> {
+  const cfg = await getReminderConfig();
   if (!supported) {
-    await AsyncStorage.setItem(ENABLED_KEY, enabled ? '1' : '0');
+    await saveConfig({ ...cfg, enabled });
     return false;
   }
   if (!enabled) {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    await AsyncStorage.setItem(ENABLED_KEY, '0');
+    await saveConfig({ ...cfg, enabled: false });
     return false;
   }
   const perm = await Notifications.requestPermissionsAsync();
   if (!perm.granted) {
-    await AsyncStorage.setItem(ENABLED_KEY, '0');
+    await saveConfig({ ...cfg, enabled: false });
     return false;
   }
-  await scheduleAll(partnerName);
-  await AsyncStorage.setItem(ENABLED_KEY, '1');
+  const next = { ...cfg, enabled: true };
+  await saveConfig(next);
+  await scheduleSmart(next, postedDates, partnerName);
   return true;
 }
 
-/** Re-arm reminders on app launch if the user has them enabled. */
-export async function syncReminders(partnerName?: string): Promise<void> {
-  if (!supported) return;
-  try {
-    if (!(await remindersEnabled())) return;
+/** Save new reminder times and reschedule. */
+export async function setReminderTimes(
+  times: ReminderTime[],
+  postedDates: string[],
+  partnerName?: string,
+): Promise<void> {
+  const cfg = await getReminderConfig();
+  const sorted = [...times].sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+  const next: ReminderConfig = { enabled: cfg.enabled, times: sorted.length ? sorted : DEFAULT_TIMES };
+  await saveConfig(next);
+  if (supported && next.enabled) {
     const perm = await Notifications.getPermissionsAsync();
-    if (perm.granted) await scheduleAll(partnerName);
-  } catch {
-    /* notifications unavailable; ignore */
+    if (perm.granted) await scheduleSmart(next, postedDates, partnerName);
   }
 }
-
-/** True on platforms where local scheduling actually works (native). */
-export const remindersSupported = supported;

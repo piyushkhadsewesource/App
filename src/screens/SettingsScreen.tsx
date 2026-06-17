@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { APP_NAME } from '../config';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen, SectionTitle, Tag, Title } from '../components/ui';
-import { REMINDER_TIMES, remindersEnabled, remindersSupported, setReminders } from '../services/notifications';
 import { useApp } from '../state/AppContext';
 import { colors, font, spacing } from '../theme';
 
@@ -14,26 +13,6 @@ export default function SettingsScreen({ navigation }: any) {
   const [anniversary, setAnniversary] = useState(id?.anniversary ?? '');
   const [code, setCode] = useState(id?.spaceId ?? '');
   const [saved, setSaved] = useState(false);
-  const [remOn, setRemOn] = useState(false);
-
-  useEffect(() => {
-    remindersEnabled().then(setRemOn);
-  }, []);
-
-  async function toggleReminders(next: boolean) {
-    const active = await setReminders(next, partnerName || app.identity?.partnerName);
-    if (next && !active) {
-      setRemOn(false);
-      Alert.alert(
-        remindersSupported ? 'Allow notifications' : 'Phone app only',
-        remindersSupported
-          ? 'Please allow notifications for Tether in your phone’s settings, then turn this on again.'
-          : 'Daily reminders run on the installed phone app, not the web preview.',
-      );
-      return;
-    }
-    setRemOn(next);
-  }
 
   async function save() {
     await app.updateIdentity({
@@ -75,24 +54,16 @@ export default function SettingsScreen({ navigation }: any) {
       </Card>
 
       <SectionTitle>Daily photo reminders</SectionTitle>
-      <Card>
+      <Card onPress={() => navigation.navigate('Reminders')}>
         <View style={styles.row}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Title>Remind me to share a photo</Title>
+            <Title>Photo reminders</Title>
             <Muted style={{ marginTop: 4 }}>
-              Three nudges a day ({REMINDER_TIMES.map((t) => t.label).join(', ')}) so neither of you forgets your daily moment.
+              Choose your own nudge times. We skip a day once you’ve already shared a photo.
             </Muted>
           </View>
-          <Switch
-            value={remOn}
-            onValueChange={toggleReminders}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor={colors.white}
-          />
+          <Text style={styles.chevron}>›</Text>
         </View>
-        {!remindersSupported ? (
-          <Muted style={{ marginTop: spacing.sm }}>These run on the installed phone app.</Muted>
-        ) : null}
       </Card>
 
       <SectionTitle>Your details</SectionTitle>
@@ -121,4 +92,5 @@ export default function SettingsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  chevron: { fontSize: 26, color: colors.textFaint },
 });

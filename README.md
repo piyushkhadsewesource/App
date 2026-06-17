@@ -20,10 +20,12 @@ It combines the four ideas that matter most into one experience:
 - 📖 **AI Relationship Journal**, a warm monthly "scrapbook page" narrated
   automatically from your check-ins, memories and letters.
 
-…and the supporting cast: **Moments** (a daily photo you both share, with a
-**photo calendar** to revisit any day), **Memory Vault** (with "on this day"
-resurfacing), **Delayed Love Letters**, an **Intimacy Deck** of closeness
-questions, a **Shared Future Board**, and a **Relationship Health** dashboard.
+…and the supporting cast: an **Emergency SOS** (a loud alarm + buzz on your
+partner's phone the instant you need them), a live **reunion countdown**,
+**Moments** (a daily photo you both share, with a **photo calendar** to revisit
+any day), **Memory Vault** (with "on this day" resurfacing), **Delayed Love
+Letters**, an **Intimacy Deck** of closeness questions, a **Shared Future
+Board**, and a **Relationship Health** dashboard.
 
 No feeds. No followers. No one else. Ever.
 
