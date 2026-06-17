@@ -21,7 +21,7 @@ import { PingType } from '../types/models';
 const PINGS: { type: PingType; emoji: string; label: string; sent: string }[] = [
   { type: 'hug', emoji: '🤗', label: 'Send a hug', sent: 'Hug on its way' },
   { type: 'thinking', emoji: '💭', label: 'Thinking of you', sent: 'They’ll know you’re thinking of them' },
-  { type: 'miss', emoji: '🥺', label: 'I miss you', sent: 'Sent — distance is hard, isn’t it' },
+  { type: 'miss', emoji: '🥺', label: 'I miss you', sent: 'Sent, distance is hard, isn’t it' },
 ];
 
 export default function MissYouScreen() {
@@ -87,7 +87,7 @@ export default function MissYouScreen() {
         ))}
       </View>
       <Muted style={{ marginTop: spacing.sm }}>
-        A tap sends a gentle notification — “{partnerName} is thinking about you right now.”
+        A tap sends a gentle notification, “{partnerName} is thinking about you right now.”
       </Muted>
 
       {/* Comfort kit */}
@@ -96,7 +96,7 @@ export default function MissYouScreen() {
         <Card tone="violet" onPress={() => setKitOpen(true)}>
           <Title>Open my comfort kit 🧸</Title>
           <Muted style={{ marginTop: 4 }}>
-            A little first-aid for lonely moments — reasons you’re loved, a memory, and what’s ahead.
+            A little first-aid for lonely moments, reasons you’re loved, a memory, and what’s ahead.
           </Muted>
         </Card>
       ) : (
@@ -107,7 +107,7 @@ export default function MissYouScreen() {
               <Title style={{ marginTop: 6 }}>“{kitReason.text}”</Title>
             ) : (
               <Body style={{ marginTop: 6 }}>
-                {partnerName} hasn’t left reasons yet — but you can leave some for them below. 🤍
+                {partnerName} hasn’t left reasons yet, but you can leave some for them below. 🤍
               </Body>
             )}
           </Card>

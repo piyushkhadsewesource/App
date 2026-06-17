@@ -31,8 +31,8 @@ export default function InsightsScreen({ navigation }: any) {
 
       <Card tone="violet" style={{ marginBottom: spacing.lg }}>
         <Body>
-          This reads the rhythm of your check-ins and quietly points out patterns — withdrawal,
-          stress, reassurance-seeking — before they become fights. It’s a companion, never a
+          This reads the rhythm of your check-ins and quietly points out patterns, withdrawal,
+          stress, reassurance-seeking, before they become fights. It’s a companion, never a
           judge, and it never leaves your space.
         </Body>
       </Card>
@@ -42,7 +42,7 @@ export default function InsightsScreen({ navigation }: any) {
           <EmptyState
             emoji="🌿"
             title="All steady"
-            text="Nothing to flag right now. Keep checking in — the more you both share, the more helpful this becomes."
+            text="Nothing to flag right now. Keep checking in, the more you both share, the more helpful this becomes."
           />
         </Card>
       ) : (

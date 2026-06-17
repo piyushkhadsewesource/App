@@ -35,24 +35,25 @@ const cardShadow: ViewStyle =
   Platform.select<ViewStyle>({
     ios: {
       shadowColor: '#5A4038',
-      shadowOpacity: 0.1,
-      shadowRadius: 14,
-      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
     },
-    android: { elevation: 3 },
-    default: {},
+    android: { elevation: 2 },
+    // react-native-web honours boxShadow for a clean, soft card lift.
+    default: { boxShadow: '0 8px 22px rgba(90, 64, 56, 0.07)' } as ViewStyle,
   }) ?? {};
 
 const softShadow: ViewStyle =
   Platform.select<ViewStyle>({
     ios: {
       shadowColor: '#5A4038',
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
     },
     android: { elevation: 1 },
-    default: {},
+    default: { boxShadow: '0 4px 12px rgba(90, 64, 56, 0.05)' } as ViewStyle,
   }) ?? {};
 
 export const shadow = { card: cardShadow, soft: softShadow };

@@ -42,7 +42,7 @@ export default function FutureScreen({ navigation }: any) {
 
       <Card tone="green" style={{ marginBottom: spacing.lg }}>
         <Body>
-          Distance is easier with a visible future. Dream it here together — and tick things off as
+          Distance is easier with a visible future. Dream it here together, and tick things off as
           they come true.
         </Body>
         {app.future.length > 0 ? (

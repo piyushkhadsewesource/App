@@ -49,7 +49,7 @@ export default function SettingsScreen({ navigation }: any) {
         <Body style={{ marginTop: spacing.sm }}>
           {app.cloud
             ? 'Your two phones are syncing live through Firebase. Use the same pairing code on both.'
-            : 'Running on-device. To sync with your partner’s phone, add your free Firebase keys in src/config.ts — see SETUP.md for the 5-minute guide.'}
+            : 'Running on-device. To sync with your partner’s phone, add your free Firebase keys in src/config.ts, see SETUP.md for the 5-minute guide.'}
         </Body>
       </Card>
 
@@ -67,7 +67,7 @@ export default function SettingsScreen({ navigation }: any) {
 
       <SectionTitle>About</SectionTitle>
       <Card>
-        <Body>{APP_NAME} — a private emotional-connection space for two. No feeds, no ads, no one else.</Body>
+        <Body>{APP_NAME}, a private emotional-connection space for two. No feeds, no ads, no one else.</Body>
         <Muted style={{ marginTop: spacing.sm }}>Made with care, for closing the distance.</Muted>
       </Card>
 

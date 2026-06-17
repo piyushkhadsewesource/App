@@ -78,22 +78,22 @@ export function conversationStarters(
       out.push(`${partnerName} said they need “${partner.need.trim()}”. Ask how you can help with that today.`);
     }
     if (m.valence <= -1) {
-      out.push(`They’re feeling ${m.label.toLowerCase()}. Try: “I saw your check-in — want to talk it out, or just have company?”`);
+      out.push(`They’re feeling ${m.label.toLowerCase()}. Try: “I saw your check-in, want to talk it out, or just have company?”`);
     }
     if (partner.stress >= 4) {
       out.push(`Stress is high for ${partnerName}. Ask: “What’s the heaviest thing on your plate right now?”`);
     }
     if (partner.affection >= 4 && m.valence >= 1) {
-      out.push(`They’re feeling close — lean in: “Tell me the best part of your day.”`);
+      out.push(`They’re feeling close, lean in: “Tell me the best part of your day.”`);
     }
   }
   if (me && partner) {
     const meV = moodMeta(me.mood).valence;
     const pV = moodMeta(partner.mood).valence;
     if (meV >= 1 && pV <= -1) {
-      out.push(`You’re steadier than ${partnerName} today — a good day to be the calm one.`);
+      out.push(`You’re steadier than ${partnerName} today, a good day to be the calm one.`);
     } else if (meV <= -1 && pV <= -1) {
-      out.push(`You’re both having a heavy day. Name it together: “Neither of us is at our best — let’s be gentle.”`);
+      out.push(`You’re both having a heavy day. Name it together: “Neither of us is at our best, let’s be gentle.”`);
     }
   }
   for (const g of GENERIC_STARTERS) {
@@ -106,15 +106,15 @@ export function conversationStarters(
 /** Concrete, do-this-now ways to support your partner today. */
 export function supportSuggestions(partner: CheckIn | null, partnerName: string): string[] {
   if (!partner) {
-    return [`No check-in from ${partnerName} yet today — a simple “thinking of you” goes a long way.`];
+    return [`No check-in from ${partnerName} yet today, a simple “thinking of you” goes a long way.`];
   }
   const tips: string[] = [];
   const v = moodMeta(partner.mood).valence;
-  if (partner.energy <= 2) tips.push('Low energy — keep it light. A voice note may feel easier than a call.');
-  if (partner.stress >= 4) tips.push('High stress — offer specific help, not just “let me know if you need anything.”');
-  if (partner.affection <= 2) tips.push('Affection is low — send a warm, no-pressure reminder that they’re loved.');
+  if (partner.energy <= 2) tips.push('Low energy, keep it light. A voice note may feel easier than a call.');
+  if (partner.stress >= 4) tips.push('High stress, offer specific help, not just “let me know if you need anything.”');
+  if (partner.affection <= 2) tips.push('Affection is low, send a warm, no-pressure reminder that they’re loved.');
   if (v <= -1) tips.push('Lead with validation before solutions: “that sounds really hard.”');
-  if (v >= 1 && partner.affection >= 4) tips.push('They’re in a good place — match it and make a small plan to look forward to.');
-  if (tips.length === 0) tips.push('Steady day — a tiny surprise (a photo, an old memory) keeps the spark alive.');
+  if (v >= 1 && partner.affection >= 4) tips.push('They’re in a good place, match it and make a small plan to look forward to.');
+  if (tips.length === 0) tips.push('Steady day, a tiny surprise (a photo, an old memory) keeps the spark alive.');
   return tips;
 }

@@ -69,7 +69,7 @@ export default function DeckScreen({ navigation }: any) {
         </Card>
       ) : (
         <Card style={{ marginTop: spacing.md }}>
-          <Field value={answer} onChangeText={setAnswer} placeholder="Answer honestly — just for the two of you…" multiline />
+          <Field value={answer} onChangeText={setAnswer} placeholder="Answer honestly, just for the two of you…" multiline />
           <Button label="Share my answer" disabled={!answer.trim()} onPress={submit} />
         </Card>
       )}

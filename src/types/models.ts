@@ -108,7 +108,7 @@ export interface Identity {
   userId: string;
   name: string;
   partnerName: string;
-  spaceId: string; // shared "pairing code" — same on both phones
+  spaceId: string; // shared "pairing code", same on both phones
   anniversary?: ISODate;
   createdAt: Millis;
 }

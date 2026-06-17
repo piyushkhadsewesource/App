@@ -27,7 +27,7 @@ export default function OnboardingScreen() {
 
       <Card tone="rose" style={{ marginBottom: spacing.lg }}>
         <Body>
-          A private space for just the two of you — to feel each other’s days, keep your memories,
+          A private space for just the two of you, to feel each other’s days, keep your memories,
           and stay close across the distance.
         </Body>
       </Card>
@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
       />
       <Muted style={{ marginTop: -spacing.sm, marginBottom: spacing.lg }}>
         {cloud
-          ? 'Both phones must use the SAME code — that’s what privately links the two of you. Share it with your partner and enter it on both phones.'
+          ? 'Both phones must use the SAME code, that’s what privately links the two of you. Share it with your partner and enter it on both phones.'
           : 'Running on-device for now. When you turn on cloud sync (see Settings), this same code links both phones.'}
       </Muted>
 

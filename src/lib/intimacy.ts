@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Intimacy Deck — daily prompts to deepen emotional intimacy, drawn from
+// Intimacy Deck, daily prompts to deepen emotional intimacy, drawn from
 // research-backed closeness exercises. One surfaces each day; both answer.
 // ─────────────────────────────────────────────────────────────────────────
 import { DeckResponse, ISODate } from '../types/models';

@@ -325,15 +325,15 @@ export function Divider() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl * 2.5 },
+  scrollContent: { padding: 20, paddingBottom: spacing.xxl * 2.5 },
   header: { marginBottom: spacing.lg },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   back: { marginBottom: spacing.sm },
   backText: { color: colors.textSoft, fontSize: font.size.md, fontWeight: font.weight.semibold },
-  h1: { fontSize: font.size.xxl, fontWeight: font.weight.bold, color: colors.text },
-  sub: { fontSize: font.size.md, color: colors.textSoft, marginTop: 2 },
+  h1: { fontSize: 27, fontWeight: font.weight.bold, color: colors.text, letterSpacing: -0.4 },
+  sub: { fontSize: font.size.md, color: colors.textSoft, marginTop: 3 },
 
-  card: { borderRadius: radius.lg, padding: spacing.lg },
+  card: { borderRadius: radius.lg, padding: 18 },
   title: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text },
   body: { fontSize: font.size.md, color: colors.text, lineHeight: 22 },
   muted: { fontSize: font.size.sm, color: colors.textSoft, lineHeight: 20 },

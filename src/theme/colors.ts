@@ -1,9 +1,9 @@
-// A warm, intimate palette — soft paper, rose, and quiet violet.
+// A warm, intimate palette, soft paper, rose, and quiet violet.
 export const colors = {
-  bg: '#FBF7F4',
+  bg: '#FBF8F6',
   surface: '#FFFFFF',
-  surfaceAlt: '#F5EDE8',
-  border: '#EDE1DA',
+  surfaceAlt: '#F6F0EC',
+  border: '#F0E8E3',
 
   text: '#2E2A2A',
   textSoft: '#6F6663',

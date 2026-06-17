@@ -176,7 +176,7 @@ export default function LettersScreen({ navigation }: any) {
 
       {ready.length + sealed.length + opened.length + mine.length === 0 && !composing ? (
         <Card>
-          <EmptyState emoji="💌" title="No letters yet" text="Write something for the future — an anniversary, a hard exam day, or just because." />
+          <EmptyState emoji="💌" title="No letters yet" text="Write something for the future, an anniversary, a hard exam day, or just because." />
           <Button label="Write your first letter" onPress={() => setComposing(true)} />
         </Card>
       ) : null}

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Relationship Health Dashboard — a maintenance gauge, never a judgment.
+// Relationship Health Dashboard, a maintenance gauge, never a judgment.
 // Blends recency, warmth, mood alignment and shared activity into one score.
 // ─────────────────────────────────────────────────────────────────────────
 import { colors } from '../theme';
@@ -75,7 +75,7 @@ export function computeHealth(input: Input): Health {
           ? { label: 'A little distant', color: colors.warn }
           : { label: 'Needs nurture', color: colors.accent };
 
-  // Days since you were "together" — both checked in on the same day.
+  // Days since you were "together", both checked in on the same day.
   const myDays = new Set(checkins.filter((c) => c.authorId === meId).map((c) => c.date));
   const sharedDays = checkins
     .filter((c) => c.authorId === partnerId && myDays.has(c.date))

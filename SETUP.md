@@ -86,7 +86,7 @@ space. For just-the-two-of-you use that's usually fine **if** you:
 - use a long, non-guessable pairing code (e.g. a random 12+ character string).
 
 For stronger security later, add **Firebase Authentication** (Anonymous or
-Email) and change the rule to check `request.auth` — the data layer is already
+Email) and change the rule to check `request.auth`, the data layer is already
 structured to make that a small change.
 
 ---
@@ -100,24 +100,24 @@ npm install -g eas-cli
 eas login                 # create a free Expo account
 ```
 
-**Android (.apk)** — easiest, no paid account:
+**Android (.apk)**, easiest, no paid account:
 ```bash
 eas build -p android --profile preview
 ```
 EAS builds an APK in the cloud and gives you a download link you can install on
 either Android phone.
 
-**iPhone (.ipa)** — Apple requires a paid **Apple Developer account**
+**iPhone (.ipa)**, Apple requires a paid **Apple Developer account**
 ($99/year) to install on real devices:
 ```bash
 eas build -p ios --profile preview
 ```
 EAS builds it in the cloud (**no Mac needed**) and you share it to both iPhones
 through **TestFlight**. Until you're ready for that, **Expo Go** (Part A) is the
-completely free way to run Tether on iPhone — no developer account required.
+completely free way to run Tether on iPhone, no developer account required.
 
 (These steps use the Expo build service, which may be restricted on some
-networks — run them from a normal internet connection.)
+networks, run them from a normal internet connection.)
 
 ---
 

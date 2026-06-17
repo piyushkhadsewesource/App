@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 // One tiny data API, two backends.
-//   • LocalDb     — AsyncStorage, works instantly with no account.
-//   • FirestoreDb — live cross-device sync once Firebase is configured.
+//   • LocalDb    , AsyncStorage, works instantly with no account.
+//   • FirestoreDb, live cross-device sync once Firebase is configured.
 // Screens never know or care which one is active.
 // ─────────────────────────────────────────────────────────────────────────
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -9,7 +9,7 @@ export const DEMO_PARTNER_ID = 'partner_demo';
 
 /**
  * In local mode there's only one phone, so we plant a little life from your
- * partner — a check-in, a few reasons they love you, a memory, a letter — so
+ * partner, a check-in, a few reasons they love you, a memory, a letter, so
  * every feature has something to show. Runs once per space; never in cloud
  * mode, where your real partner provides the other side.
  */
@@ -71,8 +71,8 @@ export async function maybeSeed(db: Db, identity: Identity): Promise<void> {
     title: 'Open me when you miss us',
     body:
       'If you’re reading this, I’m probably missing you too. Close your eyes ' +
-      'and remember the pier — the cold air, your hand in mine, that ridiculous ' +
-      'laugh. The distance is temporary. Us, I’m sure about. — yours, always.',
+      'and remember the pier, the cold air, your hand in mine, that ridiculous ' +
+      'laugh. The distance is temporary. Us, I’m sure about., yours, always.',
     occasion: 'When you miss me',
     openedAt: null,
   });

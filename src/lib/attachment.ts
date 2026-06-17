@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 // Attachment-aware companion: gently surface patterns (withdrawal, persistent
 // stress, affection dips, reassurance-seeking) before they harden into a
-// conflict cycle — and coach both partners toward a healthier response.
+// conflict cycle, and coach both partners toward a healthier response.
 // ─────────────────────────────────────────────────────────────────────────
 import { CheckIn } from '../types/models';
 import { moodMeta } from './mood';
@@ -52,8 +52,8 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       summary: last
         ? `No check-in from ${partnerName} in ${gap} days.`
         : `${partnerName} hasn’t checked in yet.`,
-      forYou: 'Silence is easy to read as rejection — but withdrawal is often overwhelm. Reach out warmly without keeping score.',
-      together: `Send a low-pressure note: “No need to reply fast — just thinking of you and here when you’re ready.”`,
+      forYou: 'Silence is easy to read as rejection, but withdrawal is often overwhelm. Reach out warmly without keeping score.',
+      together: `Send a low-pressure note: “No need to reply fast, just thinking of you and here when you’re ready.”`,
     });
   }
 
@@ -92,7 +92,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       severity: 'info',
       title: `${partnerName} is reaching for reassurance`,
       summary: 'Their recent needs are about closeness and being heard.',
-      forYou: 'These are bids for connection. Meeting them early (a quick, warm reply) prevents the anxious–distant spiral.',
+      forYou: 'These are bids for connection. Meeting them early (a quick, warm reply) prevents the anxious-distant spiral.',
       together: 'Be explicit and unprompted: “I’m all in on us. The distance is the hard part, not you.”',
     });
   }
@@ -109,7 +109,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
         ? `You’ve logged ${myStreak.days} hard days in a row.`
         : 'Your own energy has been low lately.',
       forYou: 'You show up better for someone you love when you’re not depleted. Tending yourself is part of tending the relationship.',
-      together: `Tell ${partnerName} honestly where you’re at — being known is its own kind of closeness.`,
+      together: `Tell ${partnerName} honestly where you’re at, being known is its own kind of closeness.`,
     });
   }
 
@@ -120,9 +120,9 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       id: 'partner-streak',
       severity: 'tend',
       title: `${partnerName} has had ${pStreak.days} hard days`,
-      summary: 'Several tough check-ins in a row — worth a real conversation.',
+      summary: 'Several tough check-ins in a row, worth a real conversation.',
       forYou: 'A streak is different from a bad day. Don’t wait for them to ask; gently go first.',
-      together: 'Make time for an unhurried call. Open with “I’ve noticed it’s been heavy — I’m here, no fixing required.”',
+      together: 'Make time for an unhurried call. Open with “I’ve noticed it’s been heavy, I’m here, no fixing required.”',
     });
   }
 

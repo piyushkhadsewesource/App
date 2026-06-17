@@ -18,7 +18,7 @@ import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, radius, shadow, spacing } from '../theme';
 
 export default function HomeScreen({ navigation }: any) {
   const app = useApp();
@@ -89,7 +89,7 @@ export default function HomeScreen({ navigation }: any) {
           <Metric label="This week" value={`${health.sharedThisWeek}`} />
           <Metric
             label="Together"
-            value={health.daysSinceTogether == null ? '—' : health.daysSinceTogether === 0 ? 'today' : `${health.daysSinceTogether}d ago`}
+            value={health.daysSinceTogether == null ? 'not yet' : health.daysSinceTogether === 0 ? 'today' : `${health.daysSinceTogether}d ago`}
           />
         </View>
       </Card>
@@ -226,8 +226,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    ...shadow.card,
   },
   tileLabel: { fontSize: font.size.md, fontWeight: font.weight.semibold, color: colors.text },
 });

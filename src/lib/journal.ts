@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// AI Relationship Journal — a warm, data-driven monthly narrator. It reads
+// AI Relationship Journal, a warm, data-driven monthly narrator. It reads
 // your check-ins, memories, letters and pings and writes a little scrapbook
 // page about your month. Deterministic today; swap in Claude later for prose.
 // ─────────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export function generateReport(input: Input): Report {
     return {
       title: 'Your month, together',
       periodLabel: label,
-      sentence: 'This chapter is still blank — and that’s the best kind. Check in, save a memory, send a hug, and watch your story write itself.',
+      sentence: 'This chapter is still blank, and that’s the best kind. Check in, save a memory, send a hug, and watch your story write itself.',
       sections: [],
       stats: [],
       empty: true,
@@ -92,7 +92,7 @@ export function generateReport(input: Input): Report {
   const sentence =
     `In ${label}, you checked in ${monthCheckins.length} time${monthCheckins.length === 1 ? '' : 's'}, ` +
     `saved ${memories.length} memor${memories.length === 1 ? 'y' : 'ies'}, ` +
-    `and reached for each other ${pings.length + letters.length} time${pings.length + letters.length === 1 ? '' : 's'} — ` +
+    `and reached for each other ${pings.length + letters.length} time${pings.length + letters.length === 1 ? '' : 's'}, ` +
     `proof the distance didn’t get the last word.`;
 
   const sections: ReportSection[] = [];
@@ -117,7 +117,7 @@ export function generateReport(input: Input): Report {
     sections.push({
       heading: 'What carried you',
       body:
-        `Your brightest check-in landed on ${formatDayMonth(bright.date)} — ` +
+        `Your brightest check-in landed on ${formatDayMonth(bright.date)}, ` +
         `${moodMeta(bright.mood).emoji} ${moodMeta(bright.mood).label.toLowerCase()}, closeness high. ` +
         (hard && hard.id !== bright.id
           ? `${formatDayMonth(hard.date)} was the heaviest, and you got through it anyway.`
@@ -139,7 +139,7 @@ export function generateReport(input: Input): Report {
     heading: 'Something to nurture',
     body:
       avgAff < 3
-        ? 'Closeness scores dipped this month. Next month, try one unprompted “thinking of you” a day — tiny, but it compounds.'
+        ? 'Closeness scores dipped this month. Next month, try one unprompted “thinking of you” a day, tiny, but it compounds.'
         : 'You’re tending this well. Next month, pick one Future Board dream and take a single real step toward it.',
   });
 

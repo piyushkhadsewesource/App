@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Tether — central configuration
+// Tether, central configuration
 // ─────────────────────────────────────────────────────────────────────────
 //
 // The app runs fully on-device out of the box. To turn on real-time cloud
@@ -7,7 +7,7 @@
 // (https://console.firebase.google.com), enable Cloud Firestore, and paste
 // your web app's config values below. See SETUP.md for a 5-minute walkthrough.
 //
-// Nothing else needs to change — the moment these values are real, the app
+// Nothing else needs to change, the moment these values are real, the app
 // switches from local storage to live sync automatically.
 
 export const APP_NAME = 'Tether';
