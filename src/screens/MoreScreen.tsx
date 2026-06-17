@@ -10,6 +10,7 @@ const LINKS: { route: string; emoji: string; label: string; sub: string }[] = [
   { route: 'Journal', emoji: '📖', label: 'Our journal', sub: 'Your month, narrated' },
   { route: 'Insights', emoji: '💜', label: 'Companion', sub: 'Gentle attachment-aware nudges' },
   { route: 'Future', emoji: '✨', label: 'Future board', sub: 'The life you’re building' },
+  { route: 'Vault', emoji: '🗂️', label: 'Memory vault', sub: 'Milestones and keepsakes' },
   { route: 'Settings', emoji: '⚙️', label: 'Settings', sub: 'Sync, names & pairing code' },
 ];
 

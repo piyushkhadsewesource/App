@@ -103,6 +103,20 @@ export interface DeckResponse {
   createdAt: Millis;
 }
 
+/**
+ * A daily photo "Moment". The image travels inside the record as a compressed
+ * base64 JPEG data URI, so it syncs through the same local/Firebase pipeline as
+ * everything else, with no separate file storage to set up.
+ */
+export interface Moment {
+  id: string;
+  authorId: string;
+  date: ISODate; // the day it was captured
+  createdAt: Millis;
+  image: string; // "data:image/jpeg;base64,..."
+  caption?: string;
+}
+
 /** Per-device identity + the shared pairing code that links two phones. */
 export interface Identity {
   userId: string;
@@ -122,6 +136,7 @@ export const COLLECTIONS = [
   'reasons',
   'future',
   'deck',
+  'moments',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

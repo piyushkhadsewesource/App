@@ -9,6 +9,7 @@ import InsightsScreen from '../screens/InsightsScreen';
 import JournalScreen from '../screens/JournalScreen';
 import LettersScreen from '../screens/LettersScreen';
 import MissYouScreen from '../screens/MissYouScreen';
+import MomentsScreen from '../screens/MomentsScreen';
 import MoreScreen from '../screens/MoreScreen';
 import PulseScreen from '../screens/PulseScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -43,7 +44,7 @@ function Tabs() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('🏠'), title: 'Home' }} />
       <Tab.Screen name="Pulse" component={PulseScreen} options={{ tabBarIcon: tabIcon('💗'), title: 'Pulse' }} />
       <Tab.Screen name="MissYou" component={MissYouScreen} options={{ tabBarIcon: tabIcon('🤍'), title: 'Miss you' }} />
-      <Tab.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('📸'), title: 'Vault' }} />
+      <Tab.Screen name="Moments" component={MomentsScreen} options={{ tabBarIcon: tabIcon('📸'), title: 'Moments' }} />
       <Tab.Screen name="More" component={MoreScreen} options={{ tabBarIcon: tabIcon('☰'), title: 'More' }} />
     </Tab.Navigator>
   );
@@ -53,6 +54,7 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="Tabs" component={Tabs} />
+      <Stack.Screen name="Vault" component={VaultScreen} />
       <Stack.Screen name="Letters" component={LettersScreen} />
       <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen name="Journal" component={JournalScreen} />

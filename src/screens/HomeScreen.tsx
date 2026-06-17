@@ -16,6 +16,7 @@ import { formatDayMonth, greeting, isoToDate, todayISO } from '../lib/date';
 import { computeHealth } from '../lib/health';
 import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
+import { captureStreak, hasMomentToday } from '../lib/moments';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -34,6 +35,8 @@ export default function HomeScreen({ navigation }: any) {
   const partnerLatest = latestCheckin(checkins, partnerId);
   const partnerStreak = strugglingStreak(checkins, partnerId);
   const unseenPings = pings.filter((p) => p.fromId !== meId && !p.seenAt);
+  const momentDoneToday = hasMomentToday(app.moments, meId);
+  const momentStreak = captureStreak(app.moments, meId);
 
   const onThisDay = useMemo(() => {
     const md = today.slice(5);
@@ -70,6 +73,19 @@ export default function HomeScreen({ navigation }: any) {
               {unseenPings.length} new {unseenPings.length === 1 ? 'hug' : 'hugs'} from {identity?.partnerName}
             </Title>
             <Muted>They’re thinking about you right now. Tap to feel it.</Muted>
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Today's moment nudge */}
+      {!momentDoneToday ? (
+        <Card tone="gold" onPress={() => navigation.navigate('Moments')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>📸</Text>
+          <View style={{ flex: 1 }}>
+            <Title>Capture today’s moment</Title>
+            <Muted>
+              {momentStreak > 0 ? `Keep your ${momentStreak}-day streak going.` : 'One photo a day builds your shared gallery.'}
+            </Muted>
           </View>
         </Card>
       ) : null}
@@ -149,6 +165,7 @@ export default function HomeScreen({ navigation }: any) {
       {/* Quick actions */}
       <SectionTitle>Reach for each other</SectionTitle>
       <View style={styles.grid}>
+        <QuickTile emoji="📸" label="Moments" onPress={() => navigation.navigate('Moments')} />
         <QuickTile emoji="🤍" label="When I miss you" onPress={() => navigation.navigate('MissYou')} />
         <QuickTile emoji="💌" label="Love letters" onPress={() => navigation.navigate('Letters')} />
         <QuickTile emoji="🃏" label="Intimacy deck" onPress={() => navigation.navigate('Deck')} />

@@ -25,7 +25,7 @@ const KINDS: { key: MemoryKind; label: string }[] = [
   { key: 'note', label: 'Note' },
 ];
 
-export default function VaultScreen() {
+export default function VaultScreen({ navigation }: any) {
   const app = useApp();
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
@@ -59,7 +59,8 @@ export default function VaultScreen() {
     <Screen scroll>
       <AppHeader
         title="Memory vault"
-        subtitle="The moments worth keeping"
+        subtitle="Milestones and keepsakes"
+        onBack={() => navigation.goBack()}
         right={<Button label={adding ? '×' : '＋'} variant="soft" onPress={() => setAdding((a) => !a)} style={styles.addBtn} />}
       />
 

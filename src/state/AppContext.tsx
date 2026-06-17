@@ -27,6 +27,7 @@ import {
   Identity,
   Letter,
   Memory,
+  Moment,
   Mood,
   Ping,
   PingType,
@@ -47,6 +48,7 @@ interface AppValue {
   reasons: Reason[];
   future: FutureItem[];
   deck: DeckResponse[];
+  moments: Moment[];
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -91,6 +93,8 @@ interface AppValue {
   toggleFuture(id: string, done: boolean): Promise<void>;
   removeFuture(id: string): Promise<void>;
   addDeckResponse(promptId: string, promptText: string, answer: string): Promise<void>;
+  addMoment(data: { image: string; caption?: string; date?: string }): Promise<void>;
+  removeMoment(id: string): Promise<void>;
 }
 
 const Ctx = createContext<AppValue | null>(null);
@@ -106,6 +110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [future, setFuture] = useState<FutureItem[]>([]);
   const [deck, setDeck] = useState<DeckResponse[]>([]);
+  const [moments, setMoments] = useState<Moment[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -137,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<Reason>('reasons', setReasons),
         db.watch<FutureItem>('future', setFuture),
         db.watch<DeckResponse>('deck', setDeck),
+        db.watch<Moment>('moments', setMoments),
       ];
     })();
     return () => {
@@ -158,13 +164,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...future,
       ...deck,
       ...pings,
+      ...moments,
     ];
     for (const it of pools) {
       const a = it.authorId ?? it.fromId;
       if (a && a !== meId) return a;
     }
     return DEMO_PARTNER_ID;
-  }, [meId, checkins, reasons, memories, letters, future, deck, pings]);
+  }, [meId, checkins, reasons, memories, letters, future, deck, pings, moments]);
 
   const value: AppValue = {
     ready,
@@ -179,6 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reasons,
     future,
     deck,
+    moments,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -207,6 +215,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReasons([]);
       setFuture([]);
       setDeck([]);
+      setMoments([]);
       setIdentity(null);
     },
 
@@ -304,6 +313,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         answer,
         createdAt: now(),
       });
+    },
+    async addMoment(data) {
+      const db = dbRef.current;
+      if (!db) return;
+      const today = new Date();
+      const date =
+        data.date ??
+        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+          today.getDate(),
+        ).padStart(2, '0')}`;
+      await db.add('moments', {
+        id: genId('p_'),
+        authorId: meId,
+        date,
+        createdAt: now(),
+        image: data.image,
+        caption: data.caption,
+      });
+    },
+    async removeMoment(id) {
+      await dbRef.current?.remove('moments', id);
     },
   };
 

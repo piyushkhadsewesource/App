@@ -158,7 +158,9 @@ Once it's open on both phones (with the same pairing code):
   "thinking of you." Feeling lonely? Tap **Open my comfort kit**.
 - **Love letters:** write a note and schedule it to arrive on a future date, an
   anniversary, an exam day, or just because.
-- **Memory vault (📸):** save your moments; the app resurfaces them later.
+- **Moments (📸):** take one photo a day. It lands in a shared gallery, and the
+  **Calendar** lets you tap any date to see the photos from that day.
+- **Memory vault (🗂️):** save milestones and keepsakes; the app resurfaces them later.
 - **Intimacy deck (🃏):** answer one closeness question together each day.
 - **Our journal (📖):** at month's end, read the little story the app writes
   about your month together.
