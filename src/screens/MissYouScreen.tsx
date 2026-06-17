@@ -101,7 +101,7 @@ export default function MissYouScreen() {
 
       {toast ? (
         <Card tone="rose" style={styles.toast}>
-          <Body style={{ fontWeight: font.weight.semibold }}>{toast}</Body>
+          <Body style={{ fontFamily: font.family.semibold }}>{toast}</Body>
         </Card>
       ) : null}
 
@@ -184,7 +184,7 @@ export default function MissYouScreen() {
               <Card key={p.id} style={styles.hugRow}>
                 <Text style={{ fontSize: 26 }}>{meta.emoji}</Text>
                 <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: font.weight.semibold }}>
+                  <Body style={{ fontFamily: font.family.semibold }}>
                     {partnerName} sent {p.type === 'hug' ? 'a hug' : p.type === 'miss' ? 'an “I miss you”' : 'a thought'}
                   </Body>
                   <Muted>{formatRelative(p.createdAt)}</Muted>
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  pingLabel: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.text, textAlign: 'center' },
+  pingLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
   kitButtons: { flexDirection: 'row', gap: spacing.md },
   hugRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   sos: {
@@ -252,6 +252,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.md,
   },
-  sosTitle: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.danger },
+  sosTitle: { fontSize: font.size.lg, fontFamily: font.family.bold, color: colors.danger },
   sosSub: { fontSize: font.size.sm, color: colors.textSoft, marginTop: 2 },
 });

@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
-  label: { fontSize: font.size.lg, fontWeight: font.weight.semibold, color: colors.text },
+  label: { fontSize: font.size.lg, fontFamily: font.family.semibold, color: colors.text },
   chevron: { fontSize: 26, color: colors.textFaint },
 });

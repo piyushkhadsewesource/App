@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   siren: { fontSize: 96, marginBottom: spacing.md },
-  title: { fontSize: 34, fontWeight: font.weight.bold, color: colors.white, textAlign: 'center' },
+  title: { fontSize: 34, fontFamily: font.family.bold, color: colors.white, textAlign: 'center' },
   sub: { fontSize: font.size.md, color: 'rgba(255,255,255,0.9)', marginTop: spacing.sm },
   msg: {
     fontSize: font.size.lg,
@@ -120,6 +120,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radius.pill,
   },
-  btnText: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.danger },
+  btnText: { fontSize: font.size.lg, fontFamily: font.family.bold, color: colors.danger },
   hint: { fontSize: font.size.md, color: 'rgba(255,255,255,0.9)', marginTop: spacing.xl },
 });

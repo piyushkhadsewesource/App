@@ -97,7 +97,7 @@ export default function DeckScreen({ navigation }: any) {
           <View style={{ gap: spacing.md }}>
             {history.map(({ pid, mine, theirs }) => (
               <Card key={pid}>
-                <Body style={{ fontWeight: font.weight.semibold }}>{mine?.promptText}</Body>
+                <Body style={{ fontFamily: font.family.semibold }}>{mine?.promptText}</Body>
                 <View style={styles.answerRow}>
                   <Text style={[styles.who, { color: colors.primary }]}>You</Text>
                   <Body style={{ flex: 1 }}>{mine?.answer}</Body>
@@ -122,5 +122,5 @@ export default function DeckScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   answerRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  who: { width: 64, fontWeight: font.weight.bold, fontSize: font.size.sm },
+  who: { width: 64, fontFamily: font.family.bold, fontSize: font.size.sm },
 });

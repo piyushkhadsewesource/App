@@ -224,7 +224,7 @@ function MiniLevel({ label, value, color }: { label: string; value: number; colo
 }
 
 const styles = StyleSheet.create({
-  sectionLabel: { fontSize: font.size.md, fontWeight: font.weight.bold, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.xs },
+  sectionLabel: { fontSize: font.size.md, fontFamily: font.family.bold, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.xs },
   wheel: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   moodChip: {
     flexDirection: 'row',
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1.5,
   },
-  moodLabel: { fontSize: font.size.sm, fontWeight: font.weight.semibold },
+  moodLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold },
   todayRow: { flexDirection: 'row', gap: spacing.md },
   pulseCard: {
     flex: 1,
@@ -245,13 +245,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'center',
   },
-  pulseWho: { fontWeight: font.weight.bold, marginBottom: spacing.sm, fontSize: font.size.md },
+  pulseWho: { fontFamily: font.family.bold, marginBottom: spacing.sm, fontSize: font.size.md },
   levels: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   dots: { flexDirection: 'row', gap: 3 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   miniLabel: { fontSize: 10, color: colors.textSoft, marginTop: 4 },
-  editLink: { fontWeight: font.weight.semibold, fontSize: font.size.sm },
+  editLink: { fontFamily: font.family.semibold, fontSize: font.size.sm },
   bullet: { flexDirection: 'row', gap: spacing.sm },
-  bulletDot: { fontSize: font.size.lg, color: colors.primary, fontWeight: font.weight.bold, lineHeight: 22 },
+  bulletDot: { fontSize: font.size.lg, color: colors.primary, fontFamily: font.family.bold, lineHeight: 22 },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
 });

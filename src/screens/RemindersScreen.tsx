@@ -142,7 +142,7 @@ function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => voi
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   timeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, gap: spacing.sm },
-  timeText: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text, width: 92 },
+  timeText: { fontSize: font.size.lg, fontFamily: font.family.bold, color: colors.text, width: 92 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   stepBtn: {
     width: 30,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepSign: { fontSize: 18, fontWeight: font.weight.bold, color: colors.text },
+  stepSign: { fontSize: 18, fontFamily: font.family.bold, color: colors.text },
   stepLabel: { fontSize: 10, color: colors.textFaint, width: 22, textAlign: 'center' },
   remove: { fontSize: 26, color: colors.textFaint },
 });

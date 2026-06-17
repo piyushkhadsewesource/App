@@ -131,7 +131,7 @@ export default function LettersScreen({ navigation }: any) {
               <Card key={l.id} style={styles.sealedRow}>
                 <Text style={{ fontSize: 24 }}>🔒</Text>
                 <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: font.weight.semibold }}>{l.title}</Body>
+                  <Body style={{ fontFamily: font.family.semibold }}>{l.title}</Body>
                   <Muted>From {partnerName} · opens {formatCountdown(l.deliverAt)}</Muted>
                 </View>
               </Card>
@@ -165,7 +165,7 @@ export default function LettersScreen({ navigation }: any) {
               <Card key={l.id} style={styles.sealedRow}>
                 <Text style={{ fontSize: 22 }}>{l.deliverAt <= t ? '📬' : '⏳'}</Text>
                 <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: font.weight.semibold }}>{l.title}</Body>
+                  <Body style={{ fontFamily: font.family.semibold }}>{l.title}</Body>
                   <Muted>For {partnerName} · {l.openedAt ? 'opened' : l.deliverAt <= t ? 'delivered' : `delivers ${formatCountdown(l.deliverAt)}`}</Muted>
                 </View>
               </Card>
@@ -186,7 +186,7 @@ export default function LettersScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   addBtn: { height: 40, width: 48, paddingHorizontal: 0 },
-  label: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.textSoft, marginBottom: spacing.sm, marginTop: spacing.xs },
+  label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.sm, marginTop: spacing.xs },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   sealedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   letterBody: { lineHeight: 24 },

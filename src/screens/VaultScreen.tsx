@@ -137,7 +137,7 @@ export default function VaultScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   addBtn: { height: 40, width: 48, paddingHorizontal: 0 },
-  label: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.textSoft, marginBottom: spacing.sm, marginTop: spacing.xs },
+  label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.sm, marginTop: spacing.xs },
   emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   emojiPick: {
     width: 44,
@@ -151,5 +151,5 @@ const styles = StyleSheet.create({
   },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   memHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  delete: { color: colors.danger, fontWeight: font.weight.semibold, fontSize: font.size.sm },
+  delete: { color: colors.danger, fontFamily: font.family.semibold, fontSize: font.size.sm },
 });

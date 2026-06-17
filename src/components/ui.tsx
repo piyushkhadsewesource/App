@@ -297,7 +297,7 @@ export function LevelSelector({
               },
             ]}
           >
-            <Text style={{ color: n <= value ? colors.white : colors.textFaint, fontWeight: '700' }}>
+            <Text style={{ color: n <= value ? colors.white : colors.textFaint, fontFamily: font.family.bold }}>
               {n}
             </Text>
           </Pressable>

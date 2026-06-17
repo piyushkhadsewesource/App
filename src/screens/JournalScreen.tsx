@@ -87,8 +87,8 @@ export default function JournalScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
-  stepArrow: { fontSize: 30, color: colors.primary, fontWeight: font.weight.bold, width: 40, textAlign: 'center' },
-  month: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text },
+  stepArrow: { fontSize: 30, color: colors.primary, fontFamily: font.family.bold, width: 40, textAlign: 'center' },
+  month: { fontSize: font.size.lg + 1, fontFamily: font.family.displaySemi, color: colors.text },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   stat: {
     flex: 1,
@@ -99,6 +99,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  statValue: { fontSize: font.size.xl, fontWeight: font.weight.bold, color: colors.text },
+  statValue: { fontSize: font.size.xl, fontFamily: font.family.displaySemi, color: colors.text },
   statLabel: { fontSize: 11, color: colors.textSoft, marginTop: 2, textAlign: 'center' },
 });

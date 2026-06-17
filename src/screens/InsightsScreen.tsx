@@ -74,5 +74,5 @@ export default function InsightsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row' },
   coachBox: { borderRadius: 14, padding: spacing.md, marginTop: spacing.md },
-  coachLabel: { fontWeight: font.weight.bold, fontSize: font.size.sm, color: colors.textSoft, textTransform: 'uppercase', letterSpacing: 0.4 },
+  coachLabel: { fontFamily: font.family.bold, fontSize: font.size.sm, color: colors.textSoft, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

@@ -81,7 +81,7 @@ export default function FutureScreen({ navigation }: any) {
                 {items.map((f) => (
                   <Card key={f.id} style={styles.itemRow}>
                     <Pressable onPress={() => app.toggleFuture(f.id, !f.done)} hitSlop={8} style={[styles.check, f.done && { backgroundColor: colors.good, borderColor: colors.good }]}>
-                      {f.done ? <Text style={{ color: colors.white, fontWeight: '700' }}>✓</Text> : null}
+                      {f.done ? <Text style={{ color: colors.white, fontFamily: font.family.bold }}>✓</Text> : null}
                     </Pressable>
                     <Body style={[{ flex: 1 }, f.done && styles.doneText]}>{f.text}</Body>
                     {app.isMine(f.authorId) ? (
@@ -109,7 +109,7 @@ export default function FutureScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.textSoft, marginBottom: spacing.sm },
+  label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.sm },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   check: {

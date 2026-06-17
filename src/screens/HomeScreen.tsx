@@ -207,7 +207,7 @@ export default function HomeScreen({ navigation }: any) {
       {/* Daily prompt teaser */}
       <SectionTitle>Today’s closeness question</SectionTitle>
       <Card tone="violet" onPress={() => navigation.navigate('Deck')}>
-        <Body style={{ fontWeight: font.weight.semibold }}>{prompt.text}</Body>
+        <Body style={{ fontFamily: font.family.semibold }}>{prompt.text}</Body>
         <Muted style={{ marginTop: spacing.sm }}>Tap to answer together →</Muted>
       </Card>
     </Screen>
