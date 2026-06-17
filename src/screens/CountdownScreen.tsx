@@ -90,7 +90,20 @@ export default function CountdownScreen({ navigation }: any) {
           </Card>
 
           <View style={{ height: spacing.lg }} />
-          <Button label="Change the date" variant="soft" onPress={() => setEditing(true)} />
+          <Button
+            label="Change the date or name"
+            variant="soft"
+            onPress={() => {
+              if (meeting) {
+                const d = new Date(meeting.at);
+                const p = (n: number) => String(n).padStart(2, '0');
+                setDate(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+                setTime(`${p(d.getHours())}:${p(d.getMinutes())}`);
+                setLabel(meeting.label ?? '');
+              }
+              setEditing(true);
+            }}
+          />
           <View style={{ height: spacing.sm }} />
           <Button label="Clear countdown" variant="outline" color={colors.danger} onPress={confirmClear} />
         </>
@@ -102,7 +115,7 @@ export default function CountdownScreen({ navigation }: any) {
           </Muted>
           <Field label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
           <Field label="Time (optional)" value={time} onChangeText={setTime} placeholder="HH:MM (24h), e.g. 18:30" autoCapitalize="none" />
-          <Field label="Label (optional)" value={label} onChangeText={setLabel} placeholder="e.g. Airport pickup 🛬" />
+          <Field label="What are you counting down to? (optional)" value={label} onChangeText={setLabel} placeholder="e.g. Together again, your visit, going home…" />
           <Button label="Start the countdown" onPress={save} />
           {meeting ? (
             <>

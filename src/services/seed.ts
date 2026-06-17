@@ -100,7 +100,7 @@ export async function maybeSeed(db: Db, identity: Identity): Promise<void> {
     id: 'next',
     authorId: P,
     at: now() + 24 * 24 * 3_600_000 + 5 * 3_600_000,
-    label: 'Airport reunion 🛬',
+    label: 'Together again 💞',
     createdAt: t,
   });
 
