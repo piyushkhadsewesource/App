@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
@@ -20,7 +21,7 @@ import { captureStreak, hasMomentToday } from '../lib/moments';
 import { countdownTo, shortCountdown } from '../lib/countdown';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, shadow, spacing } from '../theme';
+import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 
 export default function HomeScreen({ navigation }: any) {
   const app = useApp();
@@ -113,25 +114,29 @@ export default function HomeScreen({ navigation }: any) {
         </Card>
       )}
 
-      {/* Relationship health */}
-      <Card style={{ marginTop: spacing.md }}>
+      {/* Relationship health hero */}
+      <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
         <View style={styles.healthTop}>
           <View>
-            <Muted>Closeness today</Muted>
-            <Text style={[styles.bigScore, { color: health.color }]}>{health.closeness}</Text>
+            <Text style={styles.heroLabel}>Closeness today</Text>
+            <Text style={styles.heroScore}>{health.closeness}</Text>
           </View>
-          <Tag label={health.label} color={health.color} />
+          <View style={styles.heroTag}>
+            <Text style={styles.heroTagText}>{health.label}</Text>
+          </View>
         </View>
-        <ProgressBar value={health.closeness} color={health.color} />
+        <View style={styles.heroTrack}>
+          <View style={[styles.heroFill, { width: `${Math.max(4, Math.min(100, health.closeness))}%` }]} />
+        </View>
         <View style={styles.metricsRow}>
-          <Metric label="Mood sync" value={`${health.moodAlignment}%`} />
-          <Metric label="This week" value={`${health.sharedThisWeek}`} />
-          <Metric
+          <HeroMetric label="Mood sync" value={`${health.moodAlignment}%`} />
+          <HeroMetric label="This week" value={`${health.sharedThisWeek}`} />
+          <HeroMetric
             label="Together"
             value={health.daysSinceTogether == null ? 'not yet' : health.daysSinceTogether === 0 ? 'today' : `${health.daysSinceTogether}d ago`}
           />
         </View>
-      </Card>
+      </LinearGradient>
 
       {/* Today's pulse */}
       <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Open</Text></Pressable>}>
@@ -209,11 +214,11 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function HeroMetric({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.heroMetricValue}>{value}</Text>
+      <Text style={styles.heroMetricLabel}>{label}</Text>
     </View>
   );
 }
@@ -250,15 +255,23 @@ function QuickTile({ emoji, label, onPress }: { emoji: string; label: string; on
 const styles = StyleSheet.create({
   alert: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   alertEmoji: { fontSize: 30 },
+
+  hero: { borderRadius: radius.lg, padding: 22, marginTop: spacing.md, overflow: 'hidden' },
+  heroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: font.size.md, fontFamily: font.family.medium },
+  heroScore: { color: colors.white, fontSize: 52, fontFamily: font.family.display, lineHeight: 56, marginTop: 2 },
+  heroTag: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
+  heroTagText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6 },
+  heroTrack: { height: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginTop: spacing.md },
+  heroFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.white },
+  heroMetricValue: { color: colors.white, fontSize: font.size.lg, fontFamily: font.family.bold },
+  heroMetricLabel: { color: 'rgba(255,255,255,0.8)', fontSize: font.size.xs, marginTop: 2, fontFamily: font.family.body },
+
   healthTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
-  bigScore: { fontSize: 46, fontWeight: font.weight.bold, lineHeight: 50 },
   metricsRow: { flexDirection: 'row', marginTop: spacing.lg },
-  metricValue: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text },
-  metricLabel: { fontSize: font.size.xs, color: colors.textSoft, marginTop: 2 },
-  link: { color: colors.primary, fontWeight: font.weight.semibold, fontSize: font.size.md },
+  link: { color: colors.primary, fontFamily: font.family.semibold, fontSize: font.size.md },
   pulseRow: { flexDirection: 'row', alignItems: 'center' },
   pulseDivider: { width: 1, height: 56, backgroundColor: colors.border },
-  pulseName: { fontWeight: font.weight.bold, marginTop: 4, fontSize: font.size.md },
+  pulseName: { fontFamily: font.family.bold, marginTop: 4, fontSize: font.size.md },
   needBox: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   tile: {
@@ -268,7 +281,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(90,46,64,0.05)',
     ...shadow.card,
   },
-  tileLabel: { fontSize: font.size.md, fontWeight: font.weight.semibold, color: colors.text },
+  tileLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
 });

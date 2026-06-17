@@ -142,6 +142,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  unitValue: { fontSize: 30, fontWeight: font.weight.bold, color: colors.accent },
-  unitLabel: { fontSize: 11, color: colors.textSoft, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  unitValue: { fontSize: 32, fontFamily: font.family.display, color: colors.accent },
+  unitLabel: { fontSize: 11, color: colors.textSoft, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: font.family.semibold },
 });

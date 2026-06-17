@@ -13,8 +13,9 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, font, radius, shadow, spacing } from '../theme';
+import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 
 // ── Screen shell ───────────────────────────────────────────────────────────
 export function Screen({
@@ -143,10 +144,31 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   color?: string;
 }) {
-  const bg =
-    variant === 'primary' ? color : variant === 'soft' ? colors.surfaceAlt : 'transparent';
   const fg =
     variant === 'primary' ? colors.white : variant === 'outline' ? color : colors.text;
+  const content = (
+    <Text style={[styles.buttonText, { color: fg }]}>
+      {icon ? `${icon}  ` : ''}
+      {label}
+    </Text>
+  );
+
+  if (variant === 'primary') {
+    const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        style={({ pressed }) => [disabled ? { opacity: 0.45 } : null, pressed ? { opacity: 0.9 } : null, style]}
+      >
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, shadow.soft]}>
+          {content}
+        </LinearGradient>
+      </Pressable>
+    );
+  }
+
+  const bg = variant === 'soft' ? colors.surfaceAlt : 'transparent';
   const border = variant === 'outline' ? { borderWidth: 1.5, borderColor: color } : null;
   return (
     <Pressable
@@ -161,10 +183,7 @@ export function Button({
         style,
       ]}
     >
-      <Text style={[styles.buttonText, { color: fg }]}>
-        {icon ? `${icon}  ` : ''}
-        {label}
-      </Text>
+      {content}
     </Pressable>
   );
 }
@@ -224,7 +243,7 @@ export function Avatar({
         { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
       ]}
     >
-      <Text style={{ color: colors.white, fontSize: size * 0.42, fontWeight: font.weight.bold }}>
+      <Text style={{ color: colors.white, fontSize: size * 0.44, fontFamily: font.family.display }}>
         {initial}
       </Text>
     </View>
@@ -329,14 +348,19 @@ const styles = StyleSheet.create({
   header: { marginBottom: spacing.lg },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   back: { marginBottom: spacing.sm },
-  backText: { color: colors.textSoft, fontSize: font.size.md, fontWeight: font.weight.semibold },
-  h1: { fontSize: 27, fontWeight: font.weight.bold, color: colors.text, letterSpacing: -0.4 },
-  sub: { fontSize: font.size.md, color: colors.textSoft, marginTop: 3 },
+  backText: { color: colors.textSoft, fontSize: font.size.md, fontFamily: font.family.semibold },
+  h1: { fontSize: 30, fontFamily: font.family.display, color: colors.text, letterSpacing: -0.6 },
+  sub: { fontSize: font.size.md, color: colors.textSoft, marginTop: 3, fontFamily: font.family.body },
 
-  card: { borderRadius: radius.lg, padding: 18 },
-  title: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text },
-  body: { fontSize: font.size.md, color: colors.text, lineHeight: 22 },
-  muted: { fontSize: font.size.sm, color: colors.textSoft, lineHeight: 20 },
+  card: {
+    borderRadius: radius.lg,
+    padding: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(90,46,64,0.06)',
+  },
+  title: { fontSize: font.size.lg + 1, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: -0.2 },
+  body: { fontSize: font.size.md, color: colors.text, lineHeight: 23, fontFamily: font.family.body },
+  muted: { fontSize: font.size.sm, color: colors.textSoft, lineHeight: 20, fontFamily: font.family.body },
 
   sectionTitleRow: {
     flexDirection: 'row',
@@ -345,16 +369,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
-  sectionTitle: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text },
+  sectionTitle: { fontSize: font.size.xl, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: -0.3 },
 
   button: {
-    height: 52,
+    height: 54,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
-  buttonText: { fontSize: font.size.md, fontWeight: font.weight.bold },
+  buttonText: { fontSize: font.size.md, fontFamily: font.family.bold, letterSpacing: 0.2 },
 
   pill: {
     paddingHorizontal: spacing.md,
@@ -362,14 +386,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
   },
-  pillText: { fontSize: font.size.sm, fontWeight: font.weight.semibold },
+  pillText: { fontSize: font.size.sm, fontFamily: font.family.semibold },
 
-  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, alignSelf: 'flex-start' },
-  tagText: { fontSize: font.size.xs, fontWeight: font.weight.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tag: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: radius.pill, alignSelf: 'flex-start' },
+  tagText: { fontSize: 11, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.6 },
 
   avatar: { alignItems: 'center', justifyContent: 'center' },
 
-  fieldLabel: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.textSoft, marginBottom: spacing.xs },
+  fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -379,6 +403,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: font.size.md,
     color: colors.text,
+    fontFamily: font.family.body,
   },
   inputMultiline: { minHeight: 110, textAlignVertical: 'top' },
 
@@ -392,14 +417,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   levelLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs },
-  levelLabelText: { fontSize: font.size.xs, color: colors.textFaint },
+  levelLabelText: { fontSize: font.size.xs, color: colors.textFaint, fontFamily: font.family.body },
 
   progressTrack: { height: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: radius.pill },
 
   empty: { alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg },
-  emptyTitle: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text, marginBottom: 4 },
-  emptyText: { fontSize: font.size.md, color: colors.textSoft, textAlign: 'center', lineHeight: 21 },
+  emptyTitle: { fontSize: font.size.lg, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: 4 },
+  emptyText: { fontSize: font.size.md, color: colors.textSoft, textAlign: 'center', lineHeight: 22, fontFamily: font.family.body },
 
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
 });

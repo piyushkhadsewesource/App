@@ -80,8 +80,8 @@ export default function SettingsScreen({ navigation }: any) {
 
       <SectionTitle>About</SectionTitle>
       <Card>
-        <Body>{APP_NAME}, a private emotional-connection space for two. No feeds, no ads, no one else.</Body>
-        <Muted style={{ marginTop: spacing.sm }}>Made with care, for closing the distance.</Muted>
+        <Body>{APP_NAME}, a private space for two. Made by Piyush and Riya, for Piyush and Riya. No feeds, no ads, no one else.</Body>
+        <Muted style={{ marginTop: spacing.sm }}>Made with love, for closing the distance. 🤍</Muted>
       </Card>
 
       <View style={{ height: spacing.xl }} />
