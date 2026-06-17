@@ -14,6 +14,12 @@
           "photosPermission": "Tether uses your photos so you can share daily moments with your partner.",
           "cameraPermission": "Tether uses your camera to capture daily moments to share with your partner."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E8638C"
+        }
       ]
     ],
     "ios": {

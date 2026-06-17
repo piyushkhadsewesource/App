@@ -164,7 +164,9 @@ Once it's open on both phones (with the same pairing code):
 - **Intimacy deck (🃏):** answer one closeness question together each day.
 - **Our journal (📖):** at month's end, read the little story the app writes
   about your month together.
-- **More (☰):** everything else, plus **Settings** (names, pairing code, sync).
+- **More (☰):** everything else, plus **Settings**, where you can switch on
+  **daily photo reminders** (3 nudges a day so neither of you forgets) and manage
+  names, pairing code, and sync.
 
 That's it. Check in daily, send hugs freely, and let the letters and memories
 build up. 💛

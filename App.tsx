@@ -1,10 +1,11 @@
 import { DefaultTheme, NavigationContainer, Theme } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import { syncReminders } from './src/services/notifications';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
 
@@ -15,6 +16,11 @@ const navTheme: Theme = {
 
 function Root() {
   const { ready, identity } = useApp();
+
+  // Re-arm daily photo reminders on launch (if the user enabled them).
+  useEffect(() => {
+    syncReminders(identity?.partnerName);
+  }, [identity?.partnerName]);
 
   if (!ready) {
     return (
