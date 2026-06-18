@@ -23,12 +23,12 @@ export type FirebaseConfig = {
 };
 
 export const firebaseConfig: FirebaseConfig = {
-  apiKey: 'YOUR_FIREBASE_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyCB8dbWzupXELEPxW0xLbDdbCdvR6_gAXk',
+  authDomain: 'tether-aee5d.firebaseapp.com',
+  projectId: 'tether-aee5d',
+  storageBucket: 'tether-aee5d.firebasestorage.app',
+  messagingSenderId: '689555512099',
+  appId: '1:689555512099:web:99f9a36c20ffe8bda00a96',
 };
 
 /** True once real Firebase values have been filled in above. */
