@@ -40,14 +40,18 @@ export function formatTime(t: ReminderTime): string {
 }
 
 if (supported) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch (e) {
+    console.warn('[tether] notification handler setup failed', e);
+  }
 }
 
 export async function getReminderConfig(): Promise<ReminderConfig> {

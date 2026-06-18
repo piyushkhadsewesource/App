@@ -38,6 +38,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "owner": "piyushkhadse",
+    "extra": {
+      "eas": {
+        "projectId": "7cd8d851-0a11-4d82-aa4c-72a7cfcc8cfa"
+      }
     }
   }
 }

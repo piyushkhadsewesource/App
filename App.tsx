@@ -7,8 +7,8 @@ import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { DefaultTheme, NavigationContainer, Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import RootNavigator from './src/navigation/RootNavigator';
@@ -33,6 +33,12 @@ function Root() {
     Inter_700Bold,
   });
   const fontsReady = fontsLoaded || !!fontError;
+  // Never block the app on font loading for more than a few seconds.
+  const [fontTimeout, setFontTimeout] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFontTimeout(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Re-arm the smart photo reminders whenever launch happens or the set of
   // days you've already posted changes (so today's reminders stop once shared).
@@ -45,7 +51,7 @@ function Root() {
     refreshReminders(postedKey ? postedKey.split(',') : [], identity?.partnerName);
   }, [postedKey, identity?.partnerName]);
 
-  if (!ready || !fontsReady) {
+  if (!ready || (!fontsReady && !fontTimeout)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.primary} size="large" />
@@ -65,13 +71,41 @@ function Root() {
   );
 }
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error) {
+    console.warn('[tether] render error:', error);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#FBF8F6', padding: 24, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#2E2A2A', marginBottom: 10 }}>Tether hit a snag</Text>
+          <Text selectable style={{ fontSize: 14, color: '#C7416B', lineHeight: 20 }}>
+            {String(this.state.error?.message ?? this.state.error)}
+          </Text>
+          <Text style={{ marginTop: 16, fontSize: 13, color: '#6F6663' }}>
+            Please screenshot this and send it to me.
+          </Text>
+        </View>
+      );
+    }
+    return <>{this.props.children}</>;
+  }
+}
+
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppProvider>
-        <StatusBar style="dark" />
-        <Root />
-      </AppProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AppProvider>
+          <StatusBar style="dark" />
+          <Root />
+        </AppProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
