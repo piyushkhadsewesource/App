@@ -147,7 +147,7 @@ export function Button({
   const fg =
     variant === 'primary' ? colors.white : variant === 'outline' ? color : colors.text;
   const content = (
-    <Text style={[styles.buttonText, { color: fg }]}>
+    <Text numberOfLines={1} style={[styles.buttonText, { color: fg }]}>
       {icon ? `${icon}  ` : ''}
       {label}
     </Text>

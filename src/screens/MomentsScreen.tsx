@@ -111,8 +111,8 @@ export default function MomentsScreen() {
               : 'One photo from your day keeps the gallery growing. Your partner sees it too.'}
           </Muted>
           <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
-            <Button label="📷  Take photo" onPress={() => pick('camera')} style={{ flex: 1 }} />
-            <Button label="🖼️  Choose" variant="soft" onPress={() => pick('library')} style={{ flex: 1 }} />
+            <Button label="📷  Camera" onPress={() => pick('camera')} style={{ flex: 1 }} />
+            <Button label="🖼️  Gallery" variant="soft" onPress={() => pick('library')} style={{ flex: 1 }} />
           </View>
         </Card>
       )}
