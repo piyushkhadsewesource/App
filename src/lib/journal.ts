@@ -4,7 +4,7 @@
 // page about your month. Deterministic today; swap in Claude later for prose.
 // ─────────────────────────────────────────────────────────────────────────
 import { CheckIn, DeckResponse, ISODate, Letter, Memory, Ping } from '../types/models';
-import { formatDayMonth, monthLabel, todayISO } from './date';
+import { formatDayMonth, monthLabel, toISODate, todayISO } from './date';
 import { moodMeta } from './mood';
 
 export interface ReportSection {
@@ -38,7 +38,7 @@ interface Input {
 }
 
 const monthKey = (iso: ISODate) => iso.slice(0, 7);
-const tsMonthKey = (ts: number) => monthKey(new Date(ts).toISOString().slice(0, 10));
+const tsMonthKey = (ts: number) => monthKey(toISODate(new Date(ts)));
 
 function avg(nums: number[]): number {
   return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;

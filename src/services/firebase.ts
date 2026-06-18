@@ -30,9 +30,13 @@ export function getCloud(): Cloud | null {
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = fns.initializeFirestore(
       app,
+      // ignoreUndefinedProperties: optional fields (an SOS with no message, a
+      // hug, a photo with no caption) are written as `undefined`; without this,
+      // Firestore throws and the action silently fails. With it, the field is
+      // simply omitted.
       Platform.OS === 'web'
-        ? { experimentalAutoDetectLongPolling: true }
-        : { experimentalForceLongPolling: true },
+        ? { ignoreUndefinedProperties: true, experimentalAutoDetectLongPolling: true }
+        : { ignoreUndefinedProperties: true, experimentalForceLongPolling: true },
     );
     cloud = { db, fns };
   } catch (e) {
