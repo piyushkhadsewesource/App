@@ -70,6 +70,7 @@ export default function OnboardingScreen() {
       <Muted style={{ textAlign: 'center' }}>
         Everything stays between you two. No feeds, no followers, no one else.
       </Muted>
+      <Text style={styles.build}>Tether v1.1</Text>
     </Screen>
   );
 }
@@ -88,4 +89,5 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 46, fontFamily: font.family.display, color: colors.white, marginTop: spacing.sm, letterSpacing: -1 },
   heroTagline: { fontSize: font.size.md, color: 'rgba(255,255,255,0.92)', fontFamily: font.family.body, marginTop: 6 },
   heroMade: { fontSize: font.size.sm, color: 'rgba(255,255,255,0.9)', fontFamily: font.family.semibold, marginTop: spacing.md, letterSpacing: 0.3 },
+  build: { textAlign: 'center', marginTop: spacing.lg, fontSize: 11, color: colors.textFaint, fontFamily: font.family.body },
 });

@@ -5,16 +5,9 @@
 // Screens never know or care which one is active.
 // ─────────────────────────────────────────────────────────────────────────
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
+import type { FirestoreError, QueryDocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
 import { CollectionName, HasId } from '../types/models';
-import { cloudEnabled, firestore } from './firebase';
+import { Cloud, cloudEnabled, getCloud } from './firebase';
 
 export type Unsubscribe = () => void;
 
@@ -98,34 +91,38 @@ class LocalDb implements Db {
 class FirestoreDb implements Db {
   readonly cloud = true;
 
-  constructor(private spaceId: string) {}
+  constructor(private spaceId: string, private c: Cloud) {}
 
   private col(name: CollectionName) {
-    return collection(firestore!, 'spaces', this.spaceId, name);
+    return this.c.fns.collection(this.c.db, 'spaces', this.spaceId, name);
   }
 
   watch<T extends HasId>(name: CollectionName, cb: (items: T[]) => void): Unsubscribe {
-    return onSnapshot(
+    return this.c.fns.onSnapshot(
       this.col(name),
-      (snap) => cb(snap.docs.map((d) => d.data() as T)),
-      (err) => console.warn('[tether] sync error:', err.message),
+      (snap: QuerySnapshot) => cb(snap.docs.map((d: QueryDocumentSnapshot) => d.data() as T)),
+      (err: FirestoreError) => console.warn('[tether] sync error:', err.message),
     );
   }
 
   async add<T extends HasId>(name: CollectionName, item: T) {
+    const { doc, setDoc } = this.c.fns;
     await setDoc(doc(this.col(name), item.id), item as Record<string, unknown>);
   }
 
   async update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>) {
+    const { doc, updateDoc } = this.c.fns;
     await updateDoc(doc(this.col(name), id), patch as Record<string, unknown>);
   }
 
   async remove(name: CollectionName, id: string) {
+    const { doc, deleteDoc } = this.c.fns;
     await deleteDoc(doc(this.col(name), id));
   }
 }
 
 /** Build the active database for a couple's shared space. */
 export function createDb(spaceId: string): Db {
-  return cloudEnabled && firestore ? new FirestoreDb(spaceId) : new LocalDb(spaceId);
+  const c = cloudEnabled ? getCloud() : null;
+  return c ? new FirestoreDb(spaceId, c) : new LocalDb(spaceId);
 }
