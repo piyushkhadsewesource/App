@@ -59,7 +59,7 @@ export async function registerForPush(): Promise<string | null> {
     const res = await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
     return res.data ?? null;
   } catch {
-    // Push not configured yet (e.g. no FCM credentials) — fail quietly.
+    // Push not configured yet (e.g. no FCM credentials), so fail quietly.
     return null;
   }
 }
@@ -85,6 +85,6 @@ export async function sendSosPush(tokens: string[], fromName: string, message?: 
       body: JSON.stringify(payload),
     });
   } catch {
-    /* network error — the in-app alarm via live sync still fires when open */
+    /* network error; the in-app alarm via live sync still fires when open */
   }
 }
