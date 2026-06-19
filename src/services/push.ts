@@ -25,6 +25,12 @@ export async function ensureSosChannel(): Promise<void> {
       name: 'Emergency alerts',
       importance: Notifications.AndroidImportance.MAX,
       sound: 'alarm.wav',
+      // Play on the ALARM audio stream so it sounds at alarm volume and rings
+      // through silent/vibrate (alarms are designed to always be heard).
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.ALARM,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
       vibrationPattern: [0, 600, 300, 600, 300, 600],
       enableVibrate: true,
       bypassDnd: true,
