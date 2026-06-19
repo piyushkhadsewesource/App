@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "689555512099",
+    "project_id": "tether-aee5d",
+    "storage_bucket": "tether-aee5d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:689555512099:android:f1df181f36191a81a00a96",
+        "android_client_info": {
+          "package_name": "com.tether.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAluJqWGCEPYMRqY4yoMDfBDb9UFb_Qz0c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
