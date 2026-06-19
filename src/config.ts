@@ -13,6 +13,9 @@
 export const APP_NAME = 'Tether';
 export const APP_TAGLINE = 'Close, across any distance.';
 
+/** EAS project id (from app.json) used to fetch the Expo push token. */
+export const EAS_PROJECT_ID = '7cd8d851-0a11-4d82-aa4c-72a7cfcc8cfa';
+
 export type FirebaseConfig = {
   apiKey: string;
   authDomain: string;

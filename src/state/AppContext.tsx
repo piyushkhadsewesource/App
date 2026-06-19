@@ -8,9 +8,11 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 import { now } from '../lib/date';
 import { createDb, Db, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
+import { registerForPush, sendSosPush } from '../services/push';
 import {
   clearIdentity,
   genId,
@@ -22,6 +24,7 @@ import { DEMO_PARTNER_ID, maybeSeed } from '../services/seed';
 import {
   CheckIn,
   DeckResponse,
+  DeviceToken,
   FutureCategory,
   FutureItem,
   Identity,
@@ -121,6 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [alerts, setAlerts] = useState<SosAlert[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [tokens, setTokens] = useState<DeviceToken[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -155,6 +159,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<Moment>('moments', setMoments),
         db.watch<SosAlert>('alerts', setAlerts),
         db.watch<Meeting>('meetings', setMeetings),
+        db.watch<DeviceToken>('tokens', setTokens),
       ];
     })();
     return () => {
@@ -163,6 +168,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity?.spaceId]);
+
+  // Register this phone for emergency push so an SOS reaches the partner even
+  // when the app is closed. Best-effort: no-ops if push isn't set up yet.
+  useEffect(() => {
+    if (!identity || !cloudEnabled) return;
+    let cancelled = false;
+    (async () => {
+      const token = await registerForPush();
+      if (cancelled || !token) return;
+      try {
+        await dbRef.current?.add('tokens', {
+          id: identity.userId,
+          token,
+          platform: Platform.OS,
+          updatedAt: now(),
+        });
+      } catch {
+        /* token storage unavailable; in-app alarm still works */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity?.userId, identity?.spaceId]);
 
   const meId = identity?.userId ?? '';
 
@@ -234,6 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMoments([]);
       setAlerts([]);
       setMeetings([]);
+      setTokens([]);
       setIdentity(null);
     },
 
@@ -363,6 +394,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         message,
         seenAt: null,
       });
+      // Also push to the partner's phone so it alarms even when the app is
+      // closed. Fire-and-forget: never blocks or fails the SOS itself.
+      const partnerTokens = tokens.filter((t) => t.id !== meId).map((t) => t.token);
+      if (partnerTokens.length) {
+        void sendSosPush(partnerTokens, identity?.name ?? 'Your partner', message);
+      }
     },
     async markAlertsSeen() {
       const db = dbRef.current;

@@ -1,44 +1,21 @@
 // ─────────────────────────────────────────────────────────────────────────
 // Intimacy Deck, daily prompts to deepen emotional intimacy, drawn from
 // research-backed closeness exercises. One surfaces each day; both answer.
+//
+// The full prompt catalogue lives in deckPrompts.ts. The daily prompt uses a
+// deterministic per-cycle reshuffle: within each pass through the deck every
+// prompt appears once, and each new pass is shuffled differently, so the daily
+// question never follows a fixed calendar pattern and never repeats its order.
+// Both phones compute the same prompt for the same day (no device randomness).
 // ─────────────────────────────────────────────────────────────────────────
 import { DeckResponse, ISODate } from '../types/models';
 import { isoToDate, todayISO } from './date';
+import { DECK_PROMPTS } from './deckPrompts';
+import type { DeckCategory, Prompt } from './deckPrompts';
 
-export type DeckCategory = 'memory' | 'vulnerability' | 'admiration' | 'future' | 'playful' | 'closeness';
+export type { DeckCategory, Prompt };
 
-export interface Prompt {
-  id: string;
-  text: string;
-  category: DeckCategory;
-}
-
-export const DECK: Prompt[] = [
-  { id: 'p01', category: 'memory', text: 'What’s a memory of me that makes you smile when you’re having a bad day?' },
-  { id: 'p02', category: 'vulnerability', text: 'What’s something you’ve been afraid to tell me?' },
-  { id: 'p03', category: 'admiration', text: 'What’s something you quietly admire about me?' },
-  { id: 'p04', category: 'closeness', text: 'When do you feel closest to me, even across the distance?' },
-  { id: 'p05', category: 'future', text: 'Where do you picture us a year from tonight?' },
-  { id: 'p06', category: 'playful', text: 'If we had 24 hours together and unlimited budget, what’s the plan?' },
-  { id: 'p07', category: 'vulnerability', text: 'What do you need more of from me lately?' },
-  { id: 'p08', category: 'memory', text: 'What was the exact moment you knew you were falling for me?' },
-  { id: 'p09', category: 'admiration', text: 'What’s a strength of mine you wish I saw in myself?' },
-  { id: 'p10', category: 'closeness', text: 'What small ritual of ours means the most to you?' },
-  { id: 'p11', category: 'vulnerability', text: 'What are you most afraid of in this relationship?' },
-  { id: 'p12', category: 'future', text: 'What does “home” look like when we finally close the distance?' },
-  { id: 'p13', category: 'playful', text: 'What’s a tiny habit of mine you find unreasonably cute?' },
-  { id: 'p14', category: 'memory', text: 'Which trip or day together would you relive exactly as it was?' },
-  { id: 'p15', category: 'closeness', text: 'How do you most like to be comforted when we’re apart?' },
-  { id: 'p16', category: 'admiration', text: 'When were you proudest of me recently?' },
-  { id: 'p17', category: 'vulnerability', text: 'Is there anything unsaid between us right now?' },
-  { id: 'p18', category: 'future', text: 'What’s one dream of yours I can help carry?' },
-  { id: 'p19', category: 'playful', text: 'What song instantly makes you think of us?' },
-  { id: 'p20', category: 'closeness', text: 'What makes you feel most chosen by me?' },
-  { id: 'p21', category: 'memory', text: 'What’s the funniest thing that’s ever happened to us?' },
-  { id: 'p22', category: 'vulnerability', text: 'What do you wish I understood about your hardest days?' },
-  { id: 'p23', category: 'future', text: 'What tradition do you want us to start when we’re together?' },
-  { id: 'p24', category: 'admiration', text: 'What’s one way I’ve helped you grow?' },
-];
+export const DECK: Prompt[] = DECK_PROMPTS;
 
 const DECK_BY_ID = DECK.reduce<Record<string, Prompt>>((a, p) => {
   a[p.id] = p;
@@ -49,11 +26,39 @@ export function promptById(id: string): Prompt | undefined {
   return DECK_BY_ID[id];
 }
 
-/** The same prompt for both partners on a given day. */
+// Tiny deterministic PRNG (mulberry32) so a given seed always yields the same
+// shuffle, on both phones, with no external dependency.
+function mulberry32(seed: number): () => number {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The deck index for position `pos` within shuffle `cycle` (Fisher-Yates). */
+function shuffledIndex(pos: number, cycle: number, n: number): number {
+  const order = Array.from({ length: n }, (_, i) => i);
+  const rng = mulberry32((cycle + 1) * 0x9e3779b1);
+  for (let i = n - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = order[i];
+    order[i] = order[j];
+    order[j] = tmp;
+  }
+  return order[pos];
+}
+
+/** The same prompt for both partners on a given day, non-repeating in order. */
 export function promptForDay(dateISO: ISODate = todayISO()): Prompt {
   const d = isoToDate(dateISO);
   const epochDay = Math.floor(d.getTime() / 86_400_000);
-  return DECK[((epochDay % DECK.length) + DECK.length) % DECK.length];
+  const n = DECK.length;
+  const cycle = Math.floor(epochDay / n);
+  const pos = ((epochDay % n) + n) % n;
+  return DECK[shuffledIndex(pos, cycle, n)];
 }
 
 export function hasAnswered(responses: DeckResponse[], authorId: string, promptId: string): boolean {
@@ -75,4 +80,14 @@ export const CATEGORY_LABEL: Record<DeckCategory, string> = {
   future: 'Future',
   playful: 'Playful',
   closeness: 'Closeness',
+  gratitude: 'Gratitude',
+  desire: 'Desire',
+  growth: 'Growth',
+  repair: 'Repair',
+  values: 'Values',
+  hypothetical: 'What if',
+  longing: 'Longing',
+  support: 'Support',
+  everyday: 'Everyday',
+  dreams: 'Dreams',
 };

@@ -1,0 +1,393 @@
+// ─────────────────────────────────────────────────────────────────────────
+// The full Intimacy Deck prompt set.
+//
+// A large, deliberately varied catalogue of closeness questions so the daily
+// prompt does not feel repetitive. Combined with the per-cycle reshuffle in
+// intimacy.ts, the order never repeats and any single question only comes
+// back around very rarely. Ids are stable (answers reference them), so only
+// ever ADD new prompts, never renumber existing ones.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type DeckCategory =
+  | 'memory'
+  | 'vulnerability'
+  | 'admiration'
+  | 'future'
+  | 'playful'
+  | 'closeness'
+  | 'gratitude'
+  | 'desire'
+  | 'growth'
+  | 'repair'
+  | 'values'
+  | 'hypothetical'
+  | 'longing'
+  | 'support'
+  | 'everyday'
+  | 'dreams';
+
+export interface Prompt {
+  id: string;
+  text: string;
+  category: DeckCategory;
+}
+
+export const DECK_PROMPTS: Prompt[] = [
+  // ── Memory ────────────────────────────────────────────────────────────
+  { id: 'p01', category: 'memory', text: 'What’s a memory of me that makes you smile when you’re having a bad day?' },
+  { id: 'p08', category: 'memory', text: 'What was the exact moment you knew you were falling for me?' },
+  { id: 'p14', category: 'memory', text: 'Which trip or day together would you relive exactly as it was?' },
+  { id: 'p21', category: 'memory', text: 'What’s the funniest thing that’s ever happened to us?' },
+  { id: 'd001', category: 'memory', text: 'What’s the first thing you remember noticing about me?' },
+  { id: 'd002', category: 'memory', text: 'What was our first conversation like from your side of it?' },
+  { id: 'd003', category: 'memory', text: 'Which photo of us is your favourite, and what do you feel when you see it?' },
+  { id: 'd004', category: 'memory', text: 'What’s a small, ordinary moment with me that somehow stuck with you?' },
+  { id: 'd005', category: 'memory', text: 'When did you last laugh so hard with me that it hurt?' },
+  { id: 'd006', category: 'memory', text: 'What’s a place that will always remind you of us?' },
+  { id: 'd007', category: 'memory', text: 'What song takes you straight back to an early moment with me?' },
+  { id: 'd008', category: 'memory', text: 'What did our first date (or first call) teach you about me?' },
+  { id: 'd009', category: 'memory', text: 'What’s a time I surprised you in a way you still think about?' },
+  { id: 'd010', category: 'memory', text: 'Which inside joke of ours never gets old for you?' },
+  { id: 'd011', category: 'memory', text: 'What’s the bravest thing you’ve ever seen me do?' },
+  { id: 'd012', category: 'memory', text: 'When did you feel proudest to be with me?' },
+  { id: 'd013', category: 'memory', text: 'What’s a moment you wish you could press pause on and stay in forever?' },
+  { id: 'd014', category: 'memory', text: 'What’s the kindest thing I’ve ever done for you?' },
+  { id: 'd015', category: 'memory', text: 'What’s a tiny detail about an old memory of ours that you still remember vividly?' },
+
+  // ── Admiration ────────────────────────────────────────────────────────
+  { id: 'p03', category: 'admiration', text: 'What’s something you quietly admire about me?' },
+  { id: 'p09', category: 'admiration', text: 'What’s a strength of mine you wish I saw in myself?' },
+  { id: 'p16', category: 'admiration', text: 'When were you proudest of me recently?' },
+  { id: 'p24', category: 'admiration', text: 'What’s one way I’ve helped you grow?' },
+  { id: 'd016', category: 'admiration', text: 'What do you think I’m better at than almost anyone you know?' },
+  { id: 'd017', category: 'admiration', text: 'What’s a way I’ve quietly made your life easier?' },
+  { id: 'd018', category: 'admiration', text: 'What part of my personality do you wish more people got to see?' },
+  { id: 'd019', category: 'admiration', text: 'When do you find me most attractive that has nothing to do with looks?' },
+  { id: 'd020', category: 'admiration', text: 'What’s something I do that you find genuinely impressive?' },
+  { id: 'd021', category: 'admiration', text: 'How would you describe me to someone who’s never met me?' },
+  { id: 'd022', category: 'admiration', text: 'What value of mine do you most respect?' },
+  { id: 'd023', category: 'admiration', text: 'What have I taught you without even trying to?' },
+  { id: 'd024', category: 'admiration', text: 'What’s a hard thing I handled that made you see me differently?' },
+  { id: 'd025', category: 'admiration', text: 'What’s a compliment about me you’ve thought but never said out loud?' },
+  { id: 'd026', category: 'admiration', text: 'In what way am I a better partner than I give myself credit for?' },
+  { id: 'd027', category: 'admiration', text: 'What do you admire about how I treat the people I love?' },
+
+  // ── Vulnerability ─────────────────────────────────────────────────────
+  { id: 'p02', category: 'vulnerability', text: 'What’s something you’ve been afraid to tell me?' },
+  { id: 'p07', category: 'vulnerability', text: 'What do you need more of from me lately?' },
+  { id: 'p11', category: 'vulnerability', text: 'What are you most afraid of in this relationship?' },
+  { id: 'p17', category: 'vulnerability', text: 'Is there anything unsaid between us right now?' },
+  { id: 'p22', category: 'vulnerability', text: 'What do you wish I understood about your hardest days?' },
+  { id: 'd028', category: 'vulnerability', text: 'When do you feel most insecure about us, and what helps?' },
+  { id: 'd029', category: 'vulnerability', text: 'What’s a fear you carry that you’ve never fully explained to me?' },
+  { id: 'd030', category: 'vulnerability', text: 'What part of yourself do you hide from most people but want me to know?' },
+  { id: 'd031', category: 'vulnerability', text: 'When was the last time you felt lonely even though we’re together?' },
+  { id: 'd032', category: 'vulnerability', text: 'What do you worry I’ll think if you say it honestly?' },
+  { id: 'd033', category: 'vulnerability', text: 'What’s something you’re struggling with right now that you’ve kept light?' },
+  { id: 'd034', category: 'vulnerability', text: 'What does “feeling safe with someone” mean to you, exactly?' },
+  { id: 'd035', category: 'vulnerability', text: 'What old wound still affects how you love?' },
+  { id: 'd036', category: 'vulnerability', text: 'When do you feel like you’re too much, and when do you feel like you’re not enough?' },
+  { id: 'd037', category: 'vulnerability', text: 'What’s a need of yours that feels embarrassing to ask for?' },
+  { id: 'd038', category: 'vulnerability', text: 'What would you want me to do if you went quiet and couldn’t explain why?' },
+  { id: 'd039', category: 'vulnerability', text: 'What’s something you’re proud of that you rarely let yourself feel proud of?' },
+  { id: 'd040', category: 'vulnerability', text: 'Where in your life do you feel unseen right now?' },
+
+  // ── Closeness ─────────────────────────────────────────────────────────
+  { id: 'p04', category: 'closeness', text: 'When do you feel closest to me, even across the distance?' },
+  { id: 'p10', category: 'closeness', text: 'What small ritual of ours means the most to you?' },
+  { id: 'p15', category: 'closeness', text: 'How do you most like to be comforted when we’re apart?' },
+  { id: 'p20', category: 'closeness', text: 'What makes you feel most chosen by me?' },
+  { id: 'd041', category: 'closeness', text: 'What makes you feel truly understood by me?' },
+  { id: 'd042', category: 'closeness', text: 'What’s one thing I could do this week that would make you feel loved?' },
+  { id: 'd043', category: 'closeness', text: 'When do you feel the distance least?' },
+  { id: 'd044', category: 'closeness', text: 'What does a perfect ordinary evening together look like to you?' },
+  { id: 'd045', category: 'closeness', text: 'How do you like to be held when you’re sad?' },
+  { id: 'd046', category: 'closeness', text: 'What’s a way we communicate that works really well for us?' },
+  { id: 'd047', category: 'closeness', text: 'What makes you feel like we’re a team?' },
+  { id: 'd048', category: 'closeness', text: 'When did you last feel a wave of love for me out of nowhere?' },
+  { id: 'd049', category: 'closeness', text: 'What’s a word or phrase that instantly makes you feel close to me?' },
+  { id: 'd050', category: 'closeness', text: 'How do you most naturally show love, and how do you most like to receive it?' },
+  { id: 'd051', category: 'closeness', text: 'What’s something only the two of us would understand?' },
+  { id: 'd052', category: 'closeness', text: 'When do you feel the most “us”?' },
+
+  // ── Future ────────────────────────────────────────────────────────────
+  { id: 'p05', category: 'future', text: 'Where do you picture us a year from tonight?' },
+  { id: 'p12', category: 'future', text: 'What does “home” look like when we finally close the distance?' },
+  { id: 'p18', category: 'future', text: 'What’s one dream of yours I can help carry?' },
+  { id: 'p23', category: 'future', text: 'What tradition do you want us to start when we’re together?' },
+  { id: 'd053', category: 'future', text: 'What’s the first thing you want to do the next time we’re in the same room?' },
+  { id: 'd054', category: 'future', text: 'What does an ordinary Sunday look like once we live in the same place?' },
+  { id: 'd055', category: 'future', text: 'What’s a milestone you’re quietly looking forward to with me?' },
+  { id: 'd056', category: 'future', text: 'Where in the world do you most want us to wake up together?' },
+  { id: 'd057', category: 'future', text: 'What kind of old couple do you hope we become?' },
+  { id: 'd058', category: 'future', text: 'What do you want our home to feel like to anyone who walks in?' },
+  { id: 'd059', category: 'future', text: 'What’s something you want us to learn or try together someday?' },
+  { id: 'd060', category: 'future', text: 'What does “building a life together” mean to you concretely?' },
+  { id: 'd061', category: 'future', text: 'What worry about our future would you feel lighter sharing with me?' },
+  { id: 'd062', category: 'future', text: 'What’s one promise you’d like us to make to each other?' },
+  { id: 'd063', category: 'future', text: 'How do you imagine us spending our first anniversary in the same city?' },
+  { id: 'd064', category: 'future', text: 'What do you hope never changes about us, no matter how far we go?' },
+
+  // ── Playful ───────────────────────────────────────────────────────────
+  { id: 'p06', category: 'playful', text: 'If we had 24 hours together and unlimited budget, what’s the plan?' },
+  { id: 'p13', category: 'playful', text: 'What’s a tiny habit of mine you find unreasonably cute?' },
+  { id: 'p19', category: 'playful', text: 'What song instantly makes you think of us?' },
+  { id: 'd065', category: 'playful', text: 'If I were a snack, which one would I be and why?' },
+  { id: 'd066', category: 'playful', text: 'What ridiculous thing would you 100% do with me and no one else?' },
+  { id: 'd067', category: 'playful', text: 'If we got our own reality show, what would it be called?' },
+  { id: 'd068', category: 'playful', text: 'What’s the most “us” way to waste a perfectly good afternoon?' },
+  { id: 'd069', category: 'playful', text: 'If you could give me one totally useless superpower, what would it be?' },
+  { id: 'd070', category: 'playful', text: 'What nickname have you secretly wanted to call me?' },
+  { id: 'd071', category: 'playful', text: 'If our love were a movie genre, what would it be?' },
+  { id: 'd072', category: 'playful', text: 'What’s a tiny competition we should settle once and for all?' },
+  { id: 'd073', category: 'playful', text: 'If we opened a tiny shop or café together, what would we sell?' },
+  { id: 'd074', category: 'playful', text: 'What emoji describes our relationship best, and why?' },
+  { id: 'd075', category: 'playful', text: 'What’s the weirdest thing you find adorable about me?' },
+  { id: 'd076', category: 'playful', text: 'If you could teleport me anywhere right now just to annoy me lovingly, where?' },
+  { id: 'd077', category: 'playful', text: 'What would our team name be if we entered a game show together?' },
+  { id: 'd078', category: 'playful', text: 'What’s a hill you’ll happily die on that I think is hilarious?' },
+
+  // ── Gratitude ─────────────────────────────────────────────────────────
+  { id: 'd079', category: 'gratitude', text: 'What’s something I did recently that you never properly thanked me for?' },
+  { id: 'd080', category: 'gratitude', text: 'What about your life are you most grateful for today?' },
+  { id: 'd081', category: 'gratitude', text: 'What’s a small thing I do that you’d miss the most if it stopped?' },
+  { id: 'd082', category: 'gratitude', text: 'Who, besides me, are you thankful for right now and why?' },
+  { id: 'd083', category: 'gratitude', text: 'What part of our relationship do you not take for granted?' },
+  { id: 'd084', category: 'gratitude', text: 'What did I do early on that you’re still grateful for?' },
+  { id: 'd085', category: 'gratitude', text: 'What’s one comfort in your daily life you’re thankful exists?' },
+  { id: 'd086', category: 'gratitude', text: 'When did I show up for you exactly when you needed it?' },
+  { id: 'd087', category: 'gratitude', text: 'What’s something about your body or health you’re grateful for today?' },
+  { id: 'd088', category: 'gratitude', text: 'What ordinary thing about being loved by me are you thankful for?' },
+  { id: 'd089', category: 'gratitude', text: 'What’s a hard time you’re now grateful you went through?' },
+  { id: 'd090', category: 'gratitude', text: 'What did someone do for you this week that touched you?' },
+
+  // ── Desire / Romance ──────────────────────────────────────────────────
+  { id: 'd091', category: 'desire', text: 'What do you miss most about being physically close to me?' },
+  { id: 'd092', category: 'desire', text: 'What’s the first thing you’d want to do when you see me again?' },
+  { id: 'd093', category: 'desire', text: 'What’s something I do that you find irresistibly attractive?' },
+  { id: 'd094', category: 'desire', text: 'What does feeling wanted by me feel like to you?' },
+  { id: 'd095', category: 'desire', text: 'What’s your favourite way for me to flirt with you?' },
+  { id: 'd096', category: 'desire', text: 'What about the way I look at you do you love?' },
+  { id: 'd097', category: 'desire', text: 'What small touch from me do you crave when we’re apart?' },
+  { id: 'd098', category: 'desire', text: 'What’s the most romantic thing I could say to you right now?' },
+  { id: 'd099', category: 'desire', text: 'When do you feel most desired by me?' },
+  { id: 'd100', category: 'desire', text: 'What would a perfect slow morning in bed together look like?' },
+  { id: 'd101', category: 'desire', text: 'What’s something you’ve wanted to tell me but felt shy to?' },
+  { id: 'd102', category: 'desire', text: 'What does intimacy mean to you beyond the physical?' },
+  { id: 'd103', category: 'desire', text: 'What outfit or look of mine lives in your head rent-free?' },
+  { id: 'd104', category: 'desire', text: 'How do you like to be pursued and made to feel chosen?' },
+
+  // ── Growth ────────────────────────────────────────────────────────────
+  { id: 'd105', category: 'growth', text: 'How have you changed since we got together?' },
+  { id: 'd106', category: 'growth', text: 'What’s something you’re working on becoming better at?' },
+  { id: 'd107', category: 'growth', text: 'How have I changed in a way you love?' },
+  { id: 'd108', category: 'growth', text: 'What does the best version of yourself look like, and what gets in the way?' },
+  { id: 'd109', category: 'growth', text: 'What’s a fear you’ve outgrown, and how?' },
+  { id: 'd110', category: 'growth', text: 'What habit do you wish we built together?' },
+  { id: 'd111', category: 'growth', text: 'What have you learned about love from us specifically?' },
+  { id: 'd112', category: 'growth', text: 'What’s something you used to believe about relationships that you no longer do?' },
+  { id: 'd113', category: 'growth', text: 'Where do you most want to grow this year?' },
+  { id: 'd114', category: 'growth', text: 'How can I support the person you’re trying to become?' },
+  { id: 'd115', category: 'growth', text: 'What’s a strength you’ve discovered in yourself through the distance?' },
+  { id: 'd116', category: 'growth', text: 'What’s a mistake that taught you something you’re glad to know?' },
+
+  // ── Repair ────────────────────────────────────────────────────────────
+  { id: 'd117', category: 'repair', text: 'What helps you feel better after we argue?' },
+  { id: 'd118', category: 'repair', text: 'What do you need from me in the first few minutes of a disagreement?' },
+  { id: 'd119', category: 'repair', text: 'Is there anything you’re still holding onto that we should clear?' },
+  { id: 'd120', category: 'repair', text: 'How do you prefer to make up, space first or closeness first?' },
+  { id: 'd121', category: 'repair', text: 'What’s a way I sometimes hurt you without meaning to?' },
+  { id: 'd122', category: 'repair', text: 'What does a real apology look like to you?' },
+  { id: 'd123', category: 'repair', text: 'When you shut down, what’s actually going on underneath?' },
+  { id: 'd124', category: 'repair', text: 'What’s a recurring tension between us we could name kindly?' },
+  { id: 'd125', category: 'repair', text: 'How can we disagree without it feeling like a threat to us?' },
+  { id: 'd126', category: 'repair', text: 'What do you wish I understood about how you handle conflict?' },
+  { id: 'd127', category: 'repair', text: 'What’s something you’d like to say sorry for, big or small?' },
+  { id: 'd128', category: 'repair', text: 'What reassurance do you need most when things feel rocky?' },
+
+  // ── Values ────────────────────────────────────────────────────────────
+  { id: 'd129', category: 'values', text: 'What does a good life look like to you?' },
+  { id: 'd130', category: 'values', text: 'What principle do you refuse to compromise on?' },
+  { id: 'd131', category: 'values', text: 'What does loyalty mean to you in a relationship?' },
+  { id: 'd132', category: 'values', text: 'What role do you want family to play in our life?' },
+  { id: 'd133', category: 'values', text: 'What does success mean to you, honestly?' },
+  { id: 'd134', category: 'values', text: 'How do you want us to handle money and big decisions together?' },
+  { id: 'd135', category: 'values', text: 'What kind of people do you want us to be to our friends?' },
+  { id: 'd136', category: 'values', text: 'What belief shapes the way you move through the world?' },
+  { id: 'd137', category: 'values', text: 'What does forgiveness mean to you?' },
+  { id: 'd138', category: 'values', text: 'What would you never want us to become?' },
+  { id: 'd139', category: 'values', text: 'What does “home” mean to you beyond a place?' },
+  { id: 'd140', category: 'values', text: 'What tradition from your upbringing do you want to keep, and what would you drop?' },
+
+  // ── Hypothetical / What if ────────────────────────────────────────────
+  { id: 'd141', category: 'hypothetical', text: 'If we could live anywhere in the world together, no constraints, where?' },
+  { id: 'd142', category: 'hypothetical', text: 'If you could relive one day of your whole life, which would it be?' },
+  { id: 'd143', category: 'hypothetical', text: 'If we won a year off together, how would we spend it?' },
+  { id: 'd144', category: 'hypothetical', text: 'If you could know one thing about our future, what would you ask?' },
+  { id: 'd145', category: 'hypothetical', text: 'If we swapped lives for a day, what would surprise you about mine?' },
+  { id: 'd146', category: 'hypothetical', text: 'If you could send a message to yourself the day we met, what would it say?' },
+  { id: 'd147', category: 'hypothetical', text: 'If we could instantly master one skill together, what would it be?' },
+  { id: 'd148', category: 'hypothetical', text: 'If our future kids or pets could describe us, what would they say?' },
+  { id: 'd149', category: 'hypothetical', text: 'If you had to plan our perfect last day on earth, what’s on it?' },
+  { id: 'd150', category: 'hypothetical', text: 'If money truly didn’t matter, what work would you do?' },
+  { id: 'd151', category: 'hypothetical', text: 'If we could freeze one season of our life and stay there, which one?' },
+  { id: 'd152', category: 'hypothetical', text: 'If I could grant you one wish tonight, what would you actually ask for?' },
+
+  // ── Longing / Distance ────────────────────────────────────────────────
+  { id: 'd153', category: 'longing', text: 'What part of your day do you most wish I was there for?' },
+  { id: 'd154', category: 'longing', text: 'What do you miss most about my everyday presence?' },
+  { id: 'd155', category: 'longing', text: 'What helps you most on the nights the distance feels heavy?' },
+  { id: 'd156', category: 'longing', text: 'What’s a tiny thing you saw today that made you wish I was beside you?' },
+  { id: 'd157', category: 'longing', text: 'What do you do to feel close to me when you miss me?' },
+  { id: 'd158', category: 'longing', text: 'What’s the hardest part of loving me from far away?' },
+  { id: 'd159', category: 'longing', text: 'What keeps you going on the days the countdown feels too long?' },
+  { id: 'd160', category: 'longing', text: 'What do you want me to know on a day you’re missing me but staying strong?' },
+  { id: 'd161', category: 'longing', text: 'What ordinary couple thing do you most look forward to doing with me?' },
+  { id: 'd162', category: 'longing', text: 'How do you want me to reach out when you’ve gone quiet from missing me?' },
+  { id: 'd163', category: 'longing', text: 'What’s something about the distance that has actually made us stronger?' },
+  { id: 'd164', category: 'longing', text: 'What do you imagine when you fall asleep missing me?' },
+
+  // ── Support / Care ────────────────────────────────────────────────────
+  { id: 'd165', category: 'support', text: 'When you’re overwhelmed, do you want help, a distraction, or just company?' },
+  { id: 'd166', category: 'support', text: 'What’s the most useful thing I can do when you’re stressed?' },
+  { id: 'd167', category: 'support', text: 'How do you like to be cheered up that actually works?' },
+  { id: 'd168', category: 'support', text: 'What words land best when you’re anxious?' },
+  { id: 'd169', category: 'support', text: 'What’s something I do that unintentionally adds to your stress?' },
+  { id: 'd170', category: 'support', text: 'When you’re sick or low, what makes you feel cared for?' },
+  { id: 'd171', category: 'support', text: 'How can I tell when you need support but won’t ask for it?' },
+  { id: 'd172', category: 'support', text: 'What’s a worry I could help you carry this week?' },
+  { id: 'd173', category: 'support', text: 'What does “being there for you” look like in practice for you?' },
+  { id: 'd174', category: 'support', text: 'When you’re celebrating, how do you most want me to celebrate with you?' },
+  { id: 'd175', category: 'support', text: 'What kind of encouragement do you need but rarely get?' },
+  { id: 'd176', category: 'support', text: 'What’s one promise about how we’ll handle each other’s hard days?' },
+
+  // ── Everyday ──────────────────────────────────────────────────────────
+  { id: 'd177', category: 'everyday', text: 'What was the best small moment of your day today?' },
+  { id: 'd178', category: 'everyday', text: 'What’s something on your mind right now that you haven’t said?' },
+  { id: 'd179', category: 'everyday', text: 'What did you eat today, and did it remind you of anything?' },
+  { id: 'd180', category: 'everyday', text: 'What’s a tiny win you had recently that deserves a cheer?' },
+  { id: 'd181', category: 'everyday', text: 'What’s draining you lately, and what’s filling you up?' },
+  { id: 'd182', category: 'everyday', text: 'What did you see today that you wanted to show me?' },
+  { id: 'd183', category: 'everyday', text: 'What’s a part of your daily routine I’d find surprising?' },
+  { id: 'd184', category: 'everyday', text: 'What’s something you’re looking forward to this week?' },
+  { id: 'd185', category: 'everyday', text: 'If I were there right now, what would we be doing this minute?' },
+  { id: 'd186', category: 'everyday', text: 'What’s one thing you didn’t get to say out loud today?' },
+  { id: 'd187', category: 'everyday', text: 'What’s your honest energy level today, and why?' },
+  { id: 'd188', category: 'everyday', text: 'What made you think of me today?' },
+
+  // ── Dreams / Bucket list ──────────────────────────────────────────────
+  { id: 'd189', category: 'dreams', text: 'What’s a dream you’ve never said out loud because it felt too big?' },
+  { id: 'd190', category: 'dreams', text: 'What’s on your personal bucket list that I don’t know about?' },
+  { id: 'd191', category: 'dreams', text: 'What adventure do you most want us to take together?' },
+  { id: 'd192', category: 'dreams', text: 'What would you do with a completely free, fearless year?' },
+  { id: 'd193', category: 'dreams', text: 'What’s a creative thing you secretly want to try?' },
+  { id: 'd194', category: 'dreams', text: 'What place have you always wanted to see, and why that one?' },
+  { id: 'd195', category: 'dreams', text: 'What’s a goal of yours I can be your biggest cheerleader for?' },
+  { id: 'd196', category: 'dreams', text: 'What kind of legacy or impact do you quietly hope to leave?' },
+  { id: 'd197', category: 'dreams', text: 'What’s something you want us to save up for and do together?' },
+  { id: 'd198', category: 'dreams', text: 'If you could build your dream space, what would be in it?' },
+  { id: 'd199', category: 'dreams', text: 'What dream of mine do you most want to see come true?' },
+  { id: 'd200', category: 'dreams', text: 'What would “we made it” look like, ten years from now?' },
+
+  // ── More Memory ───────────────────────────────────────────────────────
+  { id: 'd201', category: 'memory', text: 'What’s a moment you realised this was different from anything before?' },
+  { id: 'd202', category: 'memory', text: 'What’s the most thoughtful thing I’ve ever given you?' },
+  { id: 'd203', category: 'memory', text: 'What’s a small thing I said once that has stayed with you?' },
+  { id: 'd204', category: 'memory', text: 'When did you last feel a rush of “I’m so lucky” about us?' },
+  { id: 'd205', category: 'memory', text: 'What’s our most underrated memory that deserves more credit?' },
+
+  // ── More Admiration ───────────────────────────────────────────────────
+  { id: 'd206', category: 'admiration', text: 'What’s something hard you watched me do that I made look easy?' },
+  { id: 'd207', category: 'admiration', text: 'What about my mind do you find attractive?' },
+  { id: 'd208', category: 'admiration', text: 'What do you trust me with that you wouldn’t trust most people?' },
+  { id: 'd209', category: 'admiration', text: 'What’s a quiet act of mine that meant more than I realised?' },
+  { id: 'd210', category: 'admiration', text: 'What do I do that makes you feel proud to call me yours?' },
+
+  // ── More Vulnerability ────────────────────────────────────────────────
+  { id: 'd211', category: 'vulnerability', text: 'What’s a thought that keeps you up at night lately?' },
+  { id: 'd212', category: 'vulnerability', text: 'What do you wish you could ask me for without feeling guilty?' },
+  { id: 'd213', category: 'vulnerability', text: 'What’s a part of your past you’d like me to understand better?' },
+  { id: 'd214', category: 'vulnerability', text: 'When do you feel most fragile, and what do you do with it?' },
+  { id: 'd215', category: 'vulnerability', text: 'What truth about how you’re really doing have you been softening for me?' },
+
+  // ── More Closeness ────────────────────────────────────────────────────
+  { id: 'd216', category: 'closeness', text: 'What does my voice do for you on a hard day?' },
+  { id: 'd217', category: 'closeness', text: 'What’s a way I could start or end your day that you’d love?' },
+  { id: 'd218', category: 'closeness', text: 'What makes you feel prioritised by me?' },
+  { id: 'd219', category: 'closeness', text: 'What’s one ritual we should protect no matter how busy life gets?' },
+  { id: 'd220', category: 'closeness', text: 'When do you feel the most emotionally safe with me?' },
+
+  // ── More Future ───────────────────────────────────────────────────────
+  { id: 'd221', category: 'future', text: 'What’s the first trip we should take once we close the distance?' },
+  { id: 'd222', category: 'future', text: 'What do you want our mornings to look like one day?' },
+  { id: 'd223', category: 'future', text: 'What’s a fear about the future I could help make smaller?' },
+  { id: 'd224', category: 'future', text: 'What kind of partner do you want to be five years from now?' },
+  { id: 'd225', category: 'future', text: 'What’s one thing you want us to always make time for, forever?' },
+
+  // ── More Playful ──────────────────────────────────────────────────────
+  { id: 'd226', category: 'playful', text: 'What totally over-the-top gesture would secretly thrill you?' },
+  { id: 'd227', category: 'playful', text: 'What’s the pettiest thing you’d want us to win at together?' },
+  { id: 'd228', category: 'playful', text: 'What would you name a star if I bought you one?' },
+  { id: 'd229', category: 'playful', text: 'What’s a “we have to do this someday” idea that makes you grin?' },
+  { id: 'd230', category: 'playful', text: 'If we had a couple’s catchphrase, what should it be?' },
+
+  // ── More Gratitude ────────────────────────────────────────────────────
+  { id: 'd231', category: 'gratitude', text: 'What’s one thing about today you’d call a small gift?' },
+  { id: 'd232', category: 'gratitude', text: 'What do you appreciate about the timing of us meeting?' },
+  { id: 'd233', category: 'gratitude', text: 'What strength of mine are you thankful you can lean on?' },
+  { id: 'd234', category: 'gratitude', text: 'What’s a thing I say often that you’re grateful to hear?' },
+
+  // ── More Desire ───────────────────────────────────────────────────────
+  { id: 'd235', category: 'desire', text: 'What’s a daydream about us you’ve had recently?' },
+  { id: 'd236', category: 'desire', text: 'What makes you feel butterflies about me even now?' },
+  { id: 'd237', category: 'desire', text: 'What’s the most attractive thing I’ve done this month?' },
+  { id: 'd238', category: 'desire', text: 'How do you want to be kissed hello after time apart?' },
+
+  // ── More Growth ───────────────────────────────────────────────────────
+  { id: 'd239', category: 'growth', text: 'What has loving me asked you to grow into?' },
+  { id: 'd240', category: 'growth', text: 'What’s a pattern you’re proud to be breaking?' },
+  { id: 'd241', category: 'growth', text: 'What do you want to be braver about?' },
+  { id: 'd242', category: 'growth', text: 'What would “thriving, not just surviving” look like for you right now?' },
+
+  // ── More Repair ───────────────────────────────────────────────────────
+  { id: 'd243', category: 'repair', text: 'What helps you trust that we’re okay after a rough patch?' },
+  { id: 'd244', category: 'repair', text: 'What’s a small resentment we should air before it grows?' },
+  { id: 'd245', category: 'repair', text: 'How do you want me to bring up something that’s bothering me?' },
+  { id: 'd246', category: 'repair', text: 'What’s a way we’ve gotten better at handling conflict?' },
+
+  // ── More Values ───────────────────────────────────────────────────────
+  { id: 'd247', category: 'values', text: 'What does respect look like to you on an ordinary day?' },
+  { id: 'd248', category: 'values', text: 'What boundary do you want me to always honour?' },
+  { id: 'd249', category: 'values', text: 'What does commitment mean to you beyond just staying?' },
+  { id: 'd250', category: 'values', text: 'What kind of love did you grow up seeing, and what do you want instead?' },
+
+  // ── More Hypothetical ─────────────────────────────────────────────────
+  { id: 'd251', category: 'hypothetical', text: 'If we wrote a book about us, what would the title be?' },
+  { id: 'd252', category: 'hypothetical', text: 'If you could give our relationship one upgrade instantly, what?' },
+  { id: 'd253', category: 'hypothetical', text: 'If we had a free plane ticket leaving tonight, where do we go?' },
+  { id: 'd254', category: 'hypothetical', text: 'If I could feel exactly what you feel for one minute, what would surprise me?' },
+
+  // ── More Longing ──────────────────────────────────────────────────────
+  { id: 'd255', category: 'longing', text: 'What’s the first hug going to feel like when we’re finally together?' },
+  { id: 'd256', category: 'longing', text: 'What ordinary moment do you replay to feel close to me?' },
+  { id: 'd257', category: 'longing', text: 'What do you wish I could see about your world right now?' },
+  { id: 'd258', category: 'longing', text: 'What song have you been listening to that makes you miss me?' },
+
+  // ── More Support ──────────────────────────────────────────────────────
+  { id: 'd259', category: 'support', text: 'What’s the kindest thing I could text you on a bad day?' },
+  { id: 'd260', category: 'support', text: 'How do you want to be reminded that you’re not alone in this?' },
+  { id: 'd261', category: 'support', text: 'What’s a small ritual that would help you feel supported from afar?' },
+  { id: 'd262', category: 'support', text: 'What do you need to hear more often from me?' },
+
+  // ── More Everyday ─────────────────────────────────────────────────────
+  { id: 'd263', category: 'everyday', text: 'What’s something tiny that made you smile today?' },
+  { id: 'd264', category: 'everyday', text: 'What’s the last thing that made you think “I have to tell them this”?' },
+  { id: 'd265', category: 'everyday', text: 'What’s been your soundtrack this week?' },
+  { id: 'd266', category: 'everyday', text: 'What’s one thing you’re proud you did today, however small?' },
+
+  // ── More Dreams ───────────────────────────────────────────────────────
+  { id: 'd267', category: 'dreams', text: 'What’s a “someday when we’re together” plan you think about most?' },
+  { id: 'd268', category: 'dreams', text: 'What’s a skill you’d love for us to learn side by side?' },
+  { id: 'd269', category: 'dreams', text: 'What would your ideal shared home look and feel like?' },
+  { id: 'd270', category: 'dreams', text: 'What’s a wild dream you’d chase if you knew I’d catch you?' },
+];

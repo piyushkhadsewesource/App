@@ -135,6 +135,17 @@ export interface Meeting {
   createdAt: Millis;
 }
 
+/**
+ * A phone's Expo push token, stored in the shared space so the partner's phone
+ * can send an emergency push that wakes the device even when the app is closed.
+ */
+export interface DeviceToken {
+  id: string; // the owner's userId
+  token: string; // ExponentPushToken[...]
+  platform: string;
+  updatedAt: Millis;
+}
+
 /** Per-device identity + the shared pairing code that links two phones. */
 export interface Identity {
   userId: string;
@@ -157,6 +168,7 @@ export const COLLECTIONS = [
   'moments',
   'alerts',
   'meetings',
+  'tokens',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
