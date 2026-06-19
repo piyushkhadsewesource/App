@@ -32,6 +32,10 @@ const BY_KEY = MOODS.reduce<Record<Mood, MoodMeta>>((acc, m) => {
   return acc;
 }, {} as Record<Mood, MoodMeta>);
 
+// A safe fallback so an unexpected/legacy mood value synced from the partner
+// can never crash a screen that reads .valence / .emoji / .label.
+const FALLBACK_MOOD: MoodMeta = BY_KEY.meh ?? MOODS[0];
+
 export function moodMeta(m: Mood): MoodMeta {
-  return BY_KEY[m];
+  return BY_KEY[m] ?? FALLBACK_MOOD;
 }

@@ -42,7 +42,9 @@ export default function DeckScreen({ navigation }: any) {
 
   function drawAnother() {
     const pool = DECK.filter((p) => p.id !== prompt.id);
+    if (pool.length === 0) return;
     const next = pool[Math.floor(Math.random() * pool.length)];
+    if (!next) return;
     setPrompt(next);
     setAnswer('');
   }

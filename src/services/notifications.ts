@@ -88,13 +88,58 @@ function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function reminderBody(who: string): string {
-  const options = [
+function reminderBody(who: string, seed: number): string {
+  const lines = [
     `Snap today's moment and share it with ${who}.`,
     `${who} would love a glimpse of your day. Share a photo.`,
     `One photo keeps your shared gallery and your streak alive.`,
+    `What does your world look like right now? Show ${who}.`,
+    `A picture says what texts can't. Send ${who} a moment.`,
+    `Capture something small and ordinary for ${who} today.`,
+    `${who} is out there missing you. Send a photo.`,
+    `Your day through your eyes, ${who} would treasure it.`,
+    `Even a photo of your coffee counts. Share it.`,
+    `Give ${who} a little window into today.`,
+    `One moment, one tap, and ${who} will smile.`,
+    `What made you pause today? Photograph it for ${who}.`,
+    `Keep the distance small. Share a photo with ${who}.`,
+    `${who} wants the boring beautiful details. Send one.`,
+    `A year from now you'll be glad you captured today.`,
+    `Show ${who} the sky where you are right now.`,
+    `Tiny daily photo, big daily closeness. Share it.`,
+    `Let ${who} see what you're up to.`,
+    `Don't let today go undocumented. Snap it for ${who}.`,
+    `Your face, your street, your lunch, ${who} wants all of it.`,
+    `Send ${who} proof that you thought of them today.`,
+    `A photo is a little "wish you were here." Send it.`,
+    `Make ${who}'s day with one quick picture.`,
+    `What's in front of you right now? ${who} would love to know.`,
+    `Keep your streak glowing, share today's moment.`,
+    `${who} checks the gallery for you. Give them something.`,
+    `Capture the light wherever you are, for ${who}.`,
+    `One snapshot of your today, for the two of you.`,
+    `The smallest moment shared beats the best one kept.`,
+    `Photograph the thing that made you think of ${who}.`,
+    `${who} is only a photo away from your day.`,
+    `Add today to your shared story with one picture.`,
+    `Show ${who} something they'd never see otherwise.`,
+    `A quiet moment? Capture it and send it to ${who}.`,
+    `Your day deserves a place in the gallery. Share it.`,
+    `${who} would love to see your smile right now.`,
+    `Bring ${who} along for a second, snap a photo.`,
+    `Distance shrinks one shared photo at a time.`,
+    `What's the view from where you're sitting? Send it.`,
+    `Give ${who} a reason to grin at their phone today.`,
+    `Today only happens once. Save a piece for ${who}.`,
+    `A photo now keeps ${who} close tonight.`,
+    `Let your day speak to ${who} in pictures.`,
+    `Even the ordinary is special when ${who} sees it.`,
+    `Snap it before the moment passes, ${who} is waiting.`,
+    `Your little corner of the world, shared with ${who}.`,
+    `Make today findable later, capture it for ${who}.`,
+    `One tap to feel close to ${who}. Share a photo.`,
   ];
-  return options[Math.floor(Math.random() * options.length)];
+  return lines[((seed % lines.length) + lines.length) % lines.length];
 }
 
 async function scheduleSmart(cfg: ReminderConfig, postedDates: string[], partnerName?: string) {
@@ -109,11 +154,14 @@ async function scheduleSmart(cfg: ReminderConfig, postedDates: string[], partner
   for (let d = 0; d < WINDOW_DAYS; d += 1) {
     const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
     if (posted.has(isoOf(day))) continue; // smart skip: already shared that day
-    for (const t of cfg.times) {
+    const epochDay = Math.floor(day.getTime() / 86_400_000);
+    for (let si = 0; si < cfg.times.length; si += 1) {
+      const t = cfg.times[si];
       const when = new Date(day.getFullYear(), day.getMonth(), day.getDate(), t.hour, t.minute, 0, 0);
       if (when.getTime() <= Date.now() + 1000) continue; // skip times already passed
       await Notifications.scheduleNotificationAsync({
-        content: { title: '📸 Tether', body: reminderBody(who) },
+        // Deterministic per day+slot so each reminder differs and they rotate.
+        content: { title: '📸 Tether', body: reminderBody(who, epochDay * 10 + si) },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: when,

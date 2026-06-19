@@ -8,8 +8,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 export type PhotoSource = 'camera' | 'library';
 
-const MAX_WIDTH = 1000;
-const QUALITY = 0.5;
+const MAX_WIDTH = 900;
+const QUALITY = 0.45;
 
 async function ensurePermission(source: PhotoSource): Promise<boolean> {
   if (source === 'camera') {

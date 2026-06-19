@@ -14,9 +14,11 @@ export type Unsubscribe = () => void;
 export interface Db {
   readonly cloud: boolean;
   watch<T extends HasId>(name: CollectionName, cb: (items: T[]) => void): Unsubscribe;
-  add<T extends HasId>(name: CollectionName, item: T): Promise<void>;
-  update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>): Promise<void>;
-  remove(name: CollectionName, id: string): Promise<void>;
+  // Writes resolve to true on success, false on failure. They NEVER reject, so a
+  // button tap can never produce an unhandled promise rejection / red-box crash.
+  add<T extends HasId>(name: CollectionName, item: T): Promise<boolean>;
+  update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>): Promise<boolean>;
+  remove(name: CollectionName, id: string): Promise<boolean>;
 }
 
 // ── Local (on-device) backend ────────────────────────────────────────────
@@ -63,27 +65,45 @@ class LocalDb implements Db {
     };
   }
 
-  async add<T extends HasId>(name: CollectionName, item: T) {
-    await this.ensure(name);
-    const items = this.cache.get(name)!.filter((i) => i.id !== item.id);
-    this.cache.set(name, [...items, item]);
-    await this.persist(name);
-    this.emit(name);
+  async add<T extends HasId>(name: CollectionName, item: T): Promise<boolean> {
+    try {
+      await this.ensure(name);
+      const items = this.cache.get(name)!.filter((i) => i.id !== item.id);
+      this.cache.set(name, [...items, item]);
+      await this.persist(name);
+      this.emit(name);
+      return true;
+    } catch (e) {
+      console.warn('[tether] local add failed', e);
+      return false;
+    }
   }
 
-  async update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>) {
-    await this.ensure(name);
-    const items = this.cache.get(name)!.map((i) => (i.id === id ? { ...i, ...patch } : i));
-    this.cache.set(name, items);
-    await this.persist(name);
-    this.emit(name);
+  async update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>): Promise<boolean> {
+    try {
+      await this.ensure(name);
+      const items = this.cache.get(name)!.map((i) => (i.id === id ? { ...i, ...patch } : i));
+      this.cache.set(name, items);
+      await this.persist(name);
+      this.emit(name);
+      return true;
+    } catch (e) {
+      console.warn('[tether] local update failed', e);
+      return false;
+    }
   }
 
-  async remove(name: CollectionName, id: string) {
-    await this.ensure(name);
-    this.cache.set(name, this.cache.get(name)!.filter((i) => i.id !== id));
-    await this.persist(name);
-    this.emit(name);
+  async remove(name: CollectionName, id: string): Promise<boolean> {
+    try {
+      await this.ensure(name);
+      this.cache.set(name, this.cache.get(name)!.filter((i) => i.id !== id));
+      await this.persist(name);
+      this.emit(name);
+      return true;
+    } catch (e) {
+      console.warn('[tether] local remove failed', e);
+      return false;
+    }
   }
 }
 
@@ -105,19 +125,37 @@ class FirestoreDb implements Db {
     );
   }
 
-  async add<T extends HasId>(name: CollectionName, item: T) {
-    const { doc, setDoc } = this.c.fns;
-    await setDoc(doc(this.col(name), item.id), item as Record<string, unknown>);
+  async add<T extends HasId>(name: CollectionName, item: T): Promise<boolean> {
+    try {
+      const { doc, setDoc } = this.c.fns;
+      await setDoc(doc(this.col(name), item.id), item as Record<string, unknown>);
+      return true;
+    } catch (e) {
+      console.warn('[tether] cloud add failed', e);
+      return false;
+    }
   }
 
-  async update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>) {
-    const { doc, updateDoc } = this.c.fns;
-    await updateDoc(doc(this.col(name), id), patch as Record<string, unknown>);
+  async update<T extends HasId>(name: CollectionName, id: string, patch: Partial<T>): Promise<boolean> {
+    try {
+      const { doc, updateDoc } = this.c.fns;
+      await updateDoc(doc(this.col(name), id), patch as Record<string, unknown>);
+      return true;
+    } catch (e) {
+      console.warn('[tether] cloud update failed', e);
+      return false;
+    }
   }
 
-  async remove(name: CollectionName, id: string) {
-    const { doc, deleteDoc } = this.c.fns;
-    await deleteDoc(doc(this.col(name), id));
+  async remove(name: CollectionName, id: string): Promise<boolean> {
+    try {
+      const { doc, deleteDoc } = this.c.fns;
+      await deleteDoc(doc(this.col(name), id));
+      return true;
+    } catch (e) {
+      console.warn('[tether] cloud remove failed', e);
+      return false;
+    }
   }
 }
 

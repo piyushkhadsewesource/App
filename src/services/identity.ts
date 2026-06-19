@@ -11,17 +11,25 @@ export function genId(prefix = ''): string {
   return `${prefix}${t}${r}`;
 }
 
-const CODE_WORDS = ['ROSE', 'LUNA', 'EMBER', 'TIDE', 'NOVA', 'FERN', 'WREN', 'SAGE', 'HALO', 'DUNE'];
+// 32 unambiguous characters (no I, O, 0, 1) so codes are easy to read aloud.
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-/** Friendly, shareable pairing code like "EMBER-4821". */
+/**
+ * A high-entropy, human-shareable pairing code like "K9FJ-2MWX-3RQ8".
+ * 12 random chars from a 32-symbol alphabet is ~60 bits of keyspace, which
+ * makes guessing/brute-forcing a couple's private space infeasible (the old
+ * WORD-1234 scheme was only ~16 bits). This is the only secret protecting your
+ * shared data, so it is generated long on purpose.
+ */
 export function genPairingCode(): string {
-  const w = CODE_WORDS[Math.floor(Math.random() * CODE_WORDS.length)];
-  const n = Math.floor(1000 + Math.random() * 9000);
-  return `${w}-${n}`;
+  const pick = () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  const group = () => pick() + pick() + pick() + pick();
+  return `${group()}-${group()}-${group()}`;
 }
 
+/** Keep only the valid code charset (A–Z, 0–9, dash); drop spaces and junk. */
 export function normalizeCode(code: string): string {
-  return code.trim().toUpperCase().replace(/\s+/g, '');
+  return code.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 }
 
 export async function loadIdentity(): Promise<Identity | null> {
@@ -49,10 +57,10 @@ export function makeIdentity(input: {
 }): Identity {
   return {
     userId: genId('u_'),
-    name: input.name.trim(),
-    partnerName: input.partnerName.trim(),
-    spaceId: normalizeCode(input.spaceId),
-    anniversary: input.anniversary,
+    name: input.name.trim().slice(0, 60),
+    partnerName: input.partnerName.trim().slice(0, 60),
+    spaceId: normalizeCode(input.spaceId).slice(0, 64),
+    anniversary: input.anniversary?.slice(0, 16),
     createdAt: now(),
   };
 }

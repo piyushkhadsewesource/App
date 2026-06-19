@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tether Firestore security rules.
+//
+// Paste these into Firebase console → Firestore Database → Rules → Publish.
+// (They replace the insecure "allow read, write: if true" starter rule.)
+//
+// Model: there is no account system. Knowing the exact {spaceId} (your pairing
+// code) is the only credential, so keep it secret and high-entropy (the app now
+// generates ~60-bit codes). These rules:
+//   • block enumeration of the top-level `spaces` collection (no crawling the
+//     directory of couples),
+//   • require a sane code format to even reach a space,
+//   • cap document field count and force photos to be inline image data URIs
+//     under ~700 KB, so no one can bloat or abuse your database.
+// ─────────────────────────────────────────────────────────────────────────
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A plausible pairing code: A–Z, 0–9 and dashes, 4–128 chars.
+    function validSpaceId(s) {
+      return s is string && s.size() >= 4 && s.size() <= 128 && s.matches('^[A-Z0-9-]+$');
+    }
+
+    // Deny everything by default, including listing `/spaces` itself.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Everything inside one couple's space.
+    match /spaces/{spaceId}/{document=**} {
+      allow read: if validSpaceId(spaceId);
+      allow delete: if validSpaceId(spaceId);
+      allow create, update: if validSpaceId(spaceId)
+        && request.resource.data.size() <= 40
+        && (
+          !('image' in request.resource.data)
+          || (
+            request.resource.data.image is string
+            && request.resource.data.image.size() <= 950000
+            && request.resource.data.image.matches('^data:image/.*')
+          )
+        );
+    }
+  }
+}

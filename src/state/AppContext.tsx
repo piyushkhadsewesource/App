@@ -108,6 +108,13 @@ interface AppValue {
   clearMeeting(): Promise<void>;
 }
 
+// Caps on user/partner-supplied content: keeps any single Firestore document
+// well under the 1 MB limit and protects against pathological or abusive input.
+const clampReq = (s: string, max: number): string => (s.length > max ? s.slice(0, max) : s);
+const clamp = (s: string | undefined, max: number): string | undefined =>
+  s == null ? s : s.length > max ? s.slice(0, max) : s;
+const MAX_IMAGE_CHARS = 900_000; // ~675 KB of base64, safely under Firestore's 1 MB cap
+
 const Ctx = createContext<AppValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -246,14 +253,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async updateIdentity(patch) {
       if (!identity) return;
       const next = { ...identity, ...patch };
+      next.name = clampReq(next.name, 60);
+      next.partnerName = clampReq(next.partnerName, 60);
+      next.spaceId = clampReq(next.spaceId, 64);
+      if (next.anniversary) next.anniversary = clamp(next.anniversary, 16);
       await saveIdentity(next);
       setIdentity(next);
     },
     async resetEverything() {
-      await clearIdentity();
-      const keys = await AsyncStorage.getAllKeys();
-      const ours = keys.filter((k) => k.startsWith('@tether/'));
-      if (ours.length) await AsyncStorage.multiRemove(ours);
+      try {
+        await clearIdentity();
+        const keys = await AsyncStorage.getAllKeys();
+        const ours = keys.filter((k) => k.startsWith('@tether/'));
+        if (ours.length) await AsyncStorage.multiRemove(ours);
+      } catch (e) {
+        console.warn('[tether] reset storage failed', e);
+      }
       setCheckins([]);
       setPings([]);
       setLetters([]);
@@ -282,6 +297,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         date,
         createdAt: now(),
         ...data,
+        need: clampReq(data.need, 280),
+        note: clamp(data.note, 2000),
       };
       await db.add('checkins', item);
     },
@@ -292,7 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: genId('g_'),
         fromId: meId,
         type,
-        message,
+        message: clamp(message, 500),
         createdAt: now(),
         seenAt: null,
       });
@@ -312,6 +329,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         createdAt: now(),
         openedAt: null,
         ...data,
+        title: clampReq(data.title, 140),
+        body: clampReq(data.body, 10000),
+        occasion: clamp(data.occasion, 140),
       });
     },
     async openLetter(id) {
@@ -320,7 +340,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async addMemory(data) {
       const db = dbRef.current;
       if (!db) return;
-      await db.add('memories', { id: genId('m_'), authorId: meId, createdAt: now(), ...data });
+      await db.add('memories', {
+        id: genId('m_'),
+        authorId: meId,
+        createdAt: now(),
+        ...data,
+        title: clampReq(data.title, 140),
+        description: clamp(data.description, 4000),
+        emoji: clamp(data.emoji, 8),
+      });
     },
     async removeMemory(id) {
       await dbRef.current?.remove('memories', id);
@@ -328,7 +356,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async addReason(text) {
       const db = dbRef.current;
       if (!db) return;
-      await db.add('reasons', { id: genId('r_'), authorId: meId, text, createdAt: now() });
+      await db.add('reasons', { id: genId('r_'), authorId: meId, text: clampReq(text, 500), createdAt: now() });
     },
     async removeReason(id) {
       await dbRef.current?.remove('reasons', id);
@@ -340,7 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: genId('f_'),
         authorId: meId,
         category,
-        text,
+        text: clampReq(text, 500),
         done: false,
         createdAt: now(),
       });
@@ -358,28 +386,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: genId('d_'),
         authorId: meId,
         promptId,
-        promptText,
-        answer,
+        promptText: clampReq(promptText, 280),
+        answer: clampReq(answer, 4000),
         createdAt: now(),
       });
     },
     async addMoment(data) {
       const db = dbRef.current;
       if (!db) return;
+      if (!data.image || data.image.length > MAX_IMAGE_CHARS) {
+        throw new Error('That photo is too large to share. Please try another one.');
+      }
       const today = new Date();
       const date =
         data.date ??
         `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
           today.getDate(),
         ).padStart(2, '0')}`;
-      await db.add('moments', {
+      const ok = await db.add('moments', {
         id: genId('p_'),
         authorId: meId,
         date,
         createdAt: now(),
         image: data.image,
-        caption: data.caption,
+        caption: clamp(data.caption, 500),
       });
+      if (!ok) throw new Error('Could not save that moment. Check your connection and try again.');
     },
     async removeMoment(id) {
       await dbRef.current?.remove('moments', id);
@@ -387,18 +419,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async sendSos(message) {
       const db = dbRef.current;
       if (!db) return;
+      const safeMessage = clamp(message, 500);
       await db.add('alerts', {
         id: genId('s_'),
         fromId: meId,
         createdAt: now(),
-        message,
+        message: safeMessage,
         seenAt: null,
       });
       // Also push to the partner's phone so it alarms even when the app is
       // closed. Fire-and-forget: never blocks or fails the SOS itself.
       const partnerTokens = tokens.filter((t) => t.id !== meId).map((t) => t.token);
       if (partnerTokens.length) {
-        void sendSosPush(partnerTokens, identity?.name ?? 'Your partner', message);
+        void sendSosPush(partnerTokens, identity?.name ?? 'Your partner', safeMessage);
       }
     },
     async markAlertsSeen() {
@@ -414,7 +447,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: 'next',
         authorId: meId,
         at,
-        label: label?.trim() || undefined,
+        label: clamp(label?.trim() || undefined, 140),
         createdAt: now(),
       });
     },

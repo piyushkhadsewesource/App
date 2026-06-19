@@ -52,13 +52,16 @@ function shuffledIndex(pos: number, cycle: number, n: number): number {
 }
 
 /** The same prompt for both partners on a given day, non-repeating in order. */
+const SAFE_PROMPT: Prompt = { id: 'fallback', text: 'What made you think of me today?', category: 'everyday' };
+
 export function promptForDay(dateISO: ISODate = todayISO()): Prompt {
+  const n = DECK.length;
+  if (n === 0) return SAFE_PROMPT;
   const d = isoToDate(dateISO);
   const epochDay = Math.floor(d.getTime() / 86_400_000);
-  const n = DECK.length;
   const cycle = Math.floor(epochDay / n);
   const pos = ((epochDay % n) + n) % n;
-  return DECK[shuffledIndex(pos, cycle, n)];
+  return DECK[shuffledIndex(pos, cycle, n)] ?? SAFE_PROMPT;
 }
 
 export function hasAnswered(responses: DeckResponse[], authorId: string, promptId: string): boolean {

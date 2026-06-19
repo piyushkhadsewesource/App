@@ -64,29 +64,23 @@ export const firebaseConfig: FirebaseConfig = {
 Save. Restart with `npm start`. The app now shows **"Cloud ON"** in Settings and
 syncs live. Enter the **same pairing code** on both phones and you're connected.
 
-### 5. Lock it down (recommended)
-In Firestore → **Rules**, paste this and **Publish**. It keeps each couple's
-space to itself, keyed by your secret pairing code:
+### 5. Lock it down (do this)
+In Firestore → **Rules**, paste the contents of the **`firestore.rules`** file
+in this project, then **Publish**. Those rules:
+- block anyone from listing/enumerating the directory of spaces,
+- require a sane pairing-code format to reach any space,
+- cap document size and force photos to be inline image data under ~700 KB,
+so no one can crawl, bloat, or abuse your database.
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /spaces/{spaceId}/{collection}/{doc} {
-      allow read, write: if true;   // see security note below
-    }
-  }
-}
-```
+**Security note (read this):** Tether has no login, so knowing your **pairing
+code** is what grants access to your space. The app now generates a high-entropy
+code (~60 bits, like `K9FJ-2MWX-3RQ8`), which makes guessing infeasible, but it
+is still a shared secret, so:
+- use the generated code (don't shorten it), and
+- keep your pairing code private (don't post it or screenshots of it publicly).
 
-**Security note (read this):** because Tether has no login, the rule above
-allows anyone *who knows your Firebase config and pairing code* to access the
-space. For just-the-two-of-you use that's usually fine **if** you:
-- keep your `firebaseConfig` and pairing code private (don't post them publicly), and
-- use a long, non-guessable pairing code (e.g. a random 12+ character string).
-
-For stronger security later, add **Firebase Authentication** (Anonymous or
-Email) and change the rule to check `request.auth`, the data layer is already
+For even stronger security later, enable **Firebase App Check** (attests requests
+come from your real app) and/or **Anonymous Authentication**; the data layer is
 structured to make that a small change.
 
 ---

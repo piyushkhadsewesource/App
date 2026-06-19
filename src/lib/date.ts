@@ -25,7 +25,12 @@ export function todayISO(): ISODate {
 }
 
 export function isoToDate(iso: ISODate): Date {
-  const [y, m, d] = iso.split('-').map((x) => parseInt(x, 10));
+  // Tolerant of malformed input: always returns a real (never Invalid) Date so
+  // downstream formatters can't print "undefined" or NaN.
+  const parts = String(iso ?? '').split('-').map((x) => parseInt(x, 10));
+  const y = Number.isFinite(parts[0]) ? parts[0] : 1970;
+  const m = Number.isFinite(parts[1]) ? parts[1] : 1;
+  const d = Number.isFinite(parts[2]) ? parts[2] : 1;
   return new Date(y, (m || 1) - 1, d || 1);
 }
 

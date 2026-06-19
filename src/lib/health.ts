@@ -39,8 +39,11 @@ export function computeHealth(input: Input): Health {
   const theirs = latestCheckin(checkins, partnerId);
 
   // Recency: how recently has each person checked in?
-  const recency = (c: CheckIn | null) =>
-    c ? clamp01(1 - daysBetween(c.date, today) / 5) : 0;
+  const recency = (c: CheckIn | null) => {
+    if (!c) return 0;
+    const gap = daysBetween(c.date, today);
+    return Number.isFinite(gap) ? clamp01(1 - gap / 5) : 0;
+  };
   const recencyScore = (recency(mine) + recency(theirs)) / 2;
 
   // Warmth: latest affection levels.

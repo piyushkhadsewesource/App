@@ -9,6 +9,8 @@ import { colors, font, radius, spacing } from '../theme';
 function parseWhen(dateStr: string, timeStr: string): number | null {
   const parts = dateStr.trim().split('-').map((x) => parseInt(x, 10));
   if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+  const [year, month, day] = parts;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   let hour = 12;
   let minute = 0;
   if (timeStr.trim()) {
@@ -16,7 +18,8 @@ function parseWhen(dateStr: string, timeStr: string): number | null {
     if (t.length < 2 || t.some(Number.isNaN)) return null;
     [hour, minute] = t;
   }
-  const d = new Date(parts[0], parts[1] - 1, parts[2], hour, minute, 0, 0);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  const d = new Date(year, month - 1, day, hour, minute, 0, 0);
   return Number.isNaN(d.getTime()) ? null : d.getTime();
 }
 
