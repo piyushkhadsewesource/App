@@ -54,8 +54,8 @@ export default function KnowMeScreen({ navigation }: any) {
         <AppHeader title="How well do you know me?" subtitle="The reveal" onBack={() => navigation.goBack()} />
         {segment}
         <View style={{ gap: spacing.md }}>
-          <ScoreCard grad={gradients.gameRose} cap={`How well you know ${partner}`} value={youKnow.length ? `${youCorrect}/${youKnow.length}` : '—'} hint={youKnow.length ? '' : `Guess ${partner}'s answers, then they reveal their truth.`} />
-          <ScoreCard grad={gradients.gameViolet} cap={`How well ${partner} knows you`} value={theyKnow.length ? `${theyCorrect}/${theyKnow.length}` : '—'} hint={theyKnow.length ? '' : `Set your own answers in "About you" so they can be scored.`} />
+          <ScoreCard grad={gradients.gameRose} cap={`How well you know ${partner}`} value={youKnow.length ? `${youCorrect}/${youKnow.length}` : '-'} hint={youKnow.length ? '' : `Guess ${partner}'s answers, then they reveal their truth.`} />
+          <ScoreCard grad={gradients.gameViolet} cap={`How well ${partner} knows you`} value={theyKnow.length ? `${theyCorrect}/${theyKnow.length}` : '-'} hint={theyKnow.length ? '' : `Set your own answers in "About you" so they can be scored.`} />
         </View>
       </Screen>
     );
