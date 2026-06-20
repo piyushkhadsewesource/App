@@ -119,7 +119,10 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.healthTop}>
           <View>
             <Text style={styles.heroLabel}>Closeness today</Text>
-            <Text style={styles.heroScore}>{health.closeness}</Text>
+            <Text style={styles.heroScore}>
+              {health.closeness}
+              <Text style={styles.heroScoreMax}>/100</Text>
+            </Text>
           </View>
           <View style={styles.heroTag}>
             <Text style={styles.heroTagText}>{health.label}</Text>
@@ -202,16 +205,16 @@ export default function HomeScreen({ navigation }: any) {
       {/* Quick actions */}
       <SectionTitle>Reach for each other</SectionTitle>
       <View style={styles.grid}>
-        <QuickTile emoji="🆘" label="Emergency" onPress={() => navigation.navigate('MissYou')} />
-        <QuickTile emoji="📸" label="Moments" onPress={() => navigation.navigate('Moments')} />
-        <QuickTile emoji="💞" label="Countdown" onPress={() => navigation.navigate('Countdown')} />
-        <QuickTile emoji="🤍" label="When I miss you" onPress={() => navigation.navigate('MissYou')} />
-        <QuickTile emoji="💌" label="Love letters" onPress={() => navigation.navigate('Letters')} />
-        <QuickTile emoji="🃏" label="Intimacy deck" onPress={() => navigation.navigate('Deck')} />
-        <QuickTile emoji="📖" label="Our journal" onPress={() => navigation.navigate('Journal')} />
-        <QuickTile emoji="✨" label="Future board" onPress={() => navigation.navigate('Future')} />
-        <QuickTile emoji="💜" label="Insights" onPress={() => navigation.navigate('Insights')} />
-        <QuickTile emoji="🎮" label="Games" onPress={() => navigation.navigate('Games')} />
+        <QuickTile emoji="🆘" label="Emergency" tint={colors.dangerSoft} onPress={() => navigation.navigate('MissYou')} />
+        <QuickTile emoji="📸" label="Moments" tint={colors.goldSoft} onPress={() => navigation.navigate('Moments')} />
+        <QuickTile emoji="💞" label="Countdown" tint={colors.primarySoft} onPress={() => navigation.navigate('Countdown')} />
+        <QuickTile emoji="🤍" label="When I miss you" tint={colors.accentSoft} onPress={() => navigation.navigate('MissYou')} />
+        <QuickTile emoji="💌" label="Love letters" tint={colors.primarySoft} onPress={() => navigation.navigate('Letters')} />
+        <QuickTile emoji="🃏" label="Intimacy deck" tint={colors.accentSoft} onPress={() => navigation.navigate('Deck')} />
+        <QuickTile emoji="📖" label="Our journal" tint={colors.goldSoft} onPress={() => navigation.navigate('Journal')} />
+        <QuickTile emoji="✨" label="Future board" tint={colors.goodSoft} onPress={() => navigation.navigate('Future')} />
+        <QuickTile emoji="💜" label="Insights" tint={colors.accentSoft} onPress={() => navigation.navigate('Insights')} />
+        <QuickTile emoji="🎮" label="Games" tint={colors.primarySoft} onPress={() => navigation.navigate('Games')} />
       </View>
 
       {/* Daily prompt teaser */}
@@ -246,18 +249,38 @@ function PulseFace({
 }) {
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
-      <Text style={{ fontSize: 34 }}>{mood ? mood.emoji : checkedToday ? '🙂' : '⚪️'}</Text>
+      {mood ? (
+        <Text style={{ fontSize: 34 }}>{mood.emoji}</Text>
+      ) : checkedToday ? (
+        <Text style={{ fontSize: 34 }}>🙂</Text>
+      ) : (
+        <View style={[styles.facePlaceholder, { borderColor: color + '40' }]} />
+      )}
       <Text style={[styles.pulseName, { color }]}>{name}</Text>
       <Muted>{mood ? mood.label : checkedToday ? 'Checked in' : 'No check-in yet'}</Muted>
     </View>
   );
 }
 
-function QuickTile({ emoji, label, onPress }: { emoji: string; label: string; onPress: () => void }) {
+function QuickTile({
+  emoji,
+  label,
+  tint,
+  onPress,
+}: {
+  emoji: string;
+  label: string;
+  tint: string;
+  onPress: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed ? { opacity: 0.8 } : null]}>
-      <Text style={{ fontSize: 26 }}>{emoji}</Text>
-      <Text style={styles.tileLabel}>{label}</Text>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed ? styles.tilePressed : null]}>
+      <View style={[styles.tileBadge, { backgroundColor: tint }]}>
+        <Text style={styles.tileEmoji}>{emoji}</Text>
+      </View>
+      <Text style={styles.tileLabel} numberOfLines={2}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -269,6 +292,7 @@ const styles = StyleSheet.create({
   hero: { borderRadius: radius.lg, padding: 22, marginTop: spacing.md, overflow: 'hidden' },
   heroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: font.size.md, fontFamily: font.family.medium },
   heroScore: { color: colors.white, fontSize: 52, fontFamily: font.family.display, lineHeight: 56, marginTop: 2 },
+  heroScoreMax: { color: 'rgba(255,255,255,0.7)', fontSize: 20, fontFamily: font.family.medium },
   heroTag: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
   heroTagText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6 },
   heroTrack: { height: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginTop: spacing.md },
@@ -282,6 +306,14 @@ const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center' },
   pulseDivider: { width: 1, height: 56, backgroundColor: colors.border },
   pulseName: { fontFamily: font.family.bold, marginTop: 4, fontSize: font.size.md },
+  facePlaceholder: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    backgroundColor: colors.surfaceAlt,
+  },
   needBox: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   tile: {
@@ -290,10 +322,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
+    alignItems: 'center',
     gap: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(90,46,64,0.05)',
     ...shadow.card,
   },
-  tileLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
+  tilePressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  tileBadge: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tileEmoji: { fontSize: 25 },
+  tileLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
 });

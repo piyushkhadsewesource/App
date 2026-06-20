@@ -42,22 +42,11 @@ export default function ChoiceGameScreen({ navigation, route }: any) {
           const mine = mineFor(it.id);
           const theirs = theirsFor(it.id);
           return (
-            <Card key={it.id}>
+            <Card key={it.id} style={styles.promptCard}>
               <View style={styles.optRow}>
-                {[it.a, it.b].map((opt, idx) => {
-                  const picked = mine?.choice === idx;
-                  return (
-                    <Pressable
-                      key={idx}
-                      onPress={() => app.answerGame(game, it.id, idx)}
-                      style={[styles.opt, picked && styles.optPicked]}
-                    >
-                      <Text style={[styles.optText, picked && { color: colors.white }]} numberOfLines={2}>
-                        {opt}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                <Option text={it.a} picked={mine?.choice === 0} onPress={() => app.answerGame(game, it.id, 0)} />
+                <Text style={styles.orText}>or</Text>
+                <Option text={it.b} picked={mine?.choice === 1} onPress={() => app.answerGame(game, it.id, 1)} />
               </View>
               {mine && theirs ? (
                 <Muted style={{ marginTop: spacing.sm, textAlign: 'center' }}>
@@ -76,11 +65,22 @@ export default function ChoiceGameScreen({ navigation, route }: any) {
   );
 }
 
+function Option({ text, picked, onPress }: { text: string; picked: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.opt, picked && styles.optPicked]}>
+      <Text style={[styles.optText, picked && { color: colors.white }]} numberOfLines={2}>
+        {text}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  optRow: { flexDirection: 'row', gap: spacing.md },
+  promptCard: { paddingVertical: spacing.md },
+  optRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   opt: {
     flex: 1,
-    minHeight: 64,
+    minHeight: 58,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -92,4 +92,11 @@ const styles = StyleSheet.create({
   },
   optPicked: { backgroundColor: colors.primary, borderColor: colors.primary },
   optText: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
+  orText: {
+    fontSize: font.size.xs,
+    fontFamily: font.family.bold,
+    color: colors.textFaint,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
 });
