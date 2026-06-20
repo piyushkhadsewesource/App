@@ -1,26 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen, Title } from '../components/ui';
+import DateTimeModal from '../components/DateTimeModal';
 import { formatDate } from '../lib/date';
 import { countdownTo } from '../lib/countdown';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, spacing } from '../theme';
 
-function parseWhen(dateStr: string, timeStr: string): number | null {
-  const parts = dateStr.trim().split('-').map((x) => parseInt(x, 10));
-  if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
-  const [year, month, day] = parts;
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  let hour = 12;
-  let minute = 0;
-  if (timeStr.trim()) {
-    const t = timeStr.trim().split(':').map((x) => parseInt(x, 10));
-    if (t.length < 2 || t.some(Number.isNaN)) return null;
-    [hour, minute] = t;
-  }
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-  const d = new Date(year, month - 1, day, hour, minute, 0, 0);
-  return Number.isNaN(d.getTime()) ? null : d.getTime();
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatWhen(ts: number): string {
+  const d = new Date(ts);
+  const h = d.getHours();
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const ap = h < 12 ? 'AM' : 'PM';
+  return `${WD[d.getDay()]}, ${d.getDate()} ${MO[d.getMonth()]} ${d.getFullYear()} · ${h12}:${String(
+    d.getMinutes(),
+  ).padStart(2, '0')} ${ap}`;
 }
 
 export default function CountdownScreen({ navigation }: any) {
@@ -29,9 +26,16 @@ export default function CountdownScreen({ navigation }: any) {
 
   const [now, setNow] = useState(Date.now());
   const [editing, setEditing] = useState(!meeting);
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [selectedAt, setSelectedAt] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [label, setLabel] = useState('');
+
+  const defaultInitial = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    d.setHours(18, 0, 0, 0);
+    return d.getTime();
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -42,15 +46,13 @@ export default function CountdownScreen({ navigation }: any) {
   const reunionGlow = !!cd && cd.past && now - (meeting?.at ?? 0) < 3 * 86_400_000;
 
   async function save() {
-    const at = parseWhen(date, time);
-    if (!at) {
-      Alert.alert('Check the date', 'Use the format YYYY-MM-DD (and optional time HH:MM).');
+    if (!selectedAt) {
+      Alert.alert('Pick a date', 'Tap the date field to choose when you meet next.');
       return;
     }
-    await app.setMeeting(at, label);
+    await app.setMeeting(selectedAt, label);
     setEditing(false);
-    setDate('');
-    setTime('');
+    setSelectedAt(null);
     setLabel('');
   }
 
@@ -98,10 +100,7 @@ export default function CountdownScreen({ navigation }: any) {
             variant="soft"
             onPress={() => {
               if (meeting) {
-                const d = new Date(meeting.at);
-                const p = (n: number) => String(n).padStart(2, '0');
-                setDate(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
-                setTime(`${p(d.getHours())}:${p(d.getMinutes())}`);
+                setSelectedAt(meeting.at);
                 setLabel(meeting.label ?? '');
               }
               setEditing(true);
@@ -116,14 +115,21 @@ export default function CountdownScreen({ navigation }: any) {
           <Muted style={{ marginTop: 4, marginBottom: spacing.md }}>
             You’ll both see the same live countdown.
           </Muted>
-          <Field label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
-          <Field label="Time (optional)" value={time} onChangeText={setTime} placeholder="HH:MM (24h), e.g. 18:30" autoCapitalize="none" />
+          <Text style={styles.pickerLabel}>Date & time</Text>
+          <Pressable onPress={() => setPickerOpen(true)} style={styles.whenRow}>
+            <Text style={styles.whenIcon}>📅</Text>
+            <Text style={[styles.whenText, !selectedAt && { color: colors.textFaint }]} numberOfLines={1}>
+              {selectedAt ? formatWhen(selectedAt) : 'Tap to pick a date & time'}
+            </Text>
+            <Text style={styles.whenChevron}>›</Text>
+          </Pressable>
+
           <Field label="What are you counting down to? (optional)" value={label} onChangeText={setLabel} placeholder="e.g. Together again, your visit, going home…" />
           <Button label="Start the countdown" onPress={save} />
           {meeting ? (
             <>
               <View style={{ height: spacing.sm }} />
-              <Button label="Cancel" variant="ghost" onPress={() => setEditing(false)} />
+              <Button label="Cancel" variant="ghost" onPress={() => { setEditing(false); setSelectedAt(null); }} />
             </>
           ) : null}
         </Card>
@@ -135,6 +141,16 @@ export default function CountdownScreen({ navigation }: any) {
           firm up, and watch the days melt away together. 💞
         </Body>
       </Card>
+
+      <DateTimeModal
+        visible={pickerOpen}
+        initial={selectedAt && selectedAt > Date.now() ? selectedAt : defaultInitial}
+        onCancel={() => setPickerOpen(false)}
+        onConfirm={(ts) => {
+          setSelectedAt(ts);
+          setPickerOpen(false);
+        }}
+      />
     </Screen>
   );
 }
@@ -149,6 +165,22 @@ function Unit({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  pickerLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs },
+  whenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    height: 52,
+    marginBottom: spacing.md,
+  },
+  whenIcon: { fontSize: 18 },
+  whenText: { flex: 1, fontSize: font.size.md, color: colors.text, fontFamily: font.family.semibold },
+  whenChevron: { fontSize: 22, color: colors.textFaint },
   cdRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg },
   unit: {
     flex: 1,
