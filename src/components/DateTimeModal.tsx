@@ -1,5 +1,5 @@
-// A themed pop-up calendar + time picker — no native dependency, works on web
-// and device alike, and matches the app's premium look.
+// A themed pop-up calendar + time picker (no native dependency) that works on
+// web and device alike, and matches the app's premium look.
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, font, radius, shadow, spacing } from '../theme';
