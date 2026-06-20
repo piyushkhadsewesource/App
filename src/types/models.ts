@@ -186,6 +186,7 @@ export interface TicTacToe {
   board: string; // 9 chars, each 'X' | 'O' | '-'
   turn: string; // authorId whose move it is
   xId: string; // authorId playing X (started this game)
+  oId: string; // authorId playing O
   createdAt: Millis;
   updatedAt: Millis;
 }

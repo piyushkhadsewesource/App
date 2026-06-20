@@ -190,6 +190,15 @@ export default function HomeScreen({ navigation }: any) {
         </>
       ) : null}
 
+      {/* Play together */}
+      <Card tone="violet" onPress={() => navigation.navigate('Games')} style={styles.alert}>
+        <Text style={styles.alertEmoji}>🎮</Text>
+        <View style={{ flex: 1 }}>
+          <Title>Play together</Title>
+          <Muted>This or That, Would You Rather, a quiz, and Tic-Tac-Toe.</Muted>
+        </View>
+      </Card>
+
       {/* Quick actions */}
       <SectionTitle>Reach for each other</SectionTitle>
       <View style={styles.grid}>
@@ -202,6 +211,7 @@ export default function HomeScreen({ navigation }: any) {
         <QuickTile emoji="📖" label="Our journal" onPress={() => navigation.navigate('Journal')} />
         <QuickTile emoji="✨" label="Future board" onPress={() => navigation.navigate('Future')} />
         <QuickTile emoji="💜" label="Insights" onPress={() => navigation.navigate('Insights')} />
+        <QuickTile emoji="🎮" label="Games" onPress={() => navigation.navigate('Games')} />
       </View>
 
       {/* Daily prompt teaser */}

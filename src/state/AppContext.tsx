@@ -29,6 +29,8 @@ import {
   FeelingEntry,
   FutureCategory,
   FutureItem,
+  GameAnswer,
+  GameKind,
   Identity,
   Letter,
   Meeting,
@@ -39,7 +41,9 @@ import {
   PingType,
   Reason,
   SosAlert,
+  TicTacToe,
 } from '../types/models';
+import { EMPTY_BOARD } from '../lib/games';
 
 interface AppValue {
   ready: boolean;
@@ -59,6 +63,8 @@ interface AppValue {
   moments: Moment[];
   alerts: SosAlert[];
   meeting: Meeting | null;
+  gameAnswers: GameAnswer[];
+  tictactoe: TicTacToe | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -111,6 +117,9 @@ interface AppValue {
   markAlertsSeen(): Promise<void>;
   setMeeting(at: number, label?: string): Promise<void>;
   clearMeeting(): Promise<void>;
+  answerGame(game: GameKind, promptId: string, choice: number): Promise<void>;
+  newTicTacToe(): Promise<void>;
+  playTicTacToe(index: number): Promise<void>;
 }
 
 // Caps on user/partner-supplied content: keeps any single Firestore document
@@ -138,6 +147,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<SosAlert[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [tokens, setTokens] = useState<DeviceToken[]>([]);
+  const [gameAnswers, setGameAnswers] = useState<GameAnswer[]>([]);
+  const [ttt, setTtt] = useState<TicTacToe[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -174,6 +185,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<SosAlert>('alerts', setAlerts),
         db.watch<Meeting>('meetings', setMeetings),
         db.watch<DeviceToken>('tokens', setTokens),
+        db.watch<GameAnswer>('gameAnswers', setGameAnswers),
+        db.watch<TicTacToe>('tictactoe', setTtt),
       ];
     })();
     return () => {
@@ -257,6 +270,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     moments,
     alerts,
     meeting: meetings.find((m) => m.id === 'next') ?? null,
+    gameAnswers,
+    tictactoe: ttt.find((t) => t.id === 'current') ?? null,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -298,6 +313,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAlerts([]);
       setMeetings([]);
       setTokens([]);
+      setGameAnswers([]);
+      setTtt([]);
       setIdentity(null);
     },
 
@@ -507,6 +524,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async clearMeeting() {
       await dbRef.current?.remove('meetings', 'next');
+    },
+    async answerGame(game, promptId, choice) {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('gameAnswers', {
+        id: `${game}:${promptId}:${meId}`,
+        authorId: meId,
+        game,
+        promptId,
+        choice: Math.round(choice),
+        createdAt: now(),
+      });
+    },
+    async newTicTacToe() {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('tictactoe', {
+        id: 'current',
+        board: EMPTY_BOARD,
+        turn: meId, // X starts
+        xId: meId,
+        oId: partnerId,
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    },
+    async playTicTacToe(index) {
+      const db = dbRef.current;
+      if (!db) return;
+      const game = ttt.find((t) => t.id === 'current');
+      if (!game) return;
+      if (game.turn !== meId) return; // not your turn
+      if (index < 0 || index > 8 || game.board[index] !== '-') return; // occupied/invalid
+      const mark = meId === game.xId ? 'X' : 'O';
+      const board = game.board.substring(0, index) + mark + game.board.substring(index + 1);
+      const nextTurn = game.turn === game.xId ? game.oId : game.xId;
+      await db.update<TicTacToe>('tictactoe', 'current', { board, turn: nextTurn, updatedAt: now() });
     },
   };
 
