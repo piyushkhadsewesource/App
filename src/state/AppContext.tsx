@@ -18,6 +18,7 @@ import {
   genId,
   loadIdentity,
   makeIdentity,
+  personId,
   saveIdentity,
 } from '../services/identity';
 import { DEMO_PARTNER_ID, maybeSeed } from '../services/seed';
@@ -203,8 +204,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const meId = identity?.userId ?? '';
 
-  // The partner is whoever else has written into the shared space.
+  // The partner's stable id is derived from their name (so it survives
+  // reinstalls). We still fall back to whatever other author appears in the
+  // data, then to the demo partner for local mode, so a name mismatch or legacy
+  // data can never hide them.
   const partnerId = useMemo(() => {
+    const named = identity ? personId(identity.partnerName) : '';
     const pools: Array<{ authorId?: string; fromId?: string }> = [
       ...checkins,
       ...reasons,
@@ -217,12 +222,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...alerts,
       ...meetings,
     ];
+    const others: string[] = [];
     for (const it of pools) {
       const a = it.authorId ?? it.fromId;
-      if (a && a !== meId) return a;
+      if (a && a !== meId && !others.includes(a)) others.push(a);
     }
-    return DEMO_PARTNER_ID;
-  }, [meId, checkins, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
+    if (named && others.includes(named)) return named; // partner is posting under it
+    const stable = others.find((a) => a.startsWith('p_'));
+    if (stable) return stable;
+    if (cloudEnabled && named) return named;
+    return others[0] ?? DEMO_PARTNER_ID;
+  }, [meId, identity, checkins, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
 
   const value: AppValue = {
     ready,

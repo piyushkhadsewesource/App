@@ -55,7 +55,7 @@ export async function clearIdentity(): Promise<void> {
  * (Local storage is wiped on uninstall, so name + code are the only stable
  * anchors in a no-account app. The two partners must use different names.)
  */
-function personId(name: string): string {
+export function personId(name: string): string {
   const slug = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24);
   return `p_${slug || 'me'}`;
 }
