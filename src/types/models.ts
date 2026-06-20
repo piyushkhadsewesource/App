@@ -156,6 +156,40 @@ export interface Identity {
   createdAt: Millis;
 }
 
+/** A timestamped feeling logged during the day, for the intensity timeline. */
+export interface FeelingEntry {
+  id: string;
+  authorId: string;
+  date: ISODate; // the day it belongs to
+  createdAt: Millis; // exact time, used as the timeline x-axis
+  mood: Mood;
+  intensity: number; // 1..10
+  note?: string;
+}
+
+/** Which mini-game a stored answer belongs to. */
+export type GameKind = 'thisorthat' | 'wyr' | 'knowme';
+
+/** One person's choice on one game prompt (id is deterministic so it upserts). */
+export interface GameAnswer {
+  id: string; // `${game}:${promptId}:${authorId}`
+  authorId: string;
+  game: GameKind;
+  promptId: string;
+  choice: number; // selected option index (for knowme: your own true answer)
+  createdAt: Millis;
+}
+
+/** The single shared Tic-Tac-Toe game state for the couple. */
+export interface TicTacToe {
+  id: 'current';
+  board: string; // 9 chars, each 'X' | 'O' | '-'
+  turn: string; // authorId whose move it is
+  xId: string; // authorId playing X (started this game)
+  createdAt: Millis;
+  updatedAt: Millis;
+}
+
 /** Names of the synced collections. */
 export const COLLECTIONS = [
   'checkins',
@@ -169,6 +203,9 @@ export const COLLECTIONS = [
   'alerts',
   'meetings',
   'tokens',
+  'feelings',
+  'gameAnswers',
+  'tictactoe',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

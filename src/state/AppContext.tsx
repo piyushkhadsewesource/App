@@ -26,6 +26,7 @@ import {
   CheckIn,
   DeckResponse,
   DeviceToken,
+  FeelingEntry,
   FutureCategory,
   FutureItem,
   Identity,
@@ -48,6 +49,7 @@ interface AppValue {
   partnerId: string;
 
   checkins: CheckIn[];
+  feelings: FeelingEntry[];
   pings: Ping[];
   letters: Letter[];
   memories: Memory[];
@@ -78,6 +80,8 @@ interface AppValue {
     affection: number;
     note?: string;
   }): Promise<void>;
+  logFeeling(data: { mood: Mood; intensity: number; note?: string }): Promise<void>;
+  removeFeeling(id: string): Promise<void>;
   sendPing(type: PingType, message?: string): Promise<void>;
   markPingsSeen(): Promise<void>;
   addLetter(data: {
@@ -123,6 +127,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [identity, setIdentity] = useState<Identity | null>(null);
 
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
+  const [feelings, setFeelings] = useState<FeelingEntry[]>([]);
   const [pings, setPings] = useState<Ping[]>([]);
   const [letters, setLetters] = useState<Letter[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -158,6 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       unsubs = [
         db.watch<CheckIn>('checkins', setCheckins),
+        db.watch<FeelingEntry>('feelings', setFeelings),
         db.watch<Ping>('pings', setPings),
         db.watch<Letter>('letters', setLetters),
         db.watch<Memory>('memories', setMemories),
@@ -241,6 +247,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     meId,
     partnerId,
     checkins,
+    feelings,
     pings,
     letters,
     memories,
@@ -280,6 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.warn('[tether] reset storage failed', e);
       }
       setCheckins([]);
+      setFeelings([]);
       setPings([]);
       setLetters([]);
       setMemories([]);
@@ -311,6 +319,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         note: clamp(data.note, 2000),
       };
       await db.add('checkins', item);
+    },
+    async logFeeling(data) {
+      const db = dbRef.current;
+      if (!db) return;
+      const today = new Date();
+      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+        today.getDate(),
+      ).padStart(2, '0')}`;
+      await db.add('feelings', {
+        id: genId('fl_'),
+        authorId: meId,
+        date,
+        createdAt: now(),
+        mood: data.mood,
+        intensity: Math.max(1, Math.min(10, Math.round(data.intensity))),
+        note: clamp(data.note, 500),
+      });
+    },
+    async removeFeeling(id) {
+      await dbRef.current?.remove('feelings', id);
     },
     async sendPing(type, message) {
       const db = dbRef.current;
