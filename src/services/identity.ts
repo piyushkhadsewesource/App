@@ -49,6 +49,17 @@ export async function clearIdentity(): Promise<void> {
   await AsyncStorage.removeItem(KEY);
 }
 
+/**
+ * A stable per-person id derived from the name, so reinstalling and re-entering
+ * the same name reconnects you to your own history instead of starting fresh.
+ * (Local storage is wiped on uninstall, so name + code are the only stable
+ * anchors in a no-account app. The two partners must use different names.)
+ */
+function personId(name: string): string {
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24);
+  return `p_${slug || 'me'}`;
+}
+
 export function makeIdentity(input: {
   name: string;
   partnerName: string;
@@ -56,7 +67,7 @@ export function makeIdentity(input: {
   anniversary?: string;
 }): Identity {
   return {
-    userId: genId('u_'),
+    userId: personId(input.name),
     name: input.name.trim().slice(0, 60),
     partnerName: input.partnerName.trim().slice(0, 60),
     spaceId: normalizeCode(input.spaceId).slice(0, 64),

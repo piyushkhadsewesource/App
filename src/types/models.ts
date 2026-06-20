@@ -35,7 +35,7 @@ export interface CheckIn {
   note?: string;
 }
 
-export type PingType = 'hug' | 'thinking' | 'miss';
+export type PingType = 'hug' | 'kiss' | 'thinking' | 'miss';
 
 /** A "Send Me A Hug" / "thinking of you" ping. */
 export interface Ping {

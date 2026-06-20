@@ -12,7 +12,7 @@ import { Platform } from 'react-native';
 import { now } from '../lib/date';
 import { createDb, Db, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
-import { registerForPush, sendSosPush } from '../services/push';
+import { registerForPush, sendPush, sendSosPush } from '../services/push';
 import {
   clearIdentity,
   genId,
@@ -313,6 +313,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         createdAt: now(),
         seenAt: null,
       });
+      // Notify the partner's phone (best-effort; needs push to be set up).
+      const who = identity?.name ?? 'Your partner';
+      const body =
+        type === 'kiss'
+          ? 'Sent you a kiss 💋'
+          : type === 'hug'
+            ? 'Sent you a hug 🤗'
+            : type === 'miss'
+              ? 'Misses you 🥺'
+              : 'Is thinking of you 💭';
+      const pingTokens = tokens.filter((t) => t.id !== meId).map((t) => t.token);
+      if (pingTokens.length) void sendPush(pingTokens, who, body);
     },
     async markPingsSeen() {
       const db = dbRef.current;
@@ -412,6 +424,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         caption: clamp(data.caption, 500),
       });
       if (!ok) throw new Error('Could not save that moment. Check your connection and try again.');
+      // Notify the partner that a new moment is waiting (best-effort).
+      const who = identity?.name ?? 'Your partner';
+      const momentTokens = tokens.filter((t) => t.id !== meId).map((t) => t.token);
+      if (momentTokens.length) void sendPush(momentTokens, who, '📸 Shared a new moment');
     },
     async removeMoment(id) {
       await dbRef.current?.remove('moments', id);

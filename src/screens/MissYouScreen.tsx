@@ -20,6 +20,7 @@ import { PingType } from '../types/models';
 
 const PINGS: { type: PingType; emoji: string; label: string; sent: string }[] = [
   { type: 'hug', emoji: '🤗', label: 'Send a hug', sent: 'Hug on its way' },
+  { type: 'kiss', emoji: '💋', label: 'Send a kiss', sent: 'Kiss sent 💋' },
   { type: 'thinking', emoji: '💭', label: 'Thinking of you', sent: 'They’ll know you’re thinking of them' },
   { type: 'miss', emoji: '🥺', label: 'I miss you', sent: 'Sent, distance is hard, isn’t it' },
 ];
@@ -185,7 +186,14 @@ export default function MissYouScreen() {
                 <Text style={{ fontSize: 26 }}>{meta.emoji}</Text>
                 <View style={{ flex: 1 }}>
                   <Body style={{ fontFamily: font.family.semibold }}>
-                    {partnerName} sent {p.type === 'hug' ? 'a hug' : p.type === 'miss' ? 'an “I miss you”' : 'a thought'}
+                    {partnerName} sent{' '}
+                    {p.type === 'hug'
+                      ? 'a hug'
+                      : p.type === 'kiss'
+                        ? 'a kiss'
+                        : p.type === 'miss'
+                          ? 'an “I miss you”'
+                          : 'a thought'}
                   </Body>
                   <Muted>{formatRelative(p.createdAt)}</Muted>
                 </View>
@@ -227,9 +235,9 @@ export default function MissYouScreen() {
 
 const styles = StyleSheet.create({
   toast: { marginBottom: spacing.md },
-  pingRow: { flexDirection: 'row', gap: spacing.md },
+  pingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   ping: {
-    flex: 1,
+    width: '47%',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,

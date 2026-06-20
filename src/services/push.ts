@@ -15,7 +15,23 @@ import { Platform } from 'react-native';
 import { EAS_PROJECT_ID } from '../config';
 
 const SOS_CHANNEL = 'sos';
+const PING_CHANNEL = 'pings';
 const supported = Platform.OS !== 'web';
+
+/** A normal (non-alarm) channel for hugs, kisses, thoughts and shared moments. */
+export async function ensurePingChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync(PING_CHANNEL, {
+      name: 'Hugs & moments',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 200],
+      enableVibrate: true,
+    });
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Create (or update) the high-importance Android channel used for SOS. */
 export async function ensureSosChannel(): Promise<void> {
@@ -56,11 +72,36 @@ export async function registerForPush(): Promise<string | null> {
     }
     if (!granted) return null;
     await ensureSosChannel();
+    await ensurePingChannel();
     const res = await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
     return res.data ?? null;
   } catch {
     // Push not configured yet (e.g. no FCM credentials), so fail quietly.
     return null;
+  }
+}
+
+/** Send a normal notification (hug, kiss, thought, shared moment). Best-effort. */
+export async function sendPush(tokens: string[], title: string, body: string): Promise<void> {
+  const valid = tokens.filter((t) => typeof t === 'string' && t.startsWith('ExponentPushToken'));
+  if (valid.length === 0) return;
+  const payload = valid.map((to) => ({
+    to,
+    title,
+    body,
+    sound: 'default',
+    priority: 'high',
+    channelId: PING_CHANNEL,
+    data: { type: 'ping' },
+  }));
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    /* network error; the in-app banner via live sync still appears when open */
   }
 }
 
