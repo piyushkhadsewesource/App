@@ -1,7 +1,8 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Card, Muted, Screen, Title } from '../components/ui';
 import { todayISO } from '../lib/date';
+import { hLight, hSuccess, hWarn } from '../lib/haptics';
 import { dailyWord, keyboardStates, LetterState, MAX_GUESSES, scoreGuess, WORD_LEN } from '../lib/wordle';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -32,8 +33,25 @@ export default function WordleScreen({ navigation }: any) {
   const [cur, setCur] = useState('');
   const [msg, setMsg] = useState('');
   const shake = useRef(new Animated.Value(0)).current;
+  const rowAnims = useRef([...Array(MAX_GUESSES)].map(() => new Animated.Value(1))).current;
+  const prevCount = useRef(guesses.length);
+
+  // Pop the row that was just revealed, with a matching haptic.
+  useEffect(() => {
+    if (guesses.length > prevCount.current) {
+      const r = guesses.length - 1;
+      if (rowAnims[r]) {
+        rowAnims[r].setValue(0);
+        Animated.spring(rowAnims[r], { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }).start();
+      }
+      if (guesses[r] === answer) hSuccess();
+      else hLight();
+    }
+    prevCount.current = guesses.length;
+  }, [guesses.length, guesses, answer, rowAnims]);
 
   function toast(text: string) {
+    hWarn();
     setMsg(text);
     shake.setValue(0);
     Animated.sequence([
@@ -46,7 +64,10 @@ export default function WordleScreen({ navigation }: any) {
   }
 
   const onKey = (k: string) => {
-    if (!done && cur.length < WORD_LEN) setCur(cur + k);
+    if (!done && cur.length < WORD_LEN) {
+      hLight();
+      setCur(cur + k);
+    }
   };
   const onDelete = () => setCur((c) => c.slice(0, -1));
   const onEnter = async () => {
@@ -86,7 +107,16 @@ export default function WordleScreen({ navigation }: any) {
       {/* Grid */}
       <Animated.View style={[styles.grid, { transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-9, 9] }) }] }]}>
         {rows.map((row, ri) => (
-          <View key={ri} style={styles.gridRow}>
+          <Animated.View
+            key={ri}
+            style={[
+              styles.gridRow,
+              {
+                opacity: rowAnims[ri],
+                transform: [{ scale: rowAnims[ri].interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+              },
+            ]}
+          >
             {Array.from({ length: WORD_LEN }).map((_, ci) => {
               const ch = (row.letters[ci] ?? ' ').trim();
               const st = row.states ? row.states[ci] : null;
@@ -105,7 +135,7 @@ export default function WordleScreen({ navigation }: any) {
                 </View>
               );
             })}
-          </View>
+          </Animated.View>
         ))}
       </Animated.View>
 
