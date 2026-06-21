@@ -30,18 +30,29 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const base: ViewStyle = { flex: 1, backgroundColor: colors.bg, paddingTop: insets.top };
   if (!scroll) return <View style={base}>{children}</View>;
-  return (
-    <KeyboardAvoidingView style={base} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        contentContainerStyle={[styles.scrollContent, contentStyle]}
-      >
-        {children}
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+  const list = (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      contentContainerStyle={[styles.scrollContent, contentStyle]}
+    >
+      {children}
+    </ScrollView>
   );
+
+  // iOS: KeyboardAvoidingView lifts the field above the keyboard.
+  // Android: the window is set to "pan" (app.json) so the OS keeps the focused
+  // field visible; a wrapping KeyboardAvoidingView would only fight it.
+  if (Platform.OS === 'ios') {
+    return (
+      <KeyboardAvoidingView style={base} behavior="padding">
+        {list}
+      </KeyboardAvoidingView>
+    );
+  }
+  return <View style={base}>{list}</View>;
 }
 
 // ── Header ───────────────────────────────────────────────────────────────
