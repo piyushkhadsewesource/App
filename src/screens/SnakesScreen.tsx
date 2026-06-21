@@ -24,7 +24,7 @@ export default function SnakesScreen({ navigation }: any) {
 
   let status: string;
   if (!g) status = 'Start a game to play together';
-  else if (over) status = iWon ? 'You reached 100 — you win! 🎉' : `${partner} reached 100 first 💫`;
+  else if (over) status = iWon ? 'You reached 100, you win! 🎉' : `${partner} reached 100 first 💫`;
   else if (g.roll > 0) status = `${g.rolledBy === app.meId ? 'You' : partner} rolled a ${g.roll}`;
   else status = myTurn ? 'Your roll' : `${partner}'s roll…`;
 
