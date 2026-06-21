@@ -74,6 +74,10 @@ export default function ScheduleScreen({ navigation }: any) {
   const itemsFor = (iso: string) => app.schedule.filter((s) => s.date === iso).sort((a, b) => a.startMin - b.startMin);
   const dayItems = useMemo(() => itemsFor(viewDate), [app.schedule, viewDate]);
   const days = useMemo(() => weekDays(viewDate), [viewDate]);
+  const myPrevItems = useMemo(
+    () => app.schedule.filter((s) => s.date === addDaysISO(viewDate, -1) && s.authorId === app.meId),
+    [app.schedule, viewDate, app.meId],
+  );
   const activity = (iso: string) => {
     const its = app.schedule.filter((s) => s.date === iso);
     return { mine: its.some((s) => app.isMine(s.authorId)), theirs: its.some((s) => !app.isMine(s.authorId)) };
@@ -132,6 +136,17 @@ export default function ScheduleScreen({ navigation }: any) {
   };
 
   const editingItem = editingId ? app.schedule.find((s) => s.id === editingId) ?? null : null;
+
+  const copyPrev = () => {
+    hLight();
+    app.copyScheduleDay(addDaysISO(viewDate, -1), viewDate);
+  };
+  const duplicate = () => {
+    if (!editingItem) return;
+    const it = editingItem;
+    closeForm();
+    app.addScheduleItem({ date: it.date, startMin: it.startMin, title: it.title, icon: it.icon, note: it.note });
+  };
 
   const renderItem = (it: ScheduleItem) => {
     const mine = app.isMine(it.authorId);
@@ -247,6 +262,8 @@ export default function ScheduleScreen({ navigation }: any) {
           {editingItem ? (
             <>
               <View style={{ height: spacing.sm }} />
+              <Button label="Duplicate this plan" variant="soft" onPress={duplicate} />
+              <View style={{ height: spacing.sm }} />
               <Button label="Remove from plan" variant="outline" color={colors.danger} onPress={() => confirmDelete(editingItem)} />
             </>
           ) : null}
@@ -254,7 +271,15 @@ export default function ScheduleScreen({ navigation }: any) {
           <Button label="Cancel" variant="ghost" onPress={closeForm} />
         </Card>
       ) : (
-        <Button label="＋  Add to the plan" onPress={openAdd} style={{ marginBottom: spacing.lg }} />
+        <View style={{ marginBottom: spacing.lg }}>
+          <Button label="＋  Add to the plan" onPress={openAdd} />
+          {mode === 'day' && myPrevItems.length > 0 ? (
+            <>
+              <View style={{ height: spacing.sm }} />
+              <Button label={`📋  Copy ${dayLabel(addDaysISO(viewDate, -1)).toLowerCase()}'s plan`} variant="soft" onPress={copyPrev} />
+            </>
+          ) : null}
+        </View>
       )}
 
       {/* Content */}

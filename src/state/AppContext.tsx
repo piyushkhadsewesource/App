@@ -141,6 +141,7 @@ interface AppValue {
   addScheduleItem(data: { date: string; startMin: number; title: string; endMin?: number; icon?: string; note?: string }): Promise<void>;
   updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string; date?: string }): Promise<void>;
   removeScheduleItem(id: string): Promise<void>;
+  copyScheduleDay(fromDate: string, toDate: string): Promise<void>;
   addOccasion(data: { title: string; date: string; recurrence: 'yearly' | 'monthly' | 'once'; remindDaysBefore: number; icon?: string }): Promise<void>;
   updateOccasion(id: string, patch: { title?: string; date?: string; recurrence?: 'yearly' | 'monthly' | 'once'; remindDaysBefore?: number; icon?: string }): Promise<void>;
   removeOccasion(id: string): Promise<void>;
@@ -759,6 +760,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async removeScheduleItem(id) {
       await dbRef.current?.remove('schedule', id);
+    },
+    async copyScheduleDay(fromDate, toDate) {
+      const db = dbRef.current;
+      if (!db || fromDate === toDate) return;
+      const mine = schedule.filter((s) => s.date === fromDate && s.authorId === meId);
+      // Fire the copies concurrently: a single write can stall offline (the
+      // cloud ack never arrives), and a sequential await would block the rest.
+      await Promise.all(
+        mine.map((s) =>
+          db.add('schedule', {
+            id: genId('sc_'),
+            authorId: meId,
+            date: toDate,
+            startMin: s.startMin,
+            endMin: s.endMin,
+            title: s.title,
+            icon: s.icon,
+            note: s.note,
+            createdAt: now(),
+            updatedAt: now(),
+          }),
+        ),
+      );
     },
     async addOccasion({ title, date, recurrence, remindDaysBefore, icon }) {
       const db = dbRef.current;
