@@ -57,6 +57,14 @@ export default function GamesScreen({ navigation }: any) {
       meta: 'Live match',
       go: () => navigation.navigate('Snakes'),
     },
+    {
+      grad: gradients.gameBerry,
+      emoji: '🏠',
+      title: 'Ludo',
+      sub: 'Race all four tokens home',
+      meta: 'Live match',
+      go: () => navigation.navigate('Ludo'),
+    },
   ];
 
   return (

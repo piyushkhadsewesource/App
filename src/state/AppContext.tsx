@@ -33,6 +33,7 @@ import {
   GameKind,
   Identity,
   Letter,
+  LudoGame,
   Meeting,
   Memory,
   Moment,
@@ -47,6 +48,7 @@ import {
 } from '../types/models';
 import { EMPTY_BOARD } from '../lib/games';
 import { applyRoll } from '../lib/snakes';
+import { absCell, legalTokens, movedPos, SAFE, Side } from '../lib/ludo';
 
 interface AppValue {
   ready: boolean;
@@ -70,6 +72,7 @@ interface AppValue {
   tictactoe: TicTacToe | null;
   wordle: WordleResult[];
   snakes: SnakesGame | null;
+  ludo: LudoGame | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -128,6 +131,9 @@ interface AppValue {
   recordWordle(data: { date: string; guesses: string[]; solved: boolean }): Promise<void>;
   newSnakes(): Promise<void>;
   rollSnakes(): Promise<void>;
+  newLudo(): Promise<void>;
+  rollLudo(): Promise<void>;
+  moveLudo(tokenIndex: number): Promise<void>;
 }
 
 // Caps on user/partner-supplied content: keeps any single Firestore document
@@ -159,6 +165,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ttt, setTtt] = useState<TicTacToe[]>([]);
   const [wordle, setWordle] = useState<WordleResult[]>([]);
   const [snakes, setSnakes] = useState<SnakesGame[]>([]);
+  const [ludo, setLudo] = useState<LudoGame[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -199,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<TicTacToe>('tictactoe', setTtt),
         db.watch<WordleResult>('wordle', setWordle),
         db.watch<SnakesGame>('snakes', setSnakes),
+        db.watch<LudoGame>('ludo', setLudo),
       ];
     })();
     return () => {
@@ -286,6 +294,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     tictactoe: ttt.find((t) => t.id === 'current') ?? null,
     wordle,
     snakes: snakes.find((s) => s.id === 'current') ?? null,
+    ludo: ludo.find((l) => l.id === 'current') ?? null,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -331,6 +340,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTtt([]);
       setWordle([]);
       setSnakes([]);
+      setLudo([]);
       setIdentity(null);
     },
 
@@ -628,6 +638,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...(isA ? { aPos: np } : { bPos: np }),
         roll: die,
         rolledBy: meId,
+        turn: nextTurn,
+        winner,
+        updatedAt: now(),
+      });
+    },
+    async newLudo() {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('ludo', {
+        id: 'current',
+        aId: meId,
+        bId: partnerId,
+        aTokens: [-1, -1, -1, -1],
+        bTokens: [-1, -1, -1, -1],
+        turn: meId,
+        die: 0,
+        mustMove: false,
+        winner: '',
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    },
+    async rollLudo() {
+      const db = dbRef.current;
+      if (!db) return;
+      const g = ludo.find((l) => l.id === 'current');
+      if (!g || g.winner || g.turn !== meId || g.mustMove) return;
+      const die = 1 + Math.floor(Math.random() * 6);
+      const myTokens = meId === g.aId ? g.aTokens : g.bTokens;
+      const legal = legalTokens(myTokens, die);
+      if (legal.length > 0) {
+        await db.update<LudoGame>('ludo', 'current', { die, mustMove: true, updatedAt: now() });
+      } else {
+        const nextTurn = g.turn === g.aId ? g.bId : g.aId;
+        await db.update<LudoGame>('ludo', 'current', { die, mustMove: false, turn: nextTurn, updatedAt: now() });
+      }
+    },
+    async moveLudo(tokenIndex) {
+      const db = dbRef.current;
+      if (!db) return;
+      const g = ludo.find((l) => l.id === 'current');
+      if (!g || g.winner || g.turn !== meId || !g.mustMove) return;
+      const isA = meId === g.aId;
+      const side: Side = isA ? 'a' : 'b';
+      const oppSide: Side = isA ? 'b' : 'a';
+      const myTokens = [...(isA ? g.aTokens : g.bTokens)];
+      const oppTokens = [...(isA ? g.bTokens : g.aTokens)];
+      if (!legalTokens(myTokens, g.die).includes(tokenIndex)) return;
+      const np = movedPos(myTokens[tokenIndex], g.die);
+      myTokens[tokenIndex] = np;
+      let captured = false;
+      const cell = absCell(side, np);
+      if (cell !== null && !SAFE.has(cell)) {
+        for (let j = 0; j < oppTokens.length; j++) {
+          if (absCell(oppSide, oppTokens[j]) === cell) {
+            oppTokens[j] = -1;
+            captured = true;
+          }
+        }
+      }
+      const winner = myTokens.every((p) => p === 56) ? meId : '';
+      const extra = (g.die === 6 || captured) && !winner;
+      const nextTurn = extra ? meId : g.turn === g.aId ? g.bId : g.aId;
+      await db.update<LudoGame>('ludo', 'current', {
+        aTokens: isA ? myTokens : oppTokens,
+        bTokens: isA ? oppTokens : myTokens,
+        mustMove: false,
         turn: nextTurn,
         winner,
         updatedAt: now(),

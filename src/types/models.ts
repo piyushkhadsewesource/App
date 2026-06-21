@@ -227,7 +227,8 @@ export interface LudoGame {
   aTokens: number[]; // length 4
   bTokens: number[]; // length 4
   turn: string; // authorId to act
-  roll: number; // 0 = needs a roll, else 1..6 awaiting a move
+  die: number; // last die rolled (for display), 0 only before first roll
+  mustMove: boolean; // true when the turn-holder has rolled and must move a token
   winner: string; // authorId or ''
   createdAt: Millis;
   updatedAt: Millis;

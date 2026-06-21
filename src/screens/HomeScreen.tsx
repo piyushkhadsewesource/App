@@ -198,7 +198,7 @@ export default function HomeScreen({ navigation }: any) {
         <Text style={styles.alertEmoji}>🎮</Text>
         <View style={{ flex: 1 }}>
           <Title>Play together</Title>
-          <Muted>This or That, Would You Rather, a quiz, and Tic-Tac-Toe.</Muted>
+          <Muted>Daily Wordle, Ludo, Snakes & Ladders, Tic-Tac-Toe, and more.</Muted>
         </View>
       </Card>
 

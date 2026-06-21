@@ -12,6 +12,7 @@ import InsightsScreen from '../screens/InsightsScreen';
 import JournalScreen from '../screens/JournalScreen';
 import KnowMeScreen from '../screens/KnowMeScreen';
 import LettersScreen from '../screens/LettersScreen';
+import LudoScreen from '../screens/LudoScreen';
 import MissYouScreen from '../screens/MissYouScreen';
 import MomentsScreen from '../screens/MomentsScreen';
 import MoreScreen from '../screens/MoreScreen';
@@ -78,6 +79,7 @@ export default function RootNavigator() {
       <Stack.Screen name="TicTacToe" component={TicTacToeScreen} />
       <Stack.Screen name="Wordle" component={WordleScreen} />
       <Stack.Screen name="Snakes" component={SnakesScreen} />
+      <Stack.Screen name="Ludo" component={LudoScreen} />
     </Stack.Navigator>
   );
 }
