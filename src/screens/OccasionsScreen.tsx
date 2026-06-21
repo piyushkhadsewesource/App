@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimeModal from '../components/DateTimeModal';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../components/ui';
 import { isoToDate, todayISO } from '../lib/date';
@@ -26,6 +26,7 @@ function full(d: Date): string {
 export default function OccasionsScreen({ navigation }: any) {
   const app = useApp();
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState('❤️');
   const [date, setDate] = useState(todayISO());
@@ -41,15 +42,45 @@ export default function OccasionsScreen({ navigation }: any) {
     setDate(todayISO());
     setRecurrence('yearly');
     setRemind(1);
+    setEditingId(null);
     setAdding(false);
+  };
+  const openAdd = () => { hLight(); reset(); setAdding(true); };
+  const openEdit = (o: Occasion) => {
+    hLight();
+    setEditingId(o.id);
+    setTitle(o.title);
+    setIcon(o.icon || '❤️');
+    setDate(o.date);
+    setRecurrence(o.recurrence);
+    setRemind(o.remindDaysBefore);
+    setAdding(true);
   };
 
   const save = async () => {
     if (!title.trim()) return;
     const payload = { title: title.trim(), date, recurrence, remindDaysBefore: remind, icon };
+    const id = editingId;
     reset();
-    await app.addOccasion(payload);
+    if (id) await app.updateOccasion(id, payload);
+    else await app.addOccasion(payload);
   };
+
+  const confirmRemove = (o: Occasion) => {
+    Alert.alert('Remove this date?', `“${o.title}” and its reminders will be removed.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          if (editingId === o.id) reset();
+          app.removeOccasion(o.id);
+        },
+      },
+    ]);
+  };
+
+  const editingItem = editingId ? list.find((o) => o.id === editingId) ?? null : null;
 
   return (
     <Screen scroll>
@@ -57,6 +88,7 @@ export default function OccasionsScreen({ navigation }: any) {
 
       {adding ? (
         <Card style={{ marginBottom: spacing.lg }}>
+          <Text style={styles.formTitle}>{editingId ? 'Edit this date' : 'Add a date'}</Text>
           <Field label="What are we celebrating?" value={title} onChangeText={setTitle} placeholder="e.g. Our anniversary, Riya's birthday" />
 
           <Text style={styles.label}>Pick an icon</Text>
@@ -96,12 +128,18 @@ export default function OccasionsScreen({ navigation }: any) {
           </View>
 
           <View style={{ height: spacing.sm }} />
-          <Button label="Save this date" onPress={save} />
+          <Button label={editingId ? 'Save changes' : 'Save this date'} onPress={save} />
+          {editingItem ? (
+            <>
+              <View style={{ height: spacing.sm }} />
+              <Button label="Remove this date" variant="outline" color={colors.danger} onPress={() => confirmRemove(editingItem)} />
+            </>
+          ) : null}
           <View style={{ height: spacing.sm }} />
           <Button label="Cancel" variant="ghost" onPress={reset} />
         </Card>
       ) : (
-        <Button label="＋  Add a date" onPress={() => { hLight(); setAdding(true); }} style={{ marginBottom: spacing.lg }} />
+        <Button label="＋  Add a date" onPress={openAdd} style={{ marginBottom: spacing.lg }} />
       )}
 
       {list.length === 0 ? (
@@ -118,7 +156,7 @@ export default function OccasionsScreen({ navigation }: any) {
           const yrs = yearsAt(o, next);
           const soon = days <= 7;
           return (
-            <Card key={o.id} tone={soon ? 'rose' : 'surface'} style={{ marginBottom: spacing.md }}>
+            <Card key={o.id} tone={soon ? 'rose' : 'surface'} onPress={() => openEdit(o)} style={{ marginBottom: spacing.md }}>
               <View style={styles.itemHead}>
                 <Text style={{ fontSize: 26 }}>{o.icon || '💗'}</Text>
                 <View style={{ flex: 1 }}>
@@ -138,7 +176,7 @@ export default function OccasionsScreen({ navigation }: any) {
                   {'   '}
                   🔔 {o.remindDaysBefore === 0 ? 'On the day' : `${o.remindDaysBefore}d before`}
                 </Text>
-                <Pressable hitSlop={8} onPress={() => app.removeOccasion(o.id)}>
+                <Pressable hitSlop={8} onPress={() => confirmRemove(o)}>
                   <Text style={styles.x}>Remove</Text>
                 </Pressable>
               </View>
@@ -165,6 +203,7 @@ export default function OccasionsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  formTitle: { fontSize: font.size.md, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: spacing.sm },
   label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs, marginTop: spacing.sm },
   iconRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   iconChip: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt, borderWidth: 1.5, borderColor: 'transparent' },

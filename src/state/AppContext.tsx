@@ -139,9 +139,10 @@ interface AppValue {
   rollLudo(): Promise<void>;
   moveLudo(tokenIndex: number): Promise<void>;
   addScheduleItem(data: { date: string; startMin: number; title: string; endMin?: number; icon?: string; note?: string }): Promise<void>;
-  updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string }): Promise<void>;
+  updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string; date?: string }): Promise<void>;
   removeScheduleItem(id: string): Promise<void>;
   addOccasion(data: { title: string; date: string; recurrence: 'yearly' | 'monthly' | 'once'; remindDaysBefore: number; icon?: string }): Promise<void>;
+  updateOccasion(id: string, patch: { title?: string; date?: string; recurrence?: 'yearly' | 'monthly' | 'once'; remindDaysBefore?: number; icon?: string }): Promise<void>;
   removeOccasion(id: string): Promise<void>;
 }
 
@@ -748,12 +749,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async updateScheduleItem(id, patch) {
       const db = dbRef.current;
       if (!db) return;
-      const clean: Partial<ScheduleItem> = { updatedAt: now() };
+      const clean: Record<string, unknown> = { updatedAt: now() };
       if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 80);
       if (patch.startMin != null) clean.startMin = Math.max(0, Math.min(1439, Math.round(patch.startMin)));
-      if (patch.icon) clean.icon = patch.icon.slice(0, 4);
-      if (patch.note != null) clean.note = clamp(patch.note, 200);
-      await db.update<ScheduleItem>('schedule', id, clean);
+      if (patch.date) clean.date = patch.date;
+      if (patch.icon !== undefined) clean.icon = patch.icon ? patch.icon.slice(0, 4) : null;
+      if (patch.note !== undefined) clean.note = patch.note.trim() ? clampReq(patch.note.trim(), 200) : null;
+      await db.update<ScheduleItem>('schedule', id, clean as Partial<ScheduleItem>);
     },
     async removeScheduleItem(id) {
       await dbRef.current?.remove('schedule', id);
@@ -773,6 +775,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         icon: icon ? icon.slice(0, 4) : undefined,
         createdAt: now(),
       });
+    },
+    async updateOccasion(id, patch) {
+      const db = dbRef.current;
+      if (!db) return;
+      const clean: Record<string, unknown> = {};
+      if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 80);
+      if (patch.date) clean.date = patch.date;
+      if (patch.recurrence) clean.recurrence = patch.recurrence;
+      if (patch.remindDaysBefore != null) clean.remindDaysBefore = Math.max(0, Math.min(60, Math.round(patch.remindDaysBefore)));
+      if (patch.icon !== undefined) clean.icon = patch.icon ? patch.icon.slice(0, 4) : null;
+      await db.update<Occasion>('occasions', id, clean as Partial<Occasion>);
     },
     async removeOccasion(id) {
       await dbRef.current?.remove('occasions', id);
