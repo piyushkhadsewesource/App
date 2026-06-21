@@ -52,6 +52,9 @@ export const gradients = {
   gameViolet: ['#9C8CF0', '#6F5BD0'] as const,
   gameGold: ['#F6C56B', '#E2902F'] as const,
   gameTeal: ['#5FC9A8', '#3E9C86'] as const,
+  gameGreen: ['#7BC47F', '#4FA486'] as const,
+  gameSunset: ['#FFB36B', '#F5894F'] as const,
+  gameBerry: ['#F77FB0', '#9C6BE0'] as const,
 };
 
 const cardShadow: ViewStyle =

@@ -10,6 +10,14 @@ export default function GamesScreen({ navigation }: any) {
   const partner = identity?.partnerName ?? 'them';
   const games = [
     {
+      grad: gradients.gameGreen,
+      emoji: '🟩',
+      title: 'Daily Wordle',
+      sub: 'One shared word, guess it in six',
+      meta: 'New daily',
+      go: () => navigation.navigate('Wordle'),
+    },
+    {
       grad: gradients.gameRose,
       emoji: '🎯',
       title: 'This or That',

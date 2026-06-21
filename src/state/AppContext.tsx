@@ -42,6 +42,7 @@ import {
   Reason,
   SosAlert,
   TicTacToe,
+  WordleResult,
 } from '../types/models';
 import { EMPTY_BOARD } from '../lib/games';
 
@@ -65,6 +66,7 @@ interface AppValue {
   meeting: Meeting | null;
   gameAnswers: GameAnswer[];
   tictactoe: TicTacToe | null;
+  wordle: WordleResult[];
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -120,6 +122,7 @@ interface AppValue {
   answerGame(game: GameKind, promptId: string, choice: number): Promise<void>;
   newTicTacToe(): Promise<void>;
   playTicTacToe(index: number): Promise<void>;
+  recordWordle(data: { date: string; guesses: string[]; solved: boolean }): Promise<void>;
 }
 
 // Caps on user/partner-supplied content: keeps any single Firestore document
@@ -149,6 +152,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState<DeviceToken[]>([]);
   const [gameAnswers, setGameAnswers] = useState<GameAnswer[]>([]);
   const [ttt, setTtt] = useState<TicTacToe[]>([]);
+  const [wordle, setWordle] = useState<WordleResult[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -187,6 +191,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<DeviceToken>('tokens', setTokens),
         db.watch<GameAnswer>('gameAnswers', setGameAnswers),
         db.watch<TicTacToe>('tictactoe', setTtt),
+        db.watch<WordleResult>('wordle', setWordle),
       ];
     })();
     return () => {
@@ -272,6 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     meeting: meetings.find((m) => m.id === 'next') ?? null,
     gameAnswers,
     tictactoe: ttt.find((t) => t.id === 'current') ?? null,
+    wordle,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -315,6 +321,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTokens([]);
       setGameAnswers([]);
       setTtt([]);
+      setWordle([]);
       setIdentity(null);
     },
 
@@ -561,6 +568,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const board = game.board.substring(0, index) + mark + game.board.substring(index + 1);
       const nextTurn = game.turn === game.xId ? game.oId : game.xId;
       await db.update<TicTacToe>('tictactoe', 'current', { board, turn: nextTurn, updatedAt: now() });
+    },
+    async recordWordle({ date, guesses, solved }) {
+      const db = dbRef.current;
+      if (!db) return;
+      const clean = (guesses ?? [])
+        .slice(0, 6)
+        .map((g) => String(g).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5))
+        .filter((g) => g.length === 5);
+      const id = `${date}:${meId}`;
+      const existing = wordle.find((w) => w.id === id);
+      await db.add('wordle', {
+        id,
+        authorId: meId,
+        date,
+        guesses: clean,
+        solved: !!solved,
+        createdAt: existing?.createdAt ?? now(),
+        updatedAt: now(),
+      });
     },
   };
 

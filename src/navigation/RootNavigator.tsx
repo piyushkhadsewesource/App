@@ -20,6 +20,7 @@ import RemindersScreen from '../screens/RemindersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import TicTacToeScreen from '../screens/TicTacToeScreen';
 import VaultScreen from '../screens/VaultScreen';
+import WordleScreen from '../screens/WordleScreen';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -74,6 +75,7 @@ export default function RootNavigator() {
       <Stack.Screen name="ChoiceGame" component={ChoiceGameScreen} />
       <Stack.Screen name="KnowMe" component={KnowMeScreen} />
       <Stack.Screen name="TicTacToe" component={TicTacToeScreen} />
+      <Stack.Screen name="Wordle" component={WordleScreen} />
     </Stack.Navigator>
   );
 }

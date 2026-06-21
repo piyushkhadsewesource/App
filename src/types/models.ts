@@ -191,6 +191,48 @@ export interface TicTacToe {
   updatedAt: Millis;
 }
 
+/** One person's result for a given day's Wordle (shared daily word). */
+export interface WordleResult {
+  id: string; // `${date}:${authorId}`
+  authorId: string;
+  date: ISODate;
+  guesses: string[]; // each a 5-letter uppercase guess
+  solved: boolean;
+  createdAt: Millis;
+  updatedAt: Millis;
+}
+
+/** Shared Snakes & Ladders game state (two players, turn-based). */
+export interface SnakesGame {
+  id: 'current';
+  aId: string; // authorId who started (token A)
+  bId: string; // partner (token B)
+  aPos: number; // 0..100
+  bPos: number; // 0..100
+  turn: string; // authorId to roll
+  roll: number; // last die value 1..6, 0 if none
+  rolledBy: string; // who rolled last
+  winner: string; // authorId or ''
+  createdAt: Millis;
+  updatedAt: Millis;
+}
+
+/** Shared Ludo game state (two players, four tokens each). */
+export interface LudoGame {
+  id: 'current';
+  aId: string; // authorId who started
+  bId: string; // partner
+  // Each token position: -1 in base, 0..51 on the main loop (absolute cells),
+  // 100..105 in the home column, 106 = home/finished.
+  aTokens: number[]; // length 4
+  bTokens: number[]; // length 4
+  turn: string; // authorId to act
+  roll: number; // 0 = needs a roll, else 1..6 awaiting a move
+  winner: string; // authorId or ''
+  createdAt: Millis;
+  updatedAt: Millis;
+}
+
 /** Names of the synced collections. */
 export const COLLECTIONS = [
   'checkins',
@@ -207,6 +249,9 @@ export const COLLECTIONS = [
   'feelings',
   'gameAnswers',
   'tictactoe',
+  'wordle',
+  'snakes',
+  'ludo',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
