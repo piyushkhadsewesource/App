@@ -62,12 +62,34 @@ export function sortByNext(list: Occasion[]): Occasion[] {
 export function upcomingOccasion(
   list: Occasion[],
   withinDays = 31,
+  minDays = 0,
 ): { occasion: Occasion; days: number; date: Date } | null {
   let best: { occasion: Occasion; days: number; date: Date } | null = null;
   for (const o of list) {
     const date = nextOccurrence(o);
     const days = daysUntil(date);
-    if (days >= 0 && days <= withinDays && (!best || days < best.days)) best = { occasion: o, days, date };
+    if (days >= minDays && days <= withinDays && (!best || days < best.days)) best = { occasion: o, days, date };
   }
   return best;
+}
+
+/**
+ * Saved dates whose month/day is today, with how many years ago the anchor was
+ * (for "a year ago today" nostalgia). Yearly occasions, or one-time dates that
+ * have since passed, qualify. Most years-ago first.
+ */
+export function occasionsOnThisDay(list: Occasion[]): { occasion: Occasion; yearsAgo: number }[] {
+  const now = new Date();
+  const m = now.getMonth();
+  const d = now.getDate();
+  const out: { occasion: Occasion; yearsAgo: number }[] = [];
+  for (const o of list) {
+    const a = anchorDate(o);
+    if (a.getMonth() !== m || a.getDate() !== d) continue;
+    const yearsAgo = now.getFullYear() - a.getFullYear();
+    if (o.recurrence === 'yearly' || (o.recurrence === 'once' && yearsAgo >= 1)) {
+      out.push({ occasion: o, yearsAgo });
+    }
+  }
+  return out.sort((x, y) => y.yearsAgo - x.yearsAgo);
 }

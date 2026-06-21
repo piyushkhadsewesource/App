@@ -28,6 +28,18 @@ function longDate(dateISO: string): string {
   const mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
   return `${d.getDate()} ${mo} ${d.getFullYear()}`;
 }
+function isoOf(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function dayAt(dateISO: string, h: number, m: number): number {
+  const d = isoToDate(dateISO);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+function whenLabel(ts: number): string {
+  const d = new Date(ts);
+  return `${dayLabel(isoOf(d))} · ${minLabel(d.getHours() * 60 + d.getMinutes())}`;
+}
 
 export default function ScheduleScreen({ navigation }: any) {
   const app = useApp();
@@ -37,7 +49,7 @@ export default function ScheduleScreen({ navigation }: any) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState<string | undefined>(undefined);
-  const [startMin, setStartMin] = useState(9 * 60);
+  const [whenTs, setWhenTs] = useState(() => dayAt(todayISO(), 9, 0));
   const [note, setNote] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -46,26 +58,29 @@ export default function ScheduleScreen({ navigation }: any) {
     [app.schedule, viewDate],
   );
 
+  const openAdd = () => {
+    hLight();
+    setWhenTs(dayAt(viewDate, 9, 0));
+    setAdding(true);
+  };
+
   const resetForm = () => {
     setTitle('');
     setIcon(undefined);
-    setStartMin(9 * 60);
     setNote('');
     setAdding(false);
   };
 
   const save = async () => {
     if (!title.trim()) return;
-    const payload = { date: viewDate, startMin, title: title.trim(), icon, note: note.trim() || undefined };
+    const d = new Date(whenTs);
+    const date = isoOf(d);
+    const startMin = d.getHours() * 60 + d.getMinutes();
+    const payload = { date, startMin, title: title.trim(), icon, note: note.trim() || undefined };
     resetForm();
+    if (date !== viewDate) setViewDate(date);
     await app.addScheduleItem(payload);
   };
-
-  const pickerInitial = useMemo(() => {
-    const d = isoToDate(viewDate);
-    d.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
-    return d.getTime();
-  }, [viewDate, startMin]);
 
   return (
     <Screen scroll>
@@ -106,10 +121,10 @@ export default function ScheduleScreen({ navigation }: any) {
               </Pressable>
             ))}
           </View>
-          <Text style={styles.fieldLabel}>Time</Text>
+          <Text style={styles.fieldLabel}>When</Text>
           <Pressable onPress={() => setPickerOpen(true)} style={styles.timeRow}>
-            <Text style={styles.timeIcon}>🕑</Text>
-            <Text style={styles.timeText}>{minLabel(startMin)}</Text>
+            <Text style={styles.timeIcon}>📅</Text>
+            <Text style={styles.timeText}>{whenLabel(whenTs)}</Text>
             <Text style={styles.chev}>›</Text>
           </Pressable>
           <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="Anything to add" />
@@ -118,7 +133,7 @@ export default function ScheduleScreen({ navigation }: any) {
           <Button label="Cancel" variant="ghost" onPress={resetForm} />
         </Card>
       ) : (
-        <Button label="＋  Add to the plan" onPress={() => { hLight(); setAdding(true); }} style={{ marginBottom: spacing.lg }} />
+        <Button label="＋  Add to the plan" onPress={openAdd} style={{ marginBottom: spacing.lg }} />
       )}
 
       {/* Timeline */}
@@ -160,13 +175,13 @@ export default function ScheduleScreen({ navigation }: any) {
 
       <DateTimeModal
         visible={pickerOpen}
-        mode="time"
-        title="What time?"
-        initial={pickerInitial}
+        mode="datetime"
+        allowPast
+        title="When?"
+        initial={whenTs}
         onCancel={() => setPickerOpen(false)}
         onConfirm={(ts) => {
-          const d = new Date(ts);
-          setStartMin(d.getHours() * 60 + d.getMinutes());
+          setWhenTs(ts);
           setPickerOpen(false);
         }}
       />

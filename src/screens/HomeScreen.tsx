@@ -19,7 +19,7 @@ import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
 import { captureStreak, hasMomentToday } from '../lib/moments';
 import { countdownTo, shortCountdown } from '../lib/countdown';
-import { untilLabel, upcomingOccasion } from '../lib/occasions';
+import { occasionsOnThisDay, ordinal, untilLabel, upcomingOccasion } from '../lib/occasions';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
@@ -42,7 +42,12 @@ export default function HomeScreen({ navigation }: any) {
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
 
-  const upcoming = useMemo(() => upcomingOccasion(app.occasions), [app.occasions]);
+  const occToday = useMemo(() => occasionsOnThisDay(app.occasions), [app.occasions]);
+  const anniToday = occToday[0] ?? null;
+  const upcoming = useMemo(() => {
+    const ids = new Set(occToday.map((x) => x.occasion.id));
+    return upcomingOccasion(app.occasions.filter((o) => !ids.has(o.id)), 31, 0);
+  }, [app.occasions, occToday]);
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   const nextPlan = useMemo(() => {
     const todays = app.schedule.filter((s) => s.date === today).sort((a, b) => a.startMin - b.startMin);
@@ -121,6 +126,25 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </Card>
       )}
+
+      {/* A year ago today (from your saved dates) */}
+      {anniToday ? (
+        <Card tone="gold" onPress={() => navigation.navigate('Occasions')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>{anniToday.occasion.icon || '🎉'}</Text>
+          <View style={{ flex: 1 }}>
+            <Title>
+              {anniToday.yearsAgo >= 1
+                ? `${ordinal(anniToday.yearsAgo)} ${anniToday.occasion.title} today 🎉`
+                : `${anniToday.occasion.title} is today 🎉`}
+            </Title>
+            <Muted>
+              {anniToday.yearsAgo >= 1
+                ? `${anniToday.yearsAgo} year${anniToday.yearsAgo === 1 ? '' : 's'} ago today. Make it count 💞`
+                : 'Make it count 💞'}
+            </Muted>
+          </View>
+        </Card>
+      ) : null}
 
       {/* Upcoming anniversary / special date */}
       {upcoming ? (
