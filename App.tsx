@@ -13,7 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import { refreshReminders } from './src/services/notifications';
+import { refreshReminders, syncOccasionReminders } from './src/services/notifications';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
 
@@ -23,7 +23,7 @@ const navTheme: Theme = {
 };
 
 function Root() {
-  const { ready, identity, moments, meId } = useApp();
+  const { ready, identity, moments, meId, occasions } = useApp();
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_600SemiBold,
     Fraunces_700Bold,
@@ -50,6 +50,15 @@ function Root() {
   useEffect(() => {
     refreshReminders(postedKey ? postedKey.split(',') : [], identity?.partnerName);
   }, [postedKey, identity?.partnerName]);
+
+  // Schedule local reminders for saved anniversaries and special dates.
+  const occKey = occasions
+    .map((o) => `${o.id}:${o.date}:${o.recurrence}:${o.remindDaysBefore}:${o.icon ?? ''}`)
+    .sort()
+    .join('|');
+  useEffect(() => {
+    if (identity) syncOccasionReminders(occasions);
+  }, [occKey, identity]);
 
   if (!ready || (!fontsReady && !fontTimeout)) {
     return (

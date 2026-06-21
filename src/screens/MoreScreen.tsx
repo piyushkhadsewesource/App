@@ -8,6 +8,8 @@ const LINKS: { route: string; emoji: string; label: string; sub: string }[] = [
   { route: 'Letters', emoji: '💌', label: 'Love letters', sub: 'Write now, deliver later' },
   { route: 'Deck', emoji: '🃏', label: 'Intimacy deck', sub: 'Questions that bring you closer' },
   { route: 'Games', emoji: '🎮', label: 'Play together', sub: 'Wordle, Ludo, Snakes & Ladders, and more' },
+  { route: 'Schedule', emoji: '🗓️', label: 'Our day', sub: "Share today's plan, see each other's" },
+  { route: 'Occasions', emoji: '🎀', label: 'Dates to remember', sub: 'Anniversaries & reminders' },
   { route: 'Journal', emoji: '📖', label: 'Our journal', sub: 'Your month, narrated' },
   { route: 'Insights', emoji: '💜', label: 'Companion', sub: 'Gentle attachment-aware nudges' },
   { route: 'Future', emoji: '✨', label: 'Future board', sub: 'The life you’re building' },

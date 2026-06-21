@@ -38,9 +38,11 @@ import {
   Memory,
   Moment,
   Mood,
+  Occasion,
   Ping,
   PingType,
   Reason,
+  ScheduleItem,
   SnakesGame,
   SosAlert,
   TicTacToe,
@@ -73,6 +75,8 @@ interface AppValue {
   wordle: WordleResult[];
   snakes: SnakesGame | null;
   ludo: LudoGame | null;
+  schedule: ScheduleItem[];
+  occasions: Occasion[];
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -134,6 +138,11 @@ interface AppValue {
   newLudo(): Promise<void>;
   rollLudo(): Promise<void>;
   moveLudo(tokenIndex: number): Promise<void>;
+  addScheduleItem(data: { date: string; startMin: number; title: string; endMin?: number; icon?: string; note?: string }): Promise<void>;
+  updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string }): Promise<void>;
+  removeScheduleItem(id: string): Promise<void>;
+  addOccasion(data: { title: string; date: string; recurrence: 'yearly' | 'monthly' | 'once'; remindDaysBefore: number; icon?: string }): Promise<void>;
+  removeOccasion(id: string): Promise<void>;
 }
 
 // Caps on user/partner-supplied content: keeps any single Firestore document
@@ -166,6 +175,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [wordle, setWordle] = useState<WordleResult[]>([]);
   const [snakes, setSnakes] = useState<SnakesGame[]>([]);
   const [ludo, setLudo] = useState<LudoGame[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+  const [occasions, setOccasions] = useState<Occasion[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -207,6 +218,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<WordleResult>('wordle', setWordle),
         db.watch<SnakesGame>('snakes', setSnakes),
         db.watch<LudoGame>('ludo', setLudo),
+        db.watch<ScheduleItem>('schedule', setSchedule),
+        db.watch<Occasion>('occasions', setOccasions),
       ];
     })();
     return () => {
@@ -295,6 +308,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     wordle,
     snakes: snakes.find((s) => s.id === 'current') ?? null,
     ludo: ludo.find((l) => l.id === 'current') ?? null,
+    schedule,
+    occasions,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -341,6 +356,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setWordle([]);
       setSnakes([]);
       setLudo([]);
+      setSchedule([]);
+      setOccasions([]);
       setIdentity(null);
     },
 
@@ -709,6 +726,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
         winner,
         updatedAt: now(),
       });
+    },
+    async addScheduleItem({ date, startMin, title, endMin, icon, note }) {
+      const db = dbRef.current;
+      if (!db) return;
+      const t = (title ?? '').trim();
+      if (!t) return;
+      await db.add('schedule', {
+        id: genId('sc_'),
+        authorId: meId,
+        date,
+        startMin: Math.max(0, Math.min(1439, Math.round(startMin))),
+        endMin: endMin == null ? undefined : Math.max(0, Math.min(1439, Math.round(endMin))),
+        title: clampReq(t, 80),
+        icon: icon ? icon.slice(0, 4) : undefined,
+        note: clamp(note, 200),
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    },
+    async updateScheduleItem(id, patch) {
+      const db = dbRef.current;
+      if (!db) return;
+      const clean: Partial<ScheduleItem> = { updatedAt: now() };
+      if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 80);
+      if (patch.startMin != null) clean.startMin = Math.max(0, Math.min(1439, Math.round(patch.startMin)));
+      if (patch.icon) clean.icon = patch.icon.slice(0, 4);
+      if (patch.note != null) clean.note = clamp(patch.note, 200);
+      await db.update<ScheduleItem>('schedule', id, clean);
+    },
+    async removeScheduleItem(id) {
+      await dbRef.current?.remove('schedule', id);
+    },
+    async addOccasion({ title, date, recurrence, remindDaysBefore, icon }) {
+      const db = dbRef.current;
+      if (!db) return;
+      const t = (title ?? '').trim();
+      if (!t) return;
+      await db.add('occasions', {
+        id: genId('oc_'),
+        authorId: meId,
+        title: clampReq(t, 80),
+        date,
+        recurrence,
+        remindDaysBefore: Math.max(0, Math.min(60, Math.round(remindDaysBefore))),
+        icon: icon ? icon.slice(0, 4) : undefined,
+        createdAt: now(),
+      });
+    },
+    async removeOccasion(id) {
+      await dbRef.current?.remove('occasions', id);
     },
   };
 

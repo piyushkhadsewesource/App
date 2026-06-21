@@ -19,6 +19,7 @@ import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
 import { captureStreak, hasMomentToday } from '../lib/moments';
 import { countdownTo, shortCountdown } from '../lib/countdown';
+import { untilLabel, upcomingOccasion } from '../lib/occasions';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
@@ -40,6 +41,13 @@ export default function HomeScreen({ navigation }: any) {
   const momentDoneToday = hasMomentToday(app.moments, meId);
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
+
+  const upcoming = useMemo(() => upcomingOccasion(app.occasions), [app.occasions]);
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nextPlan = useMemo(() => {
+    const todays = app.schedule.filter((s) => s.date === today).sort((a, b) => a.startMin - b.startMin);
+    return todays.find((s) => s.startMin >= nowMin - 30) ?? null;
+  }, [app.schedule, today, nowMin]);
 
   const onThisDay = useMemo(() => {
     const md = today.slice(5);
@@ -113,6 +121,32 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </Card>
       )}
+
+      {/* Upcoming anniversary / special date */}
+      {upcoming ? (
+        <Card tone="rose" onPress={() => navigation.navigate('Occasions')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>{upcoming.occasion.icon || '🎉'}</Text>
+          <View style={{ flex: 1 }}>
+            <Title>
+              {upcoming.occasion.title} · {untilLabel(upcoming.days).toLowerCase()}
+            </Title>
+            <Muted>{upcoming.days === 0 ? 'It’s today, make it count 💞' : 'Tap to see all your special dates.'}</Muted>
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Next on today's plan */}
+      {nextPlan ? (
+        <Card onPress={() => navigation.navigate('Schedule')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>{nextPlan.icon || '🗓️'}</Text>
+          <View style={{ flex: 1 }}>
+            <Title>Next up: {nextPlan.title}</Title>
+            <Muted>
+              {minLabel(nextPlan.startMin)} · {app.isMine(nextPlan.authorId) ? 'your plan' : `${identity?.partnerName ?? 'their'} plan`}
+            </Muted>
+          </View>
+        </Card>
+      ) : null}
 
       {/* Relationship health hero */}
       <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
@@ -213,6 +247,8 @@ export default function HomeScreen({ navigation }: any) {
         <QuickTile emoji="🃏" label="Intimacy deck" tint={colors.accentSoft} onPress={() => navigation.navigate('Deck')} />
         <QuickTile emoji="📖" label="Our journal" tint={colors.goldSoft} onPress={() => navigation.navigate('Journal')} />
         <QuickTile emoji="✨" label="Future board" tint={colors.goodSoft} onPress={() => navigation.navigate('Future')} />
+        <QuickTile emoji="🗓️" label="Our day" tint={colors.goodSoft} onPress={() => navigation.navigate('Schedule')} />
+        <QuickTile emoji="🎀" label="Dates" tint={colors.primarySoft} onPress={() => navigation.navigate('Occasions')} />
         <QuickTile emoji="💜" label="Insights" tint={colors.accentSoft} onPress={() => navigation.navigate('Insights')} />
         <QuickTile emoji="🎮" label="Games" tint={colors.primarySoft} onPress={() => navigation.navigate('Games')} />
       </View>
@@ -225,6 +261,13 @@ export default function HomeScreen({ navigation }: any) {
       </Card>
     </Screen>
   );
+}
+
+function minLabel(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 }
 
 function HeroMetric({ label, value }: { label: string; value: string }) {

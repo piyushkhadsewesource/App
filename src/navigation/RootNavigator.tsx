@@ -16,7 +16,9 @@ import LudoScreen from '../screens/LudoScreen';
 import MissYouScreen from '../screens/MissYouScreen';
 import MomentsScreen from '../screens/MomentsScreen';
 import MoreScreen from '../screens/MoreScreen';
+import OccasionsScreen from '../screens/OccasionsScreen';
 import PulseScreen from '../screens/PulseScreen';
+import ScheduleScreen from '../screens/ScheduleScreen';
 import RemindersScreen from '../screens/RemindersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import SnakesScreen from '../screens/SnakesScreen';
@@ -80,6 +82,8 @@ export default function RootNavigator() {
       <Stack.Screen name="Wordle" component={WordleScreen} />
       <Stack.Screen name="Snakes" component={SnakesScreen} />
       <Stack.Screen name="Ludo" component={LudoScreen} />
+      <Stack.Screen name="Schedule" component={ScheduleScreen} />
+      <Stack.Screen name="Occasions" component={OccasionsScreen} />
     </Stack.Navigator>
   );
 }

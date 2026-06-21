@@ -142,8 +142,22 @@ function reminderBody(who: string, seed: number): string {
   return lines[((seed % lines.length) + lines.length) % lines.length];
 }
 
+/** Cancel only the scheduled notifications we tagged with a given kind. */
+async function cancelKind(kind: string) {
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      all
+        .filter((n) => (n.content?.data as Record<string, unknown> | undefined)?.kind === kind)
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 async function scheduleSmart(cfg: ReminderConfig, postedDates: string[], partnerName?: string) {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelKind('moment');
   if (!cfg.enabled || cfg.times.length === 0) return;
   await ensureChannel();
 
@@ -161,7 +175,7 @@ async function scheduleSmart(cfg: ReminderConfig, postedDates: string[], partner
       if (when.getTime() <= Date.now() + 1000) continue; // skip times already passed
       await Notifications.scheduleNotificationAsync({
         // Deterministic per day+slot so each reminder differs and they rotate.
-        content: { title: '📸 Tether', body: reminderBody(who, epochDay * 10 + si) },
+        content: { title: '📸 Tether', body: reminderBody(who, epochDay * 10 + si), data: { kind: 'moment' } },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: when,
@@ -197,7 +211,7 @@ export async function setRemindersEnabled(
     return false;
   }
   if (!enabled) {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await cancelKind('moment');
     await saveConfig({ ...cfg, enabled: false });
     return false;
   }
@@ -210,6 +224,87 @@ export async function setRemindersEnabled(
   await saveConfig(next);
   await scheduleSmart(next, postedDates, partnerName);
   return true;
+}
+
+// ── Anniversaries & recurring dates ──────────────────────────────────────
+const OCC_CHANNEL = 'occasions';
+
+export interface OccasionLite {
+  id: string;
+  title: string;
+  date: string; // ISODate
+  recurrence: 'yearly' | 'monthly' | 'once';
+  remindDaysBefore: number;
+  icon?: string;
+}
+
+async function ensureOccasionChannel() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(OCC_CHANNEL, {
+      name: 'Anniversaries & dates',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+  }
+}
+
+function parseISO(s: string): Date {
+  const [y, m, d] = s.split('-').map((x) => parseInt(x, 10));
+  return new Date(y || 2024, (m || 1) - 1, d || 1);
+}
+
+async function scheduleOccasion(o: OccasionLite) {
+  const anchor = parseISO(o.date);
+  const remind = Math.max(0, Math.min(60, Math.round(o.remindDaysBefore || 0)));
+  const icon = o.icon || '💗';
+  const when = remind === 0 ? 'today' : remind === 1 ? 'tomorrow' : `in ${remind} days`;
+  const content = {
+    title: `${icon} ${o.title}`,
+    body: remind === 0 ? `${o.title} is today! 🎉` : `${o.title} is ${when}.`,
+    data: { kind: 'occasion', id: o.id },
+  };
+  const T = Notifications.SchedulableTriggerInputTypes;
+
+  if (o.recurrence === 'once') {
+    const d = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - remind, 9, 0, 0, 0);
+    if (d.getTime() > Date.now() + 1000) {
+      await Notifications.scheduleNotificationAsync({ content, trigger: { type: T.DATE, date: d, channelId: OCC_CHANNEL } });
+    }
+    return;
+  }
+  if (o.recurrence === 'yearly') {
+    const r = new Date(2024, anchor.getMonth(), anchor.getDate());
+    r.setDate(r.getDate() - remind);
+    await Notifications.scheduleNotificationAsync({
+      content,
+      trigger: { type: T.YEARLY, month: r.getMonth(), day: r.getDate(), hour: 9, minute: 0, channelId: OCC_CHANNEL },
+    });
+    return;
+  }
+  // monthly
+  let day = anchor.getDate() - remind;
+  if (day < 1) day = 1;
+  if (day > 28) day = 28;
+  await Notifications.scheduleNotificationAsync({
+    content,
+    trigger: { type: T.MONTHLY, day, hour: 9, minute: 0, channelId: OCC_CHANNEL },
+  });
+}
+
+/** Re-schedule local reminders for the couple's saved occasions. */
+export async function syncOccasionReminders(occasions: OccasionLite[]): Promise<void> {
+  if (!supported) return;
+  try {
+    let perm = await Notifications.getPermissionsAsync();
+    if (perm.status === 'undetermined' && occasions.length > 0) {
+      perm = await Notifications.requestPermissionsAsync();
+    }
+    if (!perm.granted) return;
+    await ensureOccasionChannel();
+    await cancelKind('occasion');
+    for (const o of occasions) await scheduleOccasion(o);
+  } catch {
+    /* notifications unavailable */
+  }
 }
 
 /** Save new reminder times and reschedule. */

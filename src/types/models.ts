@@ -234,6 +234,32 @@ export interface LudoGame {
   updatedAt: Millis;
 }
 
+/** One entry on the shared daily timetable. */
+export interface ScheduleItem {
+  id: string;
+  authorId: string;
+  date: ISODate; // the day it belongs to
+  startMin: number; // minutes since midnight (0..1439)
+  endMin?: number; // optional end, minutes since midnight
+  title: string;
+  icon?: string;
+  note?: string;
+  createdAt: Millis;
+  updatedAt: Millis;
+}
+
+/** A recurring date to remember (anniversary, birthday, monthly milestone…). */
+export interface Occasion {
+  id: string;
+  authorId: string;
+  title: string;
+  date: ISODate; // the anchor date
+  recurrence: 'yearly' | 'monthly' | 'once';
+  remindDaysBefore: number; // 0..30
+  icon?: string;
+  createdAt: Millis;
+}
+
 /** Names of the synced collections. */
 export const COLLECTIONS = [
   'checkins',
@@ -253,6 +279,8 @@ export const COLLECTIONS = [
   'wordle',
   'snakes',
   'ludo',
+  'schedule',
+  'occasions',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
