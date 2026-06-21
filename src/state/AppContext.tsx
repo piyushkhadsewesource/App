@@ -40,11 +40,13 @@ import {
   Ping,
   PingType,
   Reason,
+  SnakesGame,
   SosAlert,
   TicTacToe,
   WordleResult,
 } from '../types/models';
 import { EMPTY_BOARD } from '../lib/games';
+import { applyRoll } from '../lib/snakes';
 
 interface AppValue {
   ready: boolean;
@@ -67,6 +69,7 @@ interface AppValue {
   gameAnswers: GameAnswer[];
   tictactoe: TicTacToe | null;
   wordle: WordleResult[];
+  snakes: SnakesGame | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -123,6 +126,8 @@ interface AppValue {
   newTicTacToe(): Promise<void>;
   playTicTacToe(index: number): Promise<void>;
   recordWordle(data: { date: string; guesses: string[]; solved: boolean }): Promise<void>;
+  newSnakes(): Promise<void>;
+  rollSnakes(): Promise<void>;
 }
 
 // Caps on user/partner-supplied content: keeps any single Firestore document
@@ -153,6 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [gameAnswers, setGameAnswers] = useState<GameAnswer[]>([]);
   const [ttt, setTtt] = useState<TicTacToe[]>([]);
   const [wordle, setWordle] = useState<WordleResult[]>([]);
+  const [snakes, setSnakes] = useState<SnakesGame[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -192,6 +198,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<GameAnswer>('gameAnswers', setGameAnswers),
         db.watch<TicTacToe>('tictactoe', setTtt),
         db.watch<WordleResult>('wordle', setWordle),
+        db.watch<SnakesGame>('snakes', setSnakes),
       ];
     })();
     return () => {
@@ -278,6 +285,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     gameAnswers,
     tictactoe: ttt.find((t) => t.id === 'current') ?? null,
     wordle,
+    snakes: snakes.find((s) => s.id === 'current') ?? null,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -322,6 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setGameAnswers([]);
       setTtt([]);
       setWordle([]);
+      setSnakes([]);
       setIdentity(null);
     },
 
@@ -585,6 +594,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
         guesses: clean,
         solved: !!solved,
         createdAt: existing?.createdAt ?? now(),
+        updatedAt: now(),
+      });
+    },
+    async newSnakes() {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('snakes', {
+        id: 'current',
+        aId: meId,
+        bId: partnerId,
+        aPos: 0,
+        bPos: 0,
+        turn: meId,
+        roll: 0,
+        rolledBy: '',
+        winner: '',
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    },
+    async rollSnakes() {
+      const db = dbRef.current;
+      if (!db) return;
+      const g = snakes.find((s) => s.id === 'current');
+      if (!g || g.winner || g.turn !== meId) return;
+      const die = 1 + Math.floor(Math.random() * 6);
+      const isA = meId === g.aId;
+      const np = applyRoll(isA ? g.aPos : g.bPos, die);
+      const winner = np === 100 ? meId : '';
+      const nextTurn = winner ? g.turn : g.turn === g.aId ? g.bId : g.aId;
+      await db.update<SnakesGame>('snakes', 'current', {
+        ...(isA ? { aPos: np } : { bPos: np }),
+        roll: die,
+        rolledBy: meId,
+        turn: nextTurn,
+        winner,
         updatedAt: now(),
       });
     },

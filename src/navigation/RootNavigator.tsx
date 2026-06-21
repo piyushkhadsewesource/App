@@ -18,6 +18,7 @@ import MoreScreen from '../screens/MoreScreen';
 import PulseScreen from '../screens/PulseScreen';
 import RemindersScreen from '../screens/RemindersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import SnakesScreen from '../screens/SnakesScreen';
 import TicTacToeScreen from '../screens/TicTacToeScreen';
 import VaultScreen from '../screens/VaultScreen';
 import WordleScreen from '../screens/WordleScreen';
@@ -76,6 +77,7 @@ export default function RootNavigator() {
       <Stack.Screen name="KnowMe" component={KnowMeScreen} />
       <Stack.Screen name="TicTacToe" component={TicTacToeScreen} />
       <Stack.Screen name="Wordle" component={WordleScreen} />
+      <Stack.Screen name="Snakes" component={SnakesScreen} />
     </Stack.Navigator>
   );
 }

@@ -49,6 +49,14 @@ export default function GamesScreen({ navigation }: any) {
       meta: 'Live match',
       go: () => navigation.navigate('TicTacToe'),
     },
+    {
+      grad: gradients.gameSunset,
+      emoji: '🎲',
+      title: 'Snakes & Ladders',
+      sub: 'Roll, climb, slide, first to 100',
+      meta: 'Live match',
+      go: () => navigation.navigate('Snakes'),
+    },
   ];
 
   return (
