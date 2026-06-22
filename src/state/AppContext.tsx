@@ -113,6 +113,8 @@ interface AppValue {
     occasion?: string;
   }): Promise<void>;
   openLetter(id: string): Promise<void>;
+  updateLetter(id: string, patch: { title?: string; body?: string; occasion?: string; deliverAt?: number }): Promise<void>;
+  removeLetter(id: string): Promise<void>;
   addMemory(data: {
     title: string;
     description?: string;
@@ -120,11 +122,13 @@ interface AppValue {
     emoji?: string;
     kind: Memory['kind'];
   }): Promise<void>;
+  updateMemory(id: string, patch: { title?: string; description?: string; date?: string; emoji?: string; kind?: Memory['kind'] }): Promise<void>;
   removeMemory(id: string): Promise<void>;
   addReason(text: string): Promise<void>;
   removeReason(id: string): Promise<void>;
   addFuture(category: FutureCategory, text: string): Promise<void>;
   toggleFuture(id: string, done: boolean): Promise<void>;
+  updateFuture(id: string, text: string): Promise<void>;
   removeFuture(id: string): Promise<void>;
   addDeckResponse(promptId: string, promptText: string, answer: string): Promise<void>;
   addMoment(data: { image: string; caption?: string; date?: string }): Promise<void>;
@@ -470,6 +474,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async openLetter(id) {
       await dbRef.current?.update<Letter>('letters', id, { openedAt: now() });
     },
+    async updateLetter(id, patch) {
+      const db = dbRef.current;
+      if (!db) return;
+      const clean: Record<string, unknown> = {};
+      if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 140);
+      if (patch.body?.trim()) clean.body = clampReq(patch.body.trim(), 10000);
+      if (patch.occasion !== undefined) clean.occasion = patch.occasion.trim() ? clampReq(patch.occasion.trim(), 140) : null;
+      if (patch.deliverAt != null) clean.deliverAt = patch.deliverAt;
+      await db.update<Letter>('letters', id, clean as Partial<Letter>);
+    },
+    async removeLetter(id) {
+      await dbRef.current?.remove('letters', id);
+    },
     async addMemory(data) {
       const db = dbRef.current;
       if (!db) return;
@@ -482,6 +499,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         description: clamp(data.description, 4000),
         emoji: clamp(data.emoji, 8),
       });
+    },
+    async updateMemory(id, patch) {
+      const db = dbRef.current;
+      if (!db) return;
+      const clean: Record<string, unknown> = {};
+      if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 140);
+      if (patch.description !== undefined) clean.description = patch.description.trim() ? clampReq(patch.description.trim(), 4000) : null;
+      if (patch.date) clean.date = patch.date;
+      if (patch.emoji !== undefined) clean.emoji = patch.emoji ? patch.emoji.slice(0, 8) : null;
+      if (patch.kind) clean.kind = patch.kind;
+      await db.update<Memory>('memories', id, clean as Partial<Memory>);
     },
     async removeMemory(id) {
       await dbRef.current?.remove('memories', id);
@@ -508,6 +536,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async toggleFuture(id, done) {
       await dbRef.current?.update<FutureItem>('future', id, { done });
+    },
+    async updateFuture(id, text) {
+      const db = dbRef.current;
+      if (!db) return;
+      const t = (text ?? '').trim();
+      if (!t) return;
+      await db.update<FutureItem>('future', id, { text: clampReq(t, 500) });
     },
     async removeFuture(id) {
       await dbRef.current?.remove('future', id);

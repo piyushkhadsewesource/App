@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
   Body,
@@ -30,6 +30,7 @@ export default function LettersScreen({ navigation }: any) {
   const partnerName = identity?.partnerName ?? 'them';
 
   const [composing, setComposing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [occasion, setOccasion] = useState('');
@@ -63,19 +64,52 @@ export default function LettersScreen({ navigation }: any) {
     return now() + p.ms;
   }
 
-  async function sendLetter() {
-    await app.addLetter({
-      title: title.trim(),
-      body: body.trim(),
-      occasion: occasion.trim() || undefined,
-      deliverAt: deliverAtFromInputs(),
-    });
+  function resetCompose() {
     setTitle('');
     setBody('');
     setOccasion('');
     setCustomDate('');
     setPreset('week');
+    setEditingId(null);
     setComposing(false);
+  }
+
+  async function sendLetter() {
+    const payload = {
+      title: title.trim(),
+      body: body.trim(),
+      occasion: occasion.trim() || undefined,
+      deliverAt: deliverAtFromInputs(),
+    };
+    const id = editingId;
+    resetCompose();
+    if (id) await app.updateLetter(id, payload);
+    else await app.addLetter(payload);
+  }
+
+  function openEdit(l: (typeof letters)[number]) {
+    const d = new Date(l.deliverAt);
+    setEditingId(l.id);
+    setTitle(l.title);
+    setBody(l.body);
+    setOccasion(l.occasion ?? '');
+    setPreset('');
+    setCustomDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    setComposing(true);
+  }
+
+  function confirmRemove(l: (typeof letters)[number]) {
+    Alert.alert('Delete this letter?', `“${l.title}” will be removed before it is delivered.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (editingId === l.id) resetCompose();
+          app.removeLetter(l.id);
+        },
+      },
+    ]);
   }
 
   return (
@@ -84,11 +118,12 @@ export default function LettersScreen({ navigation }: any) {
         title="Love letters"
         subtitle="Write now, deliver later"
         onBack={() => navigation.goBack()}
-        right={<Button label={composing ? '×' : '✎'} variant="soft" onPress={() => setComposing((c) => !c)} style={styles.addBtn} />}
+        right={<Button label={composing ? '×' : '✎'} variant="soft" onPress={() => (composing ? resetCompose() : setComposing(true))} style={styles.addBtn} />}
       />
 
       {composing ? (
         <Card style={{ marginBottom: spacing.lg }} tone="rose">
+          <Text style={styles.formTitle}>{editingId ? 'Edit this letter' : 'New letter'}</Text>
           <Field label="Title" value={title} onChangeText={setTitle} placeholder="Open me when…" />
           <Field label="Your letter" value={body} onChangeText={setBody} placeholder={`Dear ${partnerName},`} multiline style={{ minHeight: 150 }} />
           <Field label="Occasion (optional)" value={occasion} onChangeText={setOccasion} placeholder="anniversary · a hard day · just because" />
@@ -100,7 +135,9 @@ export default function LettersScreen({ navigation }: any) {
           </View>
           <View style={{ height: spacing.sm }} />
           <Field label="…or a specific date" value={customDate} onChangeText={setCustomDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
-          <Button label="Seal & schedule 💌" disabled={!title.trim() || !body.trim()} onPress={sendLetter} />
+          <Button label={editingId ? 'Save changes' : 'Seal & schedule 💌'} disabled={!title.trim() || !body.trim()} onPress={sendLetter} />
+          <View style={{ height: spacing.sm }} />
+          <Button label="Cancel" variant="ghost" onPress={resetCompose} />
         </Card>
       ) : null}
 
@@ -161,15 +198,24 @@ export default function LettersScreen({ navigation }: any) {
         <>
           <SectionTitle>Letters you scheduled</SectionTitle>
           <View style={{ gap: spacing.sm }}>
-            {mine.map((l) => (
-              <Card key={l.id} style={styles.sealedRow}>
-                <Text style={{ fontSize: 22 }}>{l.deliverAt <= t ? '📬' : '⏳'}</Text>
-                <View style={{ flex: 1 }}>
-                  <Body style={{ fontFamily: font.family.semibold }}>{l.title}</Body>
-                  <Muted>For {partnerName} · {l.openedAt ? 'opened' : l.deliverAt <= t ? 'delivered' : `delivers ${formatCountdown(l.deliverAt)}`}</Muted>
-                </View>
-              </Card>
-            ))}
+            {mine.map((l) => {
+              const editable = l.deliverAt > t && !l.openedAt;
+              return (
+                <Card key={l.id} style={styles.sealedRow} onPress={editable ? () => openEdit(l) : undefined}>
+                  <Text style={{ fontSize: 22 }}>{l.deliverAt <= t ? '📬' : '⏳'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Body style={{ fontFamily: font.family.semibold }}>{l.title}</Body>
+                    <Muted>
+                      For {partnerName} · {l.openedAt ? 'opened' : l.deliverAt <= t ? 'delivered' : `delivers ${formatCountdown(l.deliverAt)}`}
+                      {editable ? ' · tap to edit' : ''}
+                    </Muted>
+                  </View>
+                  <Pressable hitSlop={10} onPress={() => confirmRemove(l)} style={{ paddingHorizontal: 4 }}>
+                    <Text style={styles.remove}>×</Text>
+                  </Pressable>
+                </Card>
+              );
+            })}
           </View>
         </>
       ) : null}
@@ -186,8 +232,10 @@ export default function LettersScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   addBtn: { height: 40, width: 48, paddingHorizontal: 0 },
+  formTitle: { fontSize: font.size.md, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: spacing.sm },
   label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.sm, marginTop: spacing.xs },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   sealedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  remove: { fontSize: 24, color: colors.textFaint },
   letterBody: { lineHeight: 24 },
 });
