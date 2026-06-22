@@ -260,6 +260,36 @@ export interface Occasion {
   createdAt: Millis;
 }
 
+/**
+ * A grievance the hurting partner raises so it can be talked through and made
+ * right together. Kept gentle on purpose: a feeling, how much it weighs, and a
+ * clear status the raiser controls.
+ */
+export interface Issue {
+  id: string;
+  authorId: string; // who raised it (the one who is hurting)
+  title: string;
+  detail?: string;
+  feeling?: string; // a short mood word, e.g. "hurt", "unheard"
+  weight: number; // 1..5, how heavily it sits
+  status: 'open' | 'resolved';
+  acknowledgedBy?: string; // partner who has seen and taken it to heart
+  acknowledgedAt?: Millis;
+  createdAt: Millis;
+  updatedAt: Millis;
+  resolvedAt?: Millis;
+}
+
+/** A concrete step either partner commits to (or has done) to make it right. */
+export interface IssueStep {
+  id: string;
+  issueId: string;
+  authorId: string;
+  text: string;
+  done: boolean; // false = "will do", true = "done"
+  createdAt: Millis;
+}
+
 /** Names of the synced collections. */
 export const COLLECTIONS = [
   'checkins',
@@ -281,6 +311,8 @@ export const COLLECTIONS = [
   'ludo',
   'schedule',
   'occasions',
+  'issues',
+  'issueSteps',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

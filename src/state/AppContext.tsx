@@ -32,6 +32,8 @@ import {
   GameAnswer,
   GameKind,
   Identity,
+  Issue,
+  IssueStep,
   Letter,
   LudoGame,
   Meeting,
@@ -77,6 +79,8 @@ interface AppValue {
   ludo: LudoGame | null;
   schedule: ScheduleItem[];
   occasions: Occasion[];
+  issues: Issue[];
+  issueSteps: IssueStep[];
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -145,6 +149,15 @@ interface AppValue {
   addOccasion(data: { title: string; date: string; recurrence: 'yearly' | 'monthly' | 'once'; remindDaysBefore: number; icon?: string }): Promise<void>;
   updateOccasion(id: string, patch: { title?: string; date?: string; recurrence?: 'yearly' | 'monthly' | 'once'; remindDaysBefore?: number; icon?: string }): Promise<void>;
   removeOccasion(id: string): Promise<void>;
+  raiseIssue(data: { title: string; detail?: string; feeling?: string; weight: number }): Promise<string | null>;
+  updateIssue(id: string, patch: { title?: string; detail?: string; feeling?: string; weight?: number }): Promise<void>;
+  acknowledgeIssue(id: string): Promise<void>;
+  resolveIssue(id: string): Promise<void>;
+  reopenIssue(id: string): Promise<void>;
+  removeIssue(id: string): Promise<void>;
+  addIssueStep(issueId: string, text: string, done?: boolean): Promise<void>;
+  toggleIssueStep(id: string, done: boolean): Promise<void>;
+  removeIssueStep(id: string): Promise<void>;
 }
 
 // Caps on user/partner-supplied content: keeps any single Firestore document
@@ -179,6 +192,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ludo, setLudo] = useState<LudoGame[]>([]);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [occasions, setOccasions] = useState<Occasion[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issueSteps, setIssueSteps] = useState<IssueStep[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -222,6 +237,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<LudoGame>('ludo', setLudo),
         db.watch<ScheduleItem>('schedule', setSchedule),
         db.watch<Occasion>('occasions', setOccasions),
+        db.watch<Issue>('issues', setIssues),
+        db.watch<IssueStep>('issueSteps', setIssueSteps),
       ];
     })();
     return () => {
@@ -312,6 +329,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ludo: ludo.find((l) => l.id === 'current') ?? null,
     schedule,
     occasions,
+    issues,
+    issueSteps,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -360,6 +379,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLudo([]);
       setSchedule([]);
       setOccasions([]);
+      setIssues([]);
+      setIssueSteps([]);
       setIdentity(null);
     },
 
@@ -813,6 +834,89 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async removeOccasion(id) {
       await dbRef.current?.remove('occasions', id);
+    },
+
+    async raiseIssue({ title, detail, feeling, weight }) {
+      const db = dbRef.current;
+      if (!db) return null;
+      const t = (title ?? '').trim();
+      if (!t) return null;
+      const id = genId('is_');
+      // Fire the write without awaiting: offline the cloud ack can hang forever,
+      // yet the optimistic local write lands at once (and syncs later). Returning
+      // the id straight away lets the caller open the new issue immediately.
+      void db.add('issues', {
+        id,
+        authorId: meId,
+        title: clampReq(t, 120),
+        detail: clamp(detail?.trim() || undefined, 2000),
+        feeling: clamp(feeling?.trim() || undefined, 40),
+        weight: Math.max(1, Math.min(5, Math.round(weight))),
+        status: 'open',
+        createdAt: now(),
+        updatedAt: now(),
+      });
+      // Let the partner's phone know something needs care (best-effort).
+      const who = identity?.name ?? 'Your partner';
+      const issueTokens = tokens.filter((tk) => tk.id !== meId).map((tk) => tk.token);
+      if (issueTokens.length) void sendPush(issueTokens, who, '🕊️ Raised something to clear the air');
+      return id;
+    },
+    async updateIssue(id, patch) {
+      const db = dbRef.current;
+      if (!db) return;
+      const clean: Record<string, unknown> = { updatedAt: now() };
+      if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 120);
+      if (patch.detail !== undefined) clean.detail = patch.detail.trim() ? clampReq(patch.detail.trim(), 2000) : null;
+      if (patch.feeling !== undefined) clean.feeling = patch.feeling.trim() ? clampReq(patch.feeling.trim(), 40) : null;
+      if (patch.weight != null) clean.weight = Math.max(1, Math.min(5, Math.round(patch.weight)));
+      await db.update<Issue>('issues', id, clean as Partial<Issue>);
+    },
+    async acknowledgeIssue(id) {
+      const db = dbRef.current;
+      if (!db) return;
+      const it = issues.find((i) => i.id === id);
+      if (!it || it.authorId === meId || it.acknowledgedBy) return; // only the partner, once
+      await db.update<Issue>('issues', id, { acknowledgedBy: meId, acknowledgedAt: now(), updatedAt: now() });
+    },
+    async resolveIssue(id) {
+      await dbRef.current?.update<Issue>('issues', id, { status: 'resolved', resolvedAt: now(), updatedAt: now() });
+    },
+    async reopenIssue(id) {
+      await dbRef.current?.update<Issue>('issues', id, { status: 'open', resolvedAt: null as unknown as undefined, updatedAt: now() });
+    },
+    async removeIssue(id) {
+      const db = dbRef.current;
+      if (!db) return;
+      // Remove the issue and its steps together. Fire concurrently so a single
+      // offline write can't stall the rest (the cloud ack may never arrive).
+      const steps = issueSteps.filter((s) => s.issueId === id);
+      await Promise.all([db.remove('issues', id), ...steps.map((s) => db.remove('issueSteps', s.id))]);
+    },
+    async addIssueStep(issueId, text, done = false) {
+      const db = dbRef.current;
+      if (!db) return;
+      const t = (text ?? '').trim();
+      if (!t) return;
+      // Add the step and bump the issue together, concurrently: a single write
+      // can stall offline (the ack never arrives) and would block the other.
+      await Promise.all([
+        db.add('issueSteps', {
+          id: genId('ist_'),
+          issueId,
+          authorId: meId,
+          text: clampReq(t, 280),
+          done: !!done,
+          createdAt: now(),
+        }),
+        db.update<Issue>('issues', issueId, { updatedAt: now() }),
+      ]);
+    },
+    async toggleIssueStep(id, done) {
+      await dbRef.current?.update<IssueStep>('issueSteps', id, { done });
+    },
+    async removeIssueStep(id) {
+      await dbRef.current?.remove('issueSteps', id);
     },
   };
 

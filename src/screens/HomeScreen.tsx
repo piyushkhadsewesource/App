@@ -19,6 +19,7 @@ import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
 import { captureStreak, hasMomentToday } from '../lib/moments';
 import { countdownTo, shortCountdown } from '../lib/countdown';
+import { issueNeedingYou } from '../lib/issues';
 import { occasionsOnThisDay, ordinal, untilLabel, upcomingOccasion } from '../lib/occasions';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useApp } from '../state/AppContext';
@@ -38,6 +39,7 @@ export default function HomeScreen({ navigation }: any) {
   const partnerLatest = latestCheckin(checkins, partnerId);
   const partnerStreak = strugglingStreak(checkins, partnerId);
   const unseenPings = pings.filter((p) => p.fromId !== meId && !p.seenAt);
+  const tendIssue = useMemo(() => issueNeedingYou(app.issues, meId), [app.issues, meId]);
   const momentDoneToday = hasMomentToday(app.moments, meId);
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
@@ -76,6 +78,17 @@ export default function HomeScreen({ navigation }: any) {
           <View style={{ flex: 1 }}>
             <Title>{identity?.partnerName} has had {partnerStreak.days} hard days</Title>
             <Muted>They could use some extra gentleness. Tap for ways to reach out.</Muted>
+          </View>
+        </Card>
+      ) : null}
+
+      {/* Partner raised something to clear the air */}
+      {tendIssue ? (
+        <Card tone="rose" onPress={() => navigation.navigate('IssueDetail', { id: tendIssue.id })} style={styles.alert}>
+          <Text style={styles.alertEmoji}>🕊️</Text>
+          <View style={{ flex: 1 }}>
+            <Title>{identity?.partnerName} wants to clear the air</Title>
+            <Muted>“{tendIssue.title}”. Tap to hear them out and make it right.</Muted>
           </View>
         </Card>
       ) : null}
@@ -273,6 +286,7 @@ export default function HomeScreen({ navigation }: any) {
         <QuickTile emoji="✨" label="Future board" tint={colors.goodSoft} onPress={() => navigation.navigate('Future')} />
         <QuickTile emoji="🗓️" label="Our day" tint={colors.goodSoft} onPress={() => navigation.navigate('Schedule')} />
         <QuickTile emoji="🎀" label="Dates" tint={colors.primarySoft} onPress={() => navigation.navigate('Occasions')} />
+        <QuickTile emoji="🕊️" label="Clear the air" tint={colors.accentSoft} onPress={() => navigation.navigate('Issues')} />
         <QuickTile emoji="💜" label="Insights" tint={colors.accentSoft} onPress={() => navigation.navigate('Insights')} />
         <QuickTile emoji="🎮" label="Games" tint={colors.primarySoft} onPress={() => navigation.navigate('Games')} />
       </View>
