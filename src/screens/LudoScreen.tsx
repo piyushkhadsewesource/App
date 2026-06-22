@@ -44,6 +44,12 @@ export default function LudoScreen({ navigation }: any) {
 
   const isA = !g || app.meId === g.aId;
   const mySide: Side = isA ? 'a' : 'b';
+  // Each player owns a fixed colour (side a = rose, side b = violet). Colour the
+  // chips by *side* so "You" always matches your own pawns and house on the
+  // board, on both phones. (Previously "You" was hardcoded rose, so player B saw
+  // a rose label over their violet pawns, and the colours looked swapped.)
+  const myGrad = isA ? gradients.gameRose : gradients.gameViolet;
+  const theirGrad = isA ? gradients.gameViolet : gradients.gameRose;
   const myTokens = g ? (isA ? g.aTokens : g.bTokens) : [];
   const myTurn = !!g && g.turn === app.meId && !g.winner;
   const over = !!g && !!g.winner;
@@ -105,8 +111,22 @@ export default function LudoScreen({ navigation }: any) {
       <AppHeader title="Ludo" subtitle="Race all four tokens home" onBack={() => navigation.goBack()} />
 
       <View style={styles.players}>
-        <PlayerChip name="You" grad={gradients.gameRose} home={g ? homeCount(myTokens) : 0} active={myTurn} />
-        <PlayerChip name={partner} grad={gradients.gameViolet} home={g ? homeCount(isA ? g.bTokens : g.aTokens) : 0} active={!!g && !myTurn && !over} />
+        <PlayerChip
+          name="You"
+          grad={myGrad}
+          home={g ? homeCount(myTokens) : 0}
+          active={myTurn}
+          activeLabel={g && g.mustMove ? '🎲 your move' : '🎲 your roll'}
+          pulseScale={pulseScale}
+        />
+        <PlayerChip
+          name={partner}
+          grad={theirGrad}
+          home={g ? homeCount(isA ? g.bTokens : g.aTokens) : 0}
+          active={!!g && !myTurn && !over}
+          activeLabel={g && g.mustMove ? 'moving…' : 'rolling…'}
+          pulseScale={pulseScale}
+        />
       </View>
 
       <View style={styles.board} onLayout={(e) => setSize(e.nativeEvent.layout.width)}>
@@ -173,7 +193,7 @@ export default function LudoScreen({ navigation }: any) {
         <Body style={{ marginTop: spacing.md, fontFamily: font.family.semibold, textAlign: 'center' }}>{status}</Body>
         <View style={{ height: spacing.md }} />
         {g && !over && myTurn && !g.mustMove ? (
-          <Button label="🎲  Roll the dice" onPress={() => { hMedium(); app.rollLudo(); }} style={{ alignSelf: 'stretch' }} />
+          <Button label="🎲  Roll the dice" color={myGrad[1]} onPress={() => { hMedium(); app.rollLudo(); }} style={{ alignSelf: 'stretch' }} />
         ) : g && !over ? (
           <Button label={g.mustMove && myTurn ? 'Tap a glowing token above' : `Waiting for ${partner}…`} onPress={() => {}} disabled style={{ alignSelf: 'stretch' }} />
         ) : (
@@ -214,13 +234,34 @@ function Center({ cell }: { cell: number }) {
   );
 }
 
-function PlayerChip({ name, grad, home, active }: { name: string; grad: readonly [string, string]; home: number; active: boolean }) {
+function PlayerChip({
+  name,
+  grad,
+  home,
+  active,
+  activeLabel,
+  pulseScale,
+}: {
+  name: string;
+  grad: readonly [string, string];
+  home: number;
+  active: boolean;
+  activeLabel: string;
+  pulseScale: Animated.AnimatedInterpolation<number>;
+}) {
   return (
-    <View style={[styles.chip, active && { borderColor: grad[1], backgroundColor: grad[1] + '12' }]}>
-      <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.chipDot} />
-      <View>
+    <View style={[styles.chip, active && { borderColor: grad[1], backgroundColor: grad[1] + '16' }]}>
+      <View style={styles.chipDotWrap}>
+        {active ? (
+          <Animated.View style={[styles.chipRing, { borderColor: grad[1], transform: [{ scale: pulseScale }] }]} />
+        ) : null}
+        <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.chipDot} />
+      </View>
+      <View style={{ flex: 1 }}>
         <Text style={styles.chipName}>{name}</Text>
-        <Text style={[styles.chipState, { color: active ? grad[1] : colors.textFaint }]}>{home}/4 home</Text>
+        <Text style={[styles.chipState, { color: active ? grad[1] : colors.textFaint }]} numberOfLines={1}>
+          {active ? activeLabel : `${home}/4 home`}
+        </Text>
       </View>
     </View>
   );
@@ -241,7 +282,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadow.soft,
   },
+  chipDotWrap: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
   chipDot: { width: 20, height: 20, borderRadius: 10 },
+  chipRing: { position: 'absolute', width: 20, height: 20, borderRadius: 10, borderWidth: 2 },
   chipName: { fontFamily: font.family.bold, color: colors.text, fontSize: font.size.md },
   chipState: { fontSize: 11, fontFamily: font.family.semibold },
 

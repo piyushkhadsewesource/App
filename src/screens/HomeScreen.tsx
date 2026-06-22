@@ -13,7 +13,9 @@ import {
   Tag,
   Title,
 } from '../components/ui';
+import IntensityChart from '../components/IntensityChart';
 import { formatDayMonth, greeting, isoToDate, todayISO } from '../lib/date';
+import { averageIntensity, todaysFeelings } from '../lib/feelings';
 import { computeHealth } from '../lib/health';
 import { promptForDay } from '../lib/intimacy';
 import { moodMeta } from '../lib/mood';
@@ -40,6 +42,8 @@ export default function HomeScreen({ navigation }: any) {
   const partnerStreak = strugglingStreak(checkins, partnerId);
   const unseenPings = pings.filter((p) => p.fromId !== meId && !p.seenAt);
   const tendIssue = useMemo(() => issueNeedingYou(app.issues, meId), [app.issues, meId]);
+  const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
+  const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
   const momentDoneToday = hasMomentToday(app.moments, meId);
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
@@ -245,6 +249,45 @@ export default function HomeScreen({ navigation }: any) {
         ) : null}
       </Card>
 
+      {/* Feelings through the day (intensity timeline) */}
+      <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Log</Text></Pressable>}>
+        Feelings through the day
+      </SectionTitle>
+      {myFeelings.length > 0 ? (
+        <Card onPress={() => navigation.navigate('Pulse')}>
+          <View style={styles.feelHead}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Text style={{ fontSize: 22 }}>{moodMeta(myFeelings[myFeelings.length - 1].mood).emoji}</Text>
+              <View>
+                <Body style={{ fontFamily: font.family.semibold }}>
+                  Now: {moodMeta(myFeelings[myFeelings.length - 1].mood).label} · {myFeelings[myFeelings.length - 1].intensity}/10
+                </Body>
+                <Muted>
+                  {myFeelings.length} logged today · avg {Math.round((averageIntensity(myFeelings) ?? 0) * 10) / 10}/10
+                </Muted>
+              </View>
+            </View>
+          </View>
+          <View style={{ height: spacing.sm }} />
+          <IntensityChart items={myFeelings} />
+        </Card>
+      ) : (
+        <Card tone="violet" onPress={() => navigation.navigate('Pulse')}>
+          <Body style={{ fontFamily: font.family.semibold }}>How are you feeling right now?</Body>
+          <Muted style={{ marginTop: 4 }}>
+            Log your feelings through the day and your emotional timeline builds here. Tap to add one →
+          </Muted>
+        </Card>
+      )}
+      {partnerFeelings.length > 0 ? (
+        <Card tone="violet" onPress={() => navigation.navigate('Pulse')} style={{ marginTop: spacing.md }}>
+          <Muted style={{ marginBottom: spacing.xs }}>
+            {identity?.partnerName ?? 'Partner'}’s day · {partnerFeelings.length} logged
+          </Muted>
+          <IntensityChart items={partnerFeelings} />
+        </Card>
+      ) : null}
+
       {/* On this day */}
       {onThisDay ? (
         <>
@@ -396,6 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   needBox: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
+  feelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   tile: {
     width: '47%',
