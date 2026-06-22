@@ -15,7 +15,7 @@ const LINKS: { route: string; emoji: string; label: string; sub: string }[] = [
   { route: 'Future', emoji: '✨', label: 'Future board', sub: 'The life you’re building' },
   { route: 'Countdown', emoji: '💞', label: 'Next time together', sub: 'Your reunion countdown' },
   { route: 'Vault', emoji: '🗂️', label: 'Memory vault', sub: 'Milestones and keepsakes' },
-  { route: 'Reminders', emoji: '🔔', label: 'Photo reminders', sub: 'Choose your nudge times' },
+  { route: 'Reminders', emoji: '🔔', label: 'Daily reminders', sub: 'Plan-your-day & photo nudges' },
   { route: 'Settings', emoji: '⚙️', label: 'Settings', sub: 'Sync, names & pairing code' },
 ];
 

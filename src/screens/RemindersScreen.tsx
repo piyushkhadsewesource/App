@@ -4,9 +4,11 @@ import { AppHeader, Body, Button, Card, Muted, Screen, Title } from '../componen
 import {
   DEFAULT_TIMES,
   formatTime,
+  getPlanReminderEnabled,
   getReminderConfig,
   ReminderTime,
   remindersSupported,
+  setPlanReminderEnabled,
   setReminderTimes,
   setRemindersEnabled,
 } from '../services/notifications';
@@ -22,20 +24,41 @@ export default function RemindersScreen({ navigation }: any) {
     [app.moments, app.meId],
   );
   const partnerName = app.identity?.partnerName;
+  const myPlanDates = useMemo(
+    () => app.schedule.filter((s) => s.authorId === app.meId).map((s) => s.date),
+    [app.schedule, app.meId],
+  );
 
   const [enabled, setEnabled] = useState(false);
   const [times, setTimes] = useState<ReminderTime[]>(DEFAULT_TIMES);
+  const [planEnabled, setPlanEnabled] = useState(true);
 
   useEffect(() => {
     getReminderConfig().then((c) => {
       setEnabled(c.enabled);
       setTimes(c.times);
     });
+    getPlanReminderEnabled().then(setPlanEnabled);
   }, []);
 
   async function persist(next: ReminderTime[]) {
     setTimes(next);
     await setReminderTimes(next, myDates, partnerName);
+  }
+
+  async function togglePlan(next: boolean) {
+    const active = await setPlanReminderEnabled(next, myPlanDates, partnerName);
+    if (next && !active) {
+      setPlanEnabled(false);
+      Alert.alert(
+        remindersSupported ? 'Allow notifications' : 'Phone app only',
+        remindersSupported
+          ? 'Please allow notifications for Tether in your phone’s settings, then turn this on again.'
+          : 'Reminders run on the installed phone app, not the web preview.',
+      );
+      return;
+    }
+    setPlanEnabled(next);
   }
 
   async function toggle(next: boolean) {
@@ -74,14 +97,29 @@ export default function RemindersScreen({ navigation }: any) {
 
   return (
     <Screen scroll>
-      <AppHeader title="Photo reminders" subtitle="Nudges to share your day" onBack={() => navigation.goBack()} />
+      <AppHeader title="Daily reminders" subtitle="Gentle nudges for the two of you" onBack={() => navigation.goBack()} />
 
+      {/* Plan your day (timetable) */}
       <Card style={{ marginBottom: spacing.lg }}>
         <View style={styles.row}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Title>Daily reminders</Title>
+            <Title>Plan your day</Title>
             <Muted style={{ marginTop: 4 }}>
-              Get nudged to share a photo. We skip a day once you’ve already posted, so you’re never nagged twice.
+              A morning nudge (8:30 AM) to add today’s schedule so {partnerName ?? 'your partner'} knows when you’re
+              free. Skipped once you’ve planned that day.
+            </Muted>
+          </View>
+          <Switch value={planEnabled} onValueChange={togglePlan} trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.white} />
+        </View>
+      </Card>
+
+      {/* Share a photo (moments) */}
+      <Card style={{ marginBottom: spacing.lg }}>
+        <View style={styles.row}>
+          <View style={{ flex: 1, paddingRight: spacing.md }}>
+            <Title>Share a photo</Title>
+            <Muted style={{ marginTop: 4 }}>
+              Get nudged to share a daily moment. We skip a day once you’ve already posted, so you’re never nagged twice.
             </Muted>
           </View>
           <Switch value={enabled} onValueChange={toggle} trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.white} />
@@ -91,7 +129,7 @@ export default function RemindersScreen({ navigation }: any) {
         ) : null}
       </Card>
 
-      <Title style={{ marginBottom: spacing.sm }}>Times ({times.length})</Title>
+      <Title style={{ marginBottom: spacing.sm }}>Photo reminder times ({times.length})</Title>
       <View style={{ gap: spacing.sm }}>
         {times.map((t, i) => (
           <Card key={i} style={styles.timeRow}>

@@ -13,7 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import { refreshReminders, syncOccasionReminders } from './src/services/notifications';
+import { refreshPlanReminders, refreshReminders, syncOccasionReminders } from './src/services/notifications';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
 
@@ -23,7 +23,7 @@ const navTheme: Theme = {
 };
 
 function Root() {
-  const { ready, identity, moments, meId, occasions } = useApp();
+  const { ready, identity, moments, meId, occasions, schedule } = useApp();
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_600SemiBold,
     Fraunces_700Bold,
@@ -50,6 +50,16 @@ function Root() {
   useEffect(() => {
     refreshReminders(postedKey ? postedKey.split(',') : [], identity?.partnerName);
   }, [postedKey, identity?.partnerName]);
+
+  // Re-arm the daily "plan your day" reminder; it skips days you've already planned.
+  const plannedKey = schedule
+    .filter((s) => s.authorId === meId)
+    .map((s) => s.date)
+    .sort()
+    .join(',');
+  useEffect(() => {
+    if (identity) refreshPlanReminders(plannedKey ? Array.from(new Set(plannedKey.split(','))) : [], identity?.partnerName);
+  }, [plannedKey, identity?.partnerName, identity]);
 
   // Schedule local reminders for saved anniversaries and special dates.
   const occKey = occasions

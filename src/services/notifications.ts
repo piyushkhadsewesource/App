@@ -16,6 +16,12 @@ const CHANNEL_ID = 'daily-moments';
 const WINDOW_DAYS = 8;
 const supported = Platform.OS !== 'web';
 
+// Daily "plan your day" reminder for the shared timetable.
+const PLAN_CHANNEL = 'daily-plan';
+const PLAN_KEY = '@tether/planReminder';
+const PLAN_HOUR = 8;
+const PLAN_MIN = 30;
+
 export interface ReminderTime {
   hour: number;
   minute: number;
@@ -68,17 +74,18 @@ export async function getReminderConfig(): Promise<ReminderConfig> {
   } catch {
     /* ignore */
   }
-  return { enabled: false, times: DEFAULT_TIMES };
+  // On by default: the moment reminders are part of the core experience.
+  return { enabled: true, times: DEFAULT_TIMES };
 }
 
 async function saveConfig(cfg: ReminderConfig) {
   await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
 }
 
-async function ensureChannel() {
+async function ensureChannel(id: string = CHANNEL_ID, name: string = 'Daily moments') {
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Daily moments',
+    await Notifications.setNotificationChannelAsync(id, {
+      name,
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -192,11 +199,105 @@ export async function refreshReminders(postedDates: string[], partnerName?: stri
   try {
     const cfg = await getReminderConfig();
     if (!cfg.enabled) return;
-    const perm = await Notifications.getPermissionsAsync();
+    let perm = await Notifications.getPermissionsAsync();
+    if (perm.status === 'undetermined') perm = await Notifications.requestPermissionsAsync();
     if (perm.granted) await scheduleSmart(cfg, postedDates, partnerName);
   } catch {
     /* notifications unavailable */
   }
+}
+
+// ── Daily "plan your day" timetable reminder ──────────────────────────────
+export async function getPlanReminderEnabled(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(PLAN_KEY);
+    if (raw === '0') return false;
+    if (raw === '1') return true;
+  } catch {
+    /* ignore */
+  }
+  return true; // on by default
+}
+
+async function setPlanFlag(on: boolean) {
+  try {
+    await AsyncStorage.setItem(PLAN_KEY, on ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
+function planBody(who: string, seed: number): string {
+  const lines = [
+    `Add today's plan so ${who} knows when you're free.`,
+    `What does your day look like? Share it with ${who}.`,
+    `Map out your day so you two can find time together.`,
+    `A quick plan keeps you in sync with ${who} today.`,
+    `Jot down today's schedule for ${who} to see.`,
+    `Plan your day, ${who} is curious what you're up to.`,
+    `Sketch out today so ${who} can plan around it.`,
+  ];
+  return lines[((seed % lines.length) + lines.length) % lines.length];
+}
+
+async function schedulePlan(plannedDates: string[], who: string) {
+  await cancelKind('plan');
+  if (!(await getPlanReminderEnabled())) return;
+  await ensureChannel(PLAN_CHANNEL, 'Daily plan');
+  const planned = new Set(plannedDates);
+  const base = new Date();
+  for (let d = 0; d < WINDOW_DAYS; d += 1) {
+    const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
+    if (planned.has(isoOf(day))) continue; // smart skip: already planned that day
+    const when = new Date(day.getFullYear(), day.getMonth(), day.getDate(), PLAN_HOUR, PLAN_MIN, 0, 0);
+    if (when.getTime() <= Date.now() + 1000) continue;
+    const epochDay = Math.floor(day.getTime() / 86_400_000);
+    await Notifications.scheduleNotificationAsync({
+      content: { title: '🗓️ Plan your day', body: planBody(who, epochDay), data: { kind: 'plan' } },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when, channelId: PLAN_CHANNEL },
+    });
+  }
+}
+
+/** Re-schedule the daily plan reminder (call on launch and when your plans change). */
+export async function refreshPlanReminders(plannedDates: string[], partnerName?: string): Promise<void> {
+  if (!supported) return;
+  try {
+    if (!(await getPlanReminderEnabled())) {
+      await cancelKind('plan');
+      return;
+    }
+    let perm = await Notifications.getPermissionsAsync();
+    if (perm.status === 'undetermined') perm = await Notifications.requestPermissionsAsync();
+    if (perm.granted) await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
+  } catch {
+    /* notifications unavailable */
+  }
+}
+
+/** Turn the daily plan reminder on/off. Returns true only if now active. */
+export async function setPlanReminderEnabled(
+  enabled: boolean,
+  plannedDates: string[],
+  partnerName?: string,
+): Promise<boolean> {
+  if (!supported) {
+    await setPlanFlag(enabled);
+    return false;
+  }
+  if (!enabled) {
+    await cancelKind('plan');
+    await setPlanFlag(false);
+    return false;
+  }
+  const perm = await Notifications.requestPermissionsAsync();
+  if (!perm.granted) {
+    await setPlanFlag(false);
+    return false;
+  }
+  await setPlanFlag(true);
+  await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
+  return true;
 }
 
 /** Turn reminders on/off. Returns true only if now active (permission granted). */
