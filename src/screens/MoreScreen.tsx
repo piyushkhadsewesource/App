@@ -1,21 +1,28 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppHeader, Muted, Screen } from '../components/ui';
+import { AppHeader, Muted, Screen, SectionTitle } from '../components/ui';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 
+// The "reach for each other" quick squares, moved here from Home.
+const TILES: { route: string; emoji: string; label: string; tint: string }[] = [
+  { route: 'MissYou', emoji: '🆘', label: 'Emergency', tint: colors.dangerSoft },
+  { route: 'Moments', emoji: '📸', label: 'Moments', tint: colors.goldSoft },
+  { route: 'Countdown', emoji: '💞', label: 'Countdown', tint: colors.primarySoft },
+  { route: 'MissYou', emoji: '🤍', label: 'When I miss you', tint: colors.accentSoft },
+  { route: 'Letters', emoji: '💌', label: 'Love letters', tint: colors.primarySoft },
+  { route: 'Deck', emoji: '🃏', label: 'Intimacy deck', tint: colors.accentSoft },
+  { route: 'Schedule', emoji: '🗓️', label: 'Our day', tint: colors.goodSoft },
+  { route: 'Occasions', emoji: '🎀', label: 'Dates', tint: colors.primarySoft },
+  { route: 'Issues', emoji: '🕊️', label: 'Clear the air', tint: colors.accentSoft },
+  { route: 'Future', emoji: '✨', label: 'Future board', tint: colors.goodSoft },
+  { route: 'Journal', emoji: '📖', label: 'Our journal', tint: colors.goldSoft },
+  { route: 'Insights', emoji: '💜', label: 'Companion', tint: colors.accentSoft },
+  { route: 'Games', emoji: '🎮', label: 'Play together', tint: colors.primarySoft },
+  { route: 'Vault', emoji: '🗂️', label: 'Memory vault', tint: colors.goldSoft },
+];
+
 const LINKS: { route: string; emoji: string; label: string; sub: string }[] = [
-  { route: 'Letters', emoji: '💌', label: 'Love letters', sub: 'Write now, deliver later' },
-  { route: 'Deck', emoji: '🃏', label: 'Intimacy deck', sub: 'Questions that bring you closer' },
-  { route: 'Games', emoji: '🎮', label: 'Play together', sub: 'Wordle, Ludo, Snakes & Ladders, and more' },
-  { route: 'Schedule', emoji: '🗓️', label: 'Our day', sub: "Share today's plan, see each other's" },
-  { route: 'Occasions', emoji: '🎀', label: 'Dates to remember', sub: 'Anniversaries & reminders' },
-  { route: 'Issues', emoji: '🕊️', label: 'Clear the air', sub: 'Raise a hurt, sort it together' },
-  { route: 'Journal', emoji: '📖', label: 'Our journal', sub: 'Your month, narrated' },
-  { route: 'Insights', emoji: '💜', label: 'Companion', sub: 'Gentle attachment-aware nudges' },
-  { route: 'Future', emoji: '✨', label: 'Future board', sub: 'The life you’re building' },
-  { route: 'Countdown', emoji: '💞', label: 'Next time together', sub: 'Your reunion countdown' },
-  { route: 'Vault', emoji: '🗂️', label: 'Memory vault', sub: 'Milestones and keepsakes' },
   { route: 'Reminders', emoji: '🔔', label: 'Daily reminders', sub: 'Plan-your-day & photo nudges' },
   { route: 'Settings', emoji: '⚙️', label: 'Settings', sub: 'Sync, names & pairing code' },
 ];
@@ -25,6 +32,26 @@ export default function MoreScreen({ navigation }: any) {
   return (
     <Screen scroll>
       <AppHeader title="More" subtitle={`You & ${identity?.partnerName ?? 'your love'}`} />
+
+      <SectionTitle>Reach for each other</SectionTitle>
+      <View style={styles.grid}>
+        {TILES.map((t, i) => (
+          <Pressable
+            key={`${t.route}-${i}`}
+            onPress={() => navigation.navigate(t.route)}
+            style={({ pressed }) => [styles.tile, pressed ? styles.tilePressed : null]}
+          >
+            <View style={[styles.tileBadge, { backgroundColor: t.tint }]}>
+              <Text style={styles.tileEmoji}>{t.emoji}</Text>
+            </View>
+            <Text style={styles.tileLabel} numberOfLines={2}>
+              {t.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <SectionTitle>Settings & more</SectionTitle>
       <View style={{ gap: spacing.md }}>
         {LINKS.map((l) => (
           <Pressable
@@ -46,6 +73,23 @@ export default function MoreScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.sm },
+  tile: {
+    width: '47%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(90,46,64,0.05)',
+    ...shadow.card,
+  },
+  tilePressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  tileBadge: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tileEmoji: { fontSize: 25 },
+  tileLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -14,7 +14,8 @@ import {
   Title,
 } from '../components/ui';
 import IntensityChart from '../components/IntensityChart';
-import { formatDayMonth, greeting, isoToDate, todayISO } from '../lib/date';
+import { buildActivity, withinHours } from '../lib/activity';
+import { formatDayMonth, formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { averageIntensity, todaysFeelings } from '../lib/feelings';
 import { computeHealth } from '../lib/health';
 import { promptForDay } from '../lib/intimacy';
@@ -45,6 +46,32 @@ export default function HomeScreen({ navigation }: any) {
   const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
   const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
   const momentDoneToday = hasMomentToday(app.moments, meId);
+
+  // Everything that happened recently, across every feature, newest first, so the
+  // day shows on Home and your partner's actions are easy to spot and reply to.
+  const activity = useMemo(
+    () =>
+      buildActivity({
+        meId,
+        authorName: app.authorName,
+        checkins,
+        feelings: app.feelings,
+        moments: app.moments,
+        memories,
+        reasons: app.reasons,
+        future: app.future,
+        deck: app.deck,
+        schedule: app.schedule,
+        occasions: app.occasions,
+        issues: app.issues,
+        letters: app.letters,
+        pings,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [meId, checkins, app.feelings, app.moments, memories, app.reasons, app.future, app.deck, app.schedule, app.occasions, app.issues, app.letters, pings],
+  );
+  const recent = useMemo(() => withinHours(activity, 36), [activity]);
+  const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
 
@@ -189,6 +216,42 @@ export default function HomeScreen({ navigation }: any) {
         </Card>
       ) : null}
 
+      {/* What's new together (cross-feature activity feed) */}
+      {recent.length > 0 ? (
+        <>
+          <SectionTitle
+            right={
+              partnerNew > 0 ? (
+                <View style={styles.newBadge}>
+                  <Text style={styles.newBadgeText}>{partnerNew} from {identity?.partnerName ?? 'them'}</Text>
+                </View>
+              ) : undefined
+            }
+          >
+            What’s new together
+          </SectionTitle>
+          <Card style={styles.feedCard}>
+            {recent.slice(0, 7).map((e, i) => (
+              <Pressable
+                key={e.id}
+                onPress={() => navigation.navigate(e.route, e.params)}
+                style={({ pressed }) => [styles.actRow, i > 0 ? styles.actDivider : null, !e.mine ? styles.actPartner : null, pressed ? { opacity: 0.7 } : null]}
+              >
+                <Text style={{ fontSize: 22 }}>{e.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.actText} numberOfLines={2}>{e.text}</Text>
+                  <Muted>
+                    {formatRelative(e.at)}
+                    {!e.mine ? ' · tap to respond' : ''}
+                  </Muted>
+                </View>
+                {!e.mine ? <Text style={styles.actChevron}>›</Text> : null}
+              </Pressable>
+            ))}
+          </Card>
+        </>
+      ) : null}
+
       {/* Relationship health hero */}
       <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
         <View style={styles.healthTop}>
@@ -316,24 +379,6 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </Card>
 
-      {/* Quick actions */}
-      <SectionTitle>Reach for each other</SectionTitle>
-      <View style={styles.grid}>
-        <QuickTile emoji="🆘" label="Emergency" tint={colors.dangerSoft} onPress={() => navigation.navigate('MissYou')} />
-        <QuickTile emoji="📸" label="Moments" tint={colors.goldSoft} onPress={() => navigation.navigate('Moments')} />
-        <QuickTile emoji="💞" label="Countdown" tint={colors.primarySoft} onPress={() => navigation.navigate('Countdown')} />
-        <QuickTile emoji="🤍" label="When I miss you" tint={colors.accentSoft} onPress={() => navigation.navigate('MissYou')} />
-        <QuickTile emoji="💌" label="Love letters" tint={colors.primarySoft} onPress={() => navigation.navigate('Letters')} />
-        <QuickTile emoji="🃏" label="Intimacy deck" tint={colors.accentSoft} onPress={() => navigation.navigate('Deck')} />
-        <QuickTile emoji="📖" label="Our journal" tint={colors.goldSoft} onPress={() => navigation.navigate('Journal')} />
-        <QuickTile emoji="✨" label="Future board" tint={colors.goodSoft} onPress={() => navigation.navigate('Future')} />
-        <QuickTile emoji="🗓️" label="Our day" tint={colors.goodSoft} onPress={() => navigation.navigate('Schedule')} />
-        <QuickTile emoji="🎀" label="Dates" tint={colors.primarySoft} onPress={() => navigation.navigate('Occasions')} />
-        <QuickTile emoji="🕊️" label="Clear the air" tint={colors.accentSoft} onPress={() => navigation.navigate('Issues')} />
-        <QuickTile emoji="💜" label="Insights" tint={colors.accentSoft} onPress={() => navigation.navigate('Insights')} />
-        <QuickTile emoji="🎮" label="Games" tint={colors.primarySoft} onPress={() => navigation.navigate('Games')} />
-      </View>
-
       {/* Daily prompt teaser */}
       <SectionTitle>Today’s closeness question</SectionTitle>
       <Card tone="violet" onPress={() => navigation.navigate('Deck')}>
@@ -386,29 +431,6 @@ function PulseFace({
   );
 }
 
-function QuickTile({
-  emoji,
-  label,
-  tint,
-  onPress,
-}: {
-  emoji: string;
-  label: string;
-  tint: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed ? styles.tilePressed : null]}>
-      <View style={[styles.tileBadge, { backgroundColor: tint }]}>
-        <Text style={styles.tileEmoji}>{emoji}</Text>
-      </View>
-      <Text style={styles.tileLabel} numberOfLines={2}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   alert: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   alertEmoji: { fontSize: 30 },
@@ -440,21 +462,13 @@ const styles = StyleSheet.create({
   },
   needBox: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
   feelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  tile: {
-    width: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(90,46,64,0.05)',
-    ...shadow.card,
-  },
-  tilePressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
-  tileBadge: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  tileEmoji: { fontSize: 25 },
-  tileLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
+
+  newBadge: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  newBadgeText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11 },
+  feedCard: { padding: 0, overflow: 'hidden' },
+  actText: { fontSize: font.size.md, color: colors.text, fontFamily: font.family.body, lineHeight: 21 },
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: 18 },
+  actDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  actPartner: { backgroundColor: colors.primarySoft },
+  actChevron: { fontSize: 24, color: colors.primary },
 });
