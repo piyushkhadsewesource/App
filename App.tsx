@@ -6,6 +6,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { DefaultTheme, NavigationContainer, Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -16,6 +17,10 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import { refreshPlanReminders, refreshReminders, syncOccasionReminders } from './src/services/notifications';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
+
+// Hold the native splash on screen until the first real frame is ready, so cold
+// start goes splash -> app with no flash of a loading spinner. Best-effort.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const navTheme: Theme = {
   ...DefaultTheme,
@@ -70,7 +75,16 @@ function Root() {
     if (identity) syncOccasionReminders(occasions);
   }, [occKey, identity]);
 
-  if (!ready || (!fontsReady && !fontTimeout)) {
+  // Once identity and fonts are settled, reveal the app and let the native
+  // splash fade away. On web (no native splash) this is a harmless no-op.
+  const appReady = ready && (fontsReady || fontTimeout);
+  useEffect(() => {
+    if (appReady) SplashScreen.hideAsync().catch(() => {});
+  }, [appReady]);
+
+  if (!appReady) {
+    // The native splash is still covering this on devices; the spinner is the
+    // web fallback (and a safety net if the splash ever fails to hide).
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.primary} size="large" />
