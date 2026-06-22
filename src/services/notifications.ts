@@ -16,11 +16,10 @@ const CHANNEL_ID = 'daily-moments';
 const WINDOW_DAYS = 8;
 const supported = Platform.OS !== 'web';
 
-// Daily "plan your day" reminder for the shared timetable.
+// Daily "plan your day" reminders for the shared timetable.
 const PLAN_CHANNEL = 'daily-plan';
-const PLAN_KEY = '@tether/planReminder';
-const PLAN_HOUR = 8;
-const PLAN_MIN = 30;
+const PLAN_KEY = '@tether/planReminder'; // legacy on/off flag (migrated)
+const PLAN_CONFIG_KEY = '@tether/planReminder.v2';
 
 export interface ReminderTime {
   hour: number;
@@ -207,63 +206,114 @@ export async function refreshReminders(postedDates: string[], partnerName?: stri
   }
 }
 
-// ── Daily "plan your day" timetable reminder ──────────────────────────────
-export async function getPlanReminderEnabled(): Promise<boolean> {
+// ── Daily plan reminders: "plan today" (morning) + "plan tomorrow" (evening) ──
+export interface PlanConfig {
+  enabled: boolean;
+  morningTime: ReminderTime; // nudge to plan today
+  eveningEnabled: boolean; // also nudge to plan tomorrow
+  eveningTime: ReminderTime; // nudge to plan tomorrow
+}
+
+export const DEFAULT_PLAN: PlanConfig = {
+  enabled: true,
+  morningTime: { hour: 8, minute: 30 },
+  eveningEnabled: true,
+  eveningTime: { hour: 20, minute: 0 },
+};
+
+export async function getPlanConfig(): Promise<PlanConfig> {
   try {
-    const raw = await AsyncStorage.getItem(PLAN_KEY);
-    if (raw === '0') return false;
-    if (raw === '1') return true;
+    const raw = await AsyncStorage.getItem(PLAN_CONFIG_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      return {
+        enabled: !!c.enabled,
+        morningTime: c.morningTime ?? DEFAULT_PLAN.morningTime,
+        eveningEnabled: !!c.eveningEnabled,
+        eveningTime: c.eveningTime ?? DEFAULT_PLAN.eveningTime,
+      };
+    }
+    // Migrate the old on/off-only flag, if present.
+    const legacy = await AsyncStorage.getItem(PLAN_KEY);
+    if (legacy === '0') return { ...DEFAULT_PLAN, enabled: false };
   } catch {
     /* ignore */
   }
-  return true; // on by default
+  return DEFAULT_PLAN;
 }
 
-async function setPlanFlag(on: boolean) {
+async function savePlanConfig(c: PlanConfig) {
   try {
-    await AsyncStorage.setItem(PLAN_KEY, on ? '1' : '0');
+    await AsyncStorage.setItem(PLAN_CONFIG_KEY, JSON.stringify(c));
   } catch {
     /* ignore */
   }
 }
 
-function planBody(who: string, seed: number): string {
-  const lines = [
+function planBody(who: string, seed: number, tomorrow: boolean): string {
+  const today = [
     `Add today's plan so ${who} knows when you're free.`,
     `What does your day look like? Share it with ${who}.`,
-    `Map out your day so you two can find time together.`,
+    `Map out today so you two can find time together.`,
     `A quick plan keeps you in sync with ${who} today.`,
     `Jot down today's schedule for ${who} to see.`,
-    `Plan your day, ${who} is curious what you're up to.`,
-    `Sketch out today so ${who} can plan around it.`,
   ];
+  const tom = [
+    `Sketch out tomorrow so ${who} can plan around it.`,
+    `What's tomorrow looking like? Add it for ${who}.`,
+    `Plan tomorrow tonight, ${who} will see it in the morning.`,
+    `Give ${who} a peek at tomorrow, add your plan.`,
+    `A minute now: map tomorrow for ${who}.`,
+  ];
+  const lines = tomorrow ? tom : today;
   return lines[((seed % lines.length) + lines.length) % lines.length];
 }
 
 async function schedulePlan(plannedDates: string[], who: string) {
   await cancelKind('plan');
-  if (!(await getPlanReminderEnabled())) return;
+  const cfg = await getPlanConfig();
+  if (!cfg.enabled) return;
   await ensureChannel(PLAN_CHANNEL, 'Daily plan');
   const planned = new Set(plannedDates);
   const base = new Date();
-  for (let d = 0; d < WINDOW_DAYS; d += 1) {
-    const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
-    if (planned.has(isoOf(day))) continue; // smart skip: already planned that day
-    const when = new Date(day.getFullYear(), day.getMonth(), day.getDate(), PLAN_HOUR, PLAN_MIN, 0, 0);
-    if (when.getTime() <= Date.now() + 1000) continue;
-    const epochDay = Math.floor(day.getTime() / 86_400_000);
+  const fire = async (when: Date, title: string, body: string) => {
+    if (when.getTime() <= Date.now() + 1000) return;
     await Notifications.scheduleNotificationAsync({
-      content: { title: '🗓️ Plan your day', body: planBody(who, epochDay), data: { kind: 'plan' } },
+      content: { title, body, data: { kind: 'plan' } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when, channelId: PLAN_CHANNEL },
     });
+  };
+  for (let d = 0; d < WINDOW_DAYS; d += 1) {
+    const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
+    const epochDay = Math.floor(day.getTime() / 86_400_000);
+    // Morning: plan today (skip if today is already planned).
+    if (!planned.has(isoOf(day))) {
+      await fire(
+        new Date(day.getFullYear(), day.getMonth(), day.getDate(), cfg.morningTime.hour, cfg.morningTime.minute, 0, 0),
+        '🗓️ Plan your day',
+        planBody(who, epochDay, false),
+      );
+    }
+    // Evening: plan tomorrow (skip if tomorrow is already planned).
+    if (cfg.eveningEnabled) {
+      const tomorrow = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+      if (!planned.has(isoOf(tomorrow))) {
+        await fire(
+          new Date(day.getFullYear(), day.getMonth(), day.getDate(), cfg.eveningTime.hour, cfg.eveningTime.minute, 0, 0),
+          '🌙 Plan tomorrow',
+          planBody(who, epochDay + 1, true),
+        );
+      }
+    }
   }
 }
 
-/** Re-schedule the daily plan reminder (call on launch and when your plans change). */
+/** Re-schedule the daily plan reminders (call on launch and when your plans change). */
 export async function refreshPlanReminders(plannedDates: string[], partnerName?: string): Promise<void> {
   if (!supported) return;
   try {
-    if (!(await getPlanReminderEnabled())) {
+    const cfg = await getPlanConfig();
+    if (!cfg.enabled) {
       await cancelKind('plan');
       return;
     }
@@ -275,27 +325,20 @@ export async function refreshPlanReminders(plannedDates: string[], partnerName?:
   }
 }
 
-/** Turn the daily plan reminder on/off. Returns true only if now active. */
-export async function setPlanReminderEnabled(
-  enabled: boolean,
+/** Save the plan reminder config and reschedule. Returns true only if now active. */
+export async function setPlanConfig(
+  cfg: PlanConfig,
   plannedDates: string[],
   partnerName?: string,
 ): Promise<boolean> {
-  if (!supported) {
-    await setPlanFlag(enabled);
+  await savePlanConfig(cfg);
+  if (!supported || !cfg.enabled) {
+    if (!cfg.enabled) await cancelKind('plan');
     return false;
   }
-  if (!enabled) {
-    await cancelKind('plan');
-    await setPlanFlag(false);
-    return false;
-  }
-  const perm = await Notifications.requestPermissionsAsync();
-  if (!perm.granted) {
-    await setPlanFlag(false);
-    return false;
-  }
-  await setPlanFlag(true);
+  let perm = await Notifications.getPermissionsAsync();
+  if (perm.status === 'undetermined' || !perm.granted) perm = await Notifications.requestPermissionsAsync();
+  if (!perm.granted) return false;
   await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
   return true;
 }
