@@ -3,12 +3,21 @@
     "name": "Tether",
     "slug": "tether",
     "scheme": "tether",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FBF8F6"
+        }
+      ],
       [
         "expo-image-picker",
         {
