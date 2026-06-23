@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
+import AnimatedTabBar from '../components/AnimatedTabBar';
 import ChoiceGameScreen from '../screens/ChoiceGameScreen';
 import CountdownScreen from '../screens/CountdownScreen';
 import DeckScreen from '../screens/DeckScreen';
@@ -42,17 +43,11 @@ function tabIcon(emoji: string) {
 function Tabs() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: { fontSize: 11, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('🏠'), title: 'Home' }} />
