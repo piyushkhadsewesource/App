@@ -46,6 +46,7 @@
     },
     "android": {
       "package": "com.tether.app",
+      "versionCode": 2,
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
