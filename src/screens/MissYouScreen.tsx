@@ -15,6 +15,7 @@ import {
   SectionTitle,
   Title,
 } from '../components/ui';
+import { useToast } from '../components/ToastHost';
 import { shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
 import { useApp } from '../state/AppContext';
@@ -76,7 +77,7 @@ export default function MissYouScreen() {
   const navigation = useNavigation<any>();
   const { meId, partnerId, pings, reasons, memories, future, moments, meeting, identity } = app;
   const partnerName = identity?.partnerName ?? 'them';
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
   const [kitOpen, setKitOpen] = useState(false);
   const [shuffle, setShuffle] = useState(0);
   const [newReason, setNewReason] = useState('');
@@ -107,8 +108,7 @@ export default function MissYouScreen() {
   const kitPhoto = pick(partnerMoments);
 
   function flash(msg: string, ms = 2600) {
-    setToast(msg);
-    setTimeout(() => setToast(null), ms);
+    toast.show(msg, ms);
   }
 
   function send(type: PingType, sentMsg: string, emoji: string, message?: string) {
@@ -167,12 +167,6 @@ export default function MissYouScreen() {
             <Text style={styles.sosSub}>Instantly sound {partnerName}’s phone when you need them now</Text>
           </View>
         </Pressable>
-
-        {toast ? (
-          <Card tone="rose" style={styles.toast}>
-            <Body style={{ fontFamily: font.family.semibold }}>{toast}</Body>
-          </Card>
-        ) : null}
 
         {/* Reunion countdown */}
         <Pressable onPress={() => navigation.navigate('Countdown')}>

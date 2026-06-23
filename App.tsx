@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
+import { ToastProvider } from './src/components/ToastHost';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { refreshPlanReminders, refreshReminders, syncOccasionReminders } from './src/services/notifications';
@@ -135,8 +136,10 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <AppProvider>
-          <StatusBar style="dark" />
-          <Root />
+          <ToastProvider>
+            <StatusBar style="dark" />
+            <Root />
+          </ToastProvider>
         </AppProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
