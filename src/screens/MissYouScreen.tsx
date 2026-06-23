@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
   Body,
@@ -102,7 +102,6 @@ export default function MissYouScreen() {
     return theirs.length ? theirs : moments;
   }, [moments, partnerId]);
   const pick = <T,>(arr: T[]): T | null => (arr.length ? arr[shuffle % arr.length] : null);
-  const kitReason = pick(myReasons);
   const kitMemory = pick(memories);
   const kitFuture = pick(future);
   const kitPhoto = pick(partnerMoments);
@@ -233,6 +232,14 @@ export default function MissYouScreen() {
           <Button label="💭  Send this thought" disabled={!note.trim()} onPress={sendNote} />
         </Card>
 
+        {/* Reasons carousel */}
+        {myReasons.length > 0 ? (
+          <>
+            <SectionTitle>Reasons you’re loved</SectionTitle>
+            <ReasonsCarousel reasons={myReasons} partnerName={partnerName} />
+          </>
+        ) : null}
+
         {/* Connection stats */}
         <View style={styles.statsRow}>
           <Stat value={`${hugsThisWeek}`} label="reach-outs this week" />
@@ -260,17 +267,6 @@ export default function MissYouScreen() {
                 </View>
               </Card>
             ) : null}
-
-            <Card tone="rose">
-              <Muted>A reason {partnerName} loves you</Muted>
-              {kitReason ? (
-                <Title style={{ marginTop: 6 }}>“{kitReason.text}”</Title>
-              ) : (
-                <Body style={{ marginTop: 6 }}>
-                  {partnerName} hasn’t left reasons yet, but you can leave some for them below. 🤍
-                </Body>
-              )}
-            </Card>
 
             {kitMemory ? (
               <Card tone="gold">
@@ -363,6 +359,55 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
+const REASON_GRADS: readonly (readonly [string, string])[] = [
+  gradients.gameRose,
+  gradients.gameViolet,
+  gradients.gameBerry,
+  gradients.gameSunset,
+  gradients.gameTeal,
+];
+
+function ReasonsCarousel({ reasons, partnerName }: { reasons: { id: string; text: string }[]; partnerName: string }) {
+  const [w, setW] = useState(0);
+  const [idx, setIdx] = useState(0);
+  const onScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+    if (w > 0) setIdx(Math.max(0, Math.min(reasons.length - 1, Math.round(e.nativeEvent.contentOffset.x / w))));
+  };
+  return (
+    <View>
+      <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ borderRadius: radius.lg, overflow: 'hidden' }}>
+        {w > 0 ? (
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+          >
+            {reasons.map((r, i) => (
+              <View key={r.id} style={{ width: w }}>
+                <LinearGradient colors={REASON_GRADS[i % REASON_GRADS.length]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.reasonCard}>
+                  <Text style={styles.reasonMark}>“</Text>
+                  <Text style={styles.reasonText}>{r.text}</Text>
+                  <Text style={styles.reasonWho}>loves you, {partnerName} 💗</Text>
+                </LinearGradient>
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
+      </View>
+      <View style={styles.dotsRow}>
+        {reasons.length <= 12 ? (
+          reasons.map((_, i) => <View key={i} style={[styles.dot, i === idx ? styles.dotOn : null]} />)
+        ) : (
+          <Text style={styles.counter}>{idx + 1} / {reasons.length}</Text>
+        )}
+      </View>
+      <Muted style={{ textAlign: 'center' }}>Swipe to read them all</Muted>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   toast: { marginBottom: spacing.md },
 
@@ -383,6 +428,15 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   statValue: { fontSize: font.size.xxl, fontFamily: font.family.display, color: colors.primary },
   statLabel: { fontSize: 11, color: colors.textSoft, fontFamily: font.family.body, textAlign: 'center', marginTop: 2 },
+
+  reasonCard: { minHeight: 160, padding: spacing.xl, justifyContent: 'center', borderRadius: radius.lg },
+  reasonMark: { position: 'absolute', top: 6, left: 14, fontSize: 64, color: 'rgba(255,255,255,0.35)', fontFamily: font.family.display },
+  reasonText: { color: colors.white, fontSize: font.size.xl, lineHeight: 30, fontFamily: font.family.displaySemi },
+  reasonWho: { color: 'rgba(255,255,255,0.9)', fontSize: font.size.sm, fontFamily: font.family.semibold, marginTop: spacing.md },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: spacing.md, marginBottom: 2 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.border },
+  dotOn: { backgroundColor: colors.primary, width: 20 },
+  counter: { fontSize: font.size.sm, color: colors.textSoft, fontFamily: font.family.semibold },
 
   kitButtons: { flexDirection: 'row', gap: spacing.md },
   kitPhoto: { width: '100%', height: 200, backgroundColor: colors.surfaceAlt },
