@@ -120,17 +120,41 @@ hugs, photos, the schedule, your dates, and "Clear the air" all sync between you
 
 ---
 
+## Part 4. Updating later, without rebuilding (EAS Update)
+
+The app now has **EAS Update** wired in. Once the APK from Part 1 is installed,
+most future changes (screens, text, logic, images) reach both phones **over the
+air**, no new APK, no reinstall.
+
+To push an update, from the project folder:
+```
+npx eas-cli@latest update --branch preview --message "what changed"
+```
+- `--branch preview` must match the build's channel. The `preview` APK uses the
+  `preview` channel, so use `--branch preview` for it. (A `production` build uses
+  `--branch production`.)
+- It bundles the latest JS and assets and uploads them in under a minute. Each
+  phone picks up the update the next time it opens Tether (it downloads in the
+  background and applies on the following launch).
+
+You only need a **new APK** (Part 1) when you change native bits: the app
+version, native packages, icon/splash, permissions, or `app.json` native config.
+Everyday JS and content changes just use `eas update`.
+
+---
+
 ## Notes
 
 - **Nothing in the code needs changing.** The package id (`com.tether.app`),
   `google-services.json`, the notifications plugin, the alarm sound, and the
-  push wiring are already set up, and `eas.json` already has the build profiles.
+  push wiring are already set up, and `eas.json` already has the build profiles
+  and update channels.
 - **Test the SOS** once both phones are installed and you finished Part 2: from
   one phone, trigger an SOS while the other phone has Tether fully closed. It
   should alarm through.
-- **Updating later:** re-run `eas build -p android --profile preview` and
-  reinstall the new APK. (For instant over-the-air JS updates without rebuilding,
-  ask me about EAS Update.)
+- **Native vs over-the-air:** change app version, native packages, the icon or
+  permissions -> rebuild the APK (Part 1). Change screens, text or logic ->
+  `eas update` (Part 4), no reinstall.
 - **Play Store later (optional):** that uses `--profile production` (an `.aab`)
   and a one-time $25 Google fee. Not needed to use the app the way above.
 
