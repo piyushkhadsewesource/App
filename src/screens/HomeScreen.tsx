@@ -13,6 +13,7 @@ import {
   Tag,
   Title,
 } from '../components/ui';
+import { Heartbeat } from '../components/Heartbeat';
 import IntensityChart from '../components/IntensityChart';
 import { Reveal } from '../components/Motion';
 import { buildActivity, withinHours } from '../lib/activity';
@@ -73,6 +74,8 @@ export default function HomeScreen({ navigation }: any) {
   );
   const recent = useMemo(() => withinHours(activity, 36), [activity]);
   const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
+  // Presence: if your partner did anything in the last hour, their pulse face beats.
+  const partnerActive = useMemo(() => recent.some((e) => !e.mine && e.at > Date.now() - 60 * 60 * 1000), [recent]);
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
 
@@ -301,6 +304,7 @@ export default function HomeScreen({ navigation }: any) {
             color={colors.accent}
             checkedToday={partnerLatest?.date === today}
             mood={partnerLatest?.date === today ? moodMeta(partnerLatest.mood) : null}
+            beating={partnerActive}
           />
         </View>
         {partnerLatest?.date === today && partnerLatest.need ? (
@@ -413,23 +417,26 @@ function PulseFace({
   color,
   checkedToday,
   mood,
+  beating,
 }: {
   name: string;
   color: string;
   checkedToday: boolean;
   mood: { emoji: string; label: string } | null;
+  beating?: boolean;
 }) {
+  const face = mood ? (
+    <Text style={{ fontSize: 34 }}>{mood.emoji}</Text>
+  ) : checkedToday ? (
+    <Text style={{ fontSize: 34 }}>🙂</Text>
+  ) : (
+    <View style={[styles.facePlaceholder, { borderColor: color + '40' }]} />
+  );
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
-      {mood ? (
-        <Text style={{ fontSize: 34 }}>{mood.emoji}</Text>
-      ) : checkedToday ? (
-        <Text style={{ fontSize: 34 }}>🙂</Text>
-      ) : (
-        <View style={[styles.facePlaceholder, { borderColor: color + '40' }]} />
-      )}
+      <Heartbeat active={!!beating}>{face}</Heartbeat>
       <Text style={[styles.pulseName, { color }]}>{name}</Text>
-      <Muted>{mood ? mood.label : checkedToday ? 'Checked in' : 'No check-in yet'}</Muted>
+      <Muted>{beating ? 'Active now 💚' : mood ? mood.label : checkedToday ? 'Checked in' : 'No check-in yet'}</Muted>
     </View>
   );
 }
