@@ -14,6 +14,7 @@ import {
   Title,
 } from '../components/ui';
 import IntensityChart from '../components/IntensityChart';
+import { Reveal } from '../components/Motion';
 import { buildActivity, withinHours } from '../lib/activity';
 import { formatDayMonth, formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { averageIntensity, todaysFeelings } from '../lib/feelings';
@@ -232,21 +233,23 @@ export default function HomeScreen({ navigation }: any) {
           </SectionTitle>
           <Card style={styles.feedCard}>
             {recent.slice(0, 7).map((e, i) => (
-              <Pressable
-                key={e.id}
-                onPress={() => navigation.navigate(e.route, e.params)}
-                style={({ pressed }) => [styles.actRow, i > 0 ? styles.actDivider : null, !e.mine ? styles.actPartner : null, pressed ? { opacity: 0.7 } : null]}
-              >
-                <Text style={{ fontSize: 22 }}>{e.icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.actText} numberOfLines={2}>{e.text}</Text>
-                  <Muted>
-                    {formatRelative(e.at)}
-                    {!e.mine ? ' · tap to respond' : ''}
-                  </Muted>
-                </View>
-                {!e.mine ? <Text style={styles.actChevron}>›</Text> : null}
-              </Pressable>
+              // Each row cascades in with a staggered reveal for a buttery feed.
+              <Reveal key={e.id} delay={i * 55}>
+                <Pressable
+                  onPress={() => navigation.navigate(e.route, e.params)}
+                  style={({ pressed }) => [styles.actRow, i > 0 ? styles.actDivider : null, !e.mine ? styles.actPartner : null, pressed ? { opacity: 0.7 } : null]}
+                >
+                  <Text style={{ fontSize: 22 }}>{e.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.actText} numberOfLines={2}>{e.text}</Text>
+                    <Muted>
+                      {formatRelative(e.at)}
+                      {!e.mine ? ' · tap to respond' : ''}
+                    </Muted>
+                  </View>
+                  {!e.mine ? <Text style={styles.actChevron}>›</Text> : null}
+                </Pressable>
+              </Reveal>
             ))}
           </Card>
         </>

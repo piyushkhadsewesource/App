@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useRef } from 'react';
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,6 +17,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
+import { spring } from '../theme/motion';
+import { Press } from './Motion';
 
 // ── Screen shell ───────────────────────────────────────────────────────────
 export function Screen({
@@ -110,10 +113,11 @@ export function Card({
     </View>
   );
   if (!onPress) return body;
+  // Tappable cards gently spring inward on press for a tactile, physical feel.
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => (pressed ? { opacity: 0.85 } : null)}>
+    <Press onPress={onPress} scaleTo={0.985}>
       {body}
-    </Pressable>
+    </Press>
   );
 }
 
@@ -164,17 +168,25 @@ export function Button({
     </Text>
   );
 
+  // Spring the button inward on press for a satisfying, tactile tap.
+  const scale = useRef(new Animated.Value(1)).current;
+  const press = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
+  const pressProps = {
+    onPress,
+    disabled,
+    onPressIn: () => !disabled && press(0.97),
+    onPressOut: () => press(1),
+  };
+
   if (variant === 'primary') {
     const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
     return (
-      <Pressable
-        onPress={onPress}
-        disabled={disabled}
-        style={({ pressed }) => [disabled ? { opacity: 0.45 } : null, pressed ? { opacity: 0.9 } : null, style]}
-      >
-        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, shadow.soft]}>
-          {content}
-        </LinearGradient>
+      <Pressable {...pressProps} style={[disabled ? { opacity: 0.45 } : null, style]}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, shadow.soft]}>
+            {content}
+          </LinearGradient>
+        </Animated.View>
       </Pressable>
     );
   }
@@ -182,19 +194,10 @@ export function Button({
   const bg = variant === 'soft' ? colors.surfaceAlt : 'transparent';
   const border = variant === 'outline' ? { borderWidth: 1.5, borderColor: color } : null;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: bg },
-        border,
-        disabled ? { opacity: 0.45 } : null,
-        pressed ? { opacity: 0.85 } : null,
-        style,
-      ]}
-    >
-      {content}
+    <Pressable {...pressProps} style={[disabled ? { opacity: 0.45 } : null, style]}>
+      <Animated.View style={[styles.button, { backgroundColor: bg }, border, { transform: [{ scale }] }]}>
+        {content}
+      </Animated.View>
     </Pressable>
   );
 }
