@@ -159,7 +159,7 @@ export default function KnowMeScreen({ navigation }: any) {
 
         <View style={styles.controls}>
           <View style={styles.navRow}>
-            <Pressable onPress={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0} style={styles.navBtn}>
+            <Pressable onPress={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0} style={styles.navBtn} accessibilityRole="button" accessibilityLabel="Previous question" accessibilityState={{ disabled: idx === 0 }}>
               <Text style={[styles.navText, idx === 0 && { color: colors.border }]}>‹ Back</Text>
             </Pressable>
             <Pressable onPress={() => setIdx((i) => i + 1)} style={[styles.btn, styles.btnPrimary, { flex: 1, marginLeft: spacing.md }]}>

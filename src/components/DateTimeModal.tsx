@@ -108,11 +108,11 @@ export default function DateTimeModal({
           {mode !== 'time' ? (
             <>
               <View style={styles.monthHeader}>
-                <Pressable onPress={prevMonth} hitSlop={12} disabled={atFloor} style={styles.navBtn}>
+                <Pressable onPress={prevMonth} hitSlop={12} disabled={atFloor} style={styles.navBtn} accessibilityRole="button" accessibilityLabel="Previous month" accessibilityState={{ disabled: atFloor }}>
                   <Text style={[styles.navArrow, atFloor && { color: colors.border }]}>‹</Text>
                 </Pressable>
                 <Text style={styles.monthTitle}>{MONTHS[viewM]} {viewY}</Text>
-                <Pressable onPress={nextMonth} hitSlop={12} style={styles.navBtn}>
+                <Pressable onPress={nextMonth} hitSlop={12} style={styles.navBtn} accessibilityRole="button" accessibilityLabel="Next month">
                   <Text style={styles.navArrow}>›</Text>
                 </Pressable>
               </View>

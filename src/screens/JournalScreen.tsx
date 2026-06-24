@@ -40,11 +40,11 @@ export default function JournalScreen({ navigation }: any) {
 
       {/* Month stepper */}
       <View style={styles.stepper}>
-        <Pressable onPress={() => setMonthISO((m) => shiftMonth(m, -1))} hitSlop={12}>
+        <Pressable onPress={() => setMonthISO((m) => shiftMonth(m, -1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous month">
           <Text style={styles.stepArrow}>‹</Text>
         </Pressable>
         <Text style={styles.month}>{report.periodLabel}</Text>
-        <Pressable onPress={() => !isCurrentMonth && setMonthISO((m) => shiftMonth(m, 1))} hitSlop={12} disabled={isCurrentMonth}>
+        <Pressable onPress={() => !isCurrentMonth && setMonthISO((m) => shiftMonth(m, 1))} hitSlop={12} disabled={isCurrentMonth} accessibilityRole="button" accessibilityLabel="Next month" accessibilityState={{ disabled: isCurrentMonth }}>
           <Text style={[styles.stepArrow, isCurrentMonth && { color: colors.border }]}>›</Text>
         </Pressable>
       </View>

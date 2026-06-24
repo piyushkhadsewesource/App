@@ -179,7 +179,7 @@ export default function RemindersScreen({ navigation }: any) {
             <Stepper label="hr" onMinus={() => adjust(i, 'hour', -1)} onPlus={() => adjust(i, 'hour', 1)} />
             <Stepper label="min" onMinus={() => adjust(i, 'minute', -5)} onPlus={() => adjust(i, 'minute', 5)} />
             {times.length > 1 ? (
-              <Pressable hitSlop={8} onPress={() => removeAt(i)} style={{ paddingHorizontal: spacing.sm }}>
+              <Pressable hitSlop={8} onPress={() => removeAt(i)} style={{ paddingHorizontal: spacing.sm }} accessibilityRole="button" accessibilityLabel="Remove this reminder time">
                 <Text style={styles.remove}>×</Text>
               </Pressable>
             ) : null}
@@ -205,13 +205,14 @@ export default function RemindersScreen({ navigation }: any) {
 }
 
 function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => void; onPlus: () => void }) {
+  const unit = label === 'hr' ? 'hour' : 'minute';
   return (
     <View style={styles.stepper}>
-      <Pressable hitSlop={6} onPress={onMinus} style={styles.stepBtn}>
+      <Pressable hitSlop={6} onPress={onMinus} style={styles.stepBtn} accessibilityRole="button" accessibilityLabel={`Decrease ${unit}`}>
         <Text style={styles.stepSign}>−</Text>
       </Pressable>
       <Text style={styles.stepLabel}>{label}</Text>
-      <Pressable hitSlop={6} onPress={onPlus} style={styles.stepBtn}>
+      <Pressable hitSlop={6} onPress={onPlus} style={styles.stepBtn} accessibilityRole="button" accessibilityLabel={`Increase ${unit}`}>
         <Text style={styles.stepSign}>＋</Text>
       </Pressable>
     </View>
