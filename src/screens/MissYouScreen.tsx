@@ -31,18 +31,32 @@ const PINGS: { type: PingType; emoji: string; label: string; sent: string; grad:
 
 const DAY = 86_400_000;
 
-// Floating-emoji burst, so reaching out feels alive instead of silent.
+// Floating-emoji burst, so reaching out feels alive instead of silent. The
+// emojis launch from near the centre, spread outward and arc back down under a
+// little gravity, like a warm firework.
 function useBurst() {
-  const [parts, setParts] = useState<{ id: number; emoji: string; left: number; v: Animated.Value }[]>([]);
+  const [parts, setParts] = useState<
+    { id: number; emoji: string; left: number; vx: number; peak: number; fall: number; rot: number; size: number; v: Animated.Value }[]
+  >([]);
   const idRef = useRef(0);
   const fire = (emoji: string) => {
-    const items = Array.from({ length: 7 }).map(() => {
+    const items = Array.from({ length: 9 }).map(() => {
       const v = new Animated.Value(0);
       const id = idRef.current++;
-      Animated.timing(v, { toValue: 1, duration: 1000 + Math.random() * 700, useNativeDriver: true }).start(() => {
-        setParts((p) => p.filter((x) => x.id !== id));
+      Animated.timing(v, { toValue: 1, duration: 1300 + Math.random() * 700, useNativeDriver: true }).start(({ finished }) => {
+        if (finished) setParts((p) => p.filter((x) => x.id !== id));
       });
-      return { id, emoji, left: 8 + Math.random() * 84, v };
+      return {
+        id,
+        emoji,
+        left: 44 + Math.random() * 12, // launch near the centre
+        vx: (Math.random() - 0.5) * 340, // spread outward
+        peak: 200 + Math.random() * 150, // how high it arcs
+        fall: 50 + Math.random() * 120, // settles below the peak
+        rot: (Math.random() - 0.5) * 260,
+        size: 26 + Math.random() * 12,
+        v,
+      };
     });
     setParts((p) => [...p, ...items]);
   };
@@ -54,13 +68,14 @@ function useBurst() {
           style={{
             position: 'absolute',
             left: `${p.left}%`,
-            bottom: 90,
-            fontSize: 30,
-            opacity: p.v.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 1, 1, 0] }),
+            bottom: 120,
+            fontSize: p.size,
+            opacity: p.v.interpolate({ inputRange: [0, 0.12, 0.8, 1], outputRange: [0, 1, 1, 0] }),
             transform: [
-              { translateY: p.v.interpolate({ inputRange: [0, 1], outputRange: [0, -320] }) },
-              { scale: p.v.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.5, 1.25, 0.9] }) },
-              { rotate: p.v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${Math.random() > 0.5 ? '' : '-'}18deg`] }) },
+              { translateX: p.v.interpolate({ inputRange: [0, 1], outputRange: [0, p.vx] }) },
+              { translateY: p.v.interpolate({ inputRange: [0, 0.38, 1], outputRange: [0, -p.peak, -p.peak + p.fall] }) },
+              { rotate: p.v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${p.rot}deg`] }) },
+              { scale: p.v.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.4, 1.15, 0.85] }) },
             ],
           }}
         >
