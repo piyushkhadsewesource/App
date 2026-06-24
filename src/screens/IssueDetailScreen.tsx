@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Celebrate } from '../components/Celebrate';
 import { AppHeader, Body, Button, Card, Field, LevelSelector, Muted, Screen, Title } from '../components/ui';
 import { formatRelative } from '../lib/date';
 import { hLight, hSuccess } from '../lib/haptics';
@@ -117,7 +118,8 @@ export default function IssueDetailScreen({ navigation, route }: any) {
   };
 
   return (
-    <Screen scroll>
+    <>
+      <Screen scroll>
       <AppHeader title="Clear the air" subtitle={resolved ? 'Cleared together' : 'Working through it'} onBack={() => navigation.goBack()} />
 
       {/* Hero / inline editor (raiser only) */}
@@ -290,7 +292,10 @@ export default function IssueDetailScreen({ navigation, route }: any) {
           <Button label="Remove this" variant="ghost" color={colors.danger} onPress={confirmRemove} />
         </>
       ) : null}
-    </Screen>
+      </Screen>
+      {/* Petals rain down the moment an issue is cleared together. */}
+      <Celebrate play={resolved} />
+    </>
   );
 }
 

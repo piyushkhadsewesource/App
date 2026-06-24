@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Celebrate } from '../components/Celebrate';
 import Dice from '../components/Dice';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import { hMedium, hSuccess } from '../lib/haptics';
@@ -107,7 +108,8 @@ export default function LudoScreen({ navigation }: any) {
   const homeCount = (tokens: number[]) => tokens.filter((p) => p === 56).length;
 
   return (
-    <Screen scroll>
+    <>
+      <Screen scroll>
       <AppHeader title="Ludo" subtitle="Race all four tokens home" onBack={() => navigation.goBack()} />
 
       <View style={styles.players}>
@@ -207,7 +209,10 @@ export default function LudoScreen({ navigation }: any) {
           them back, ★ squares are safe, and a 6 earns another roll. First with all four home wins.
         </Muted>
       </Card>
-    </Screen>
+      </Screen>
+      {/* Confetti rains down when you win. */}
+      <Celebrate play={iWon} />
+    </>
   );
 }
 
