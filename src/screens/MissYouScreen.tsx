@@ -140,14 +140,12 @@ export default function MissYouScreen() {
         {
           text: 'Send alert',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            } catch {
-              /* ignore */
-            }
-            await app.sendSos();
+          onPress: () => {
+            // Confirm instantly; fire the SOS without blocking (the alarm reaches
+            // the partner via live sync / push, never gated on the cloud ack).
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
             flash(`Emergency alert sent to ${partnerName} 🆘`, 2800);
+            void app.sendSos();
           },
         },
       ],

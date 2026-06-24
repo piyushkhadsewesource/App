@@ -61,14 +61,18 @@ export default function PulseScreen() {
   const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
   const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
 
-  async function save() {
-    await app.saveCheckin({ mood, need: need.trim(), energy, stress, affection, note: note.trim() || undefined });
+  function save() {
+    // Close the form immediately; fire the write without blocking (offline the
+    // cloud ack can hang, but the check-in lands locally at once).
+    const data = { mood, need: need.trim(), energy, stress, affection, note: note.trim() || undefined };
     setEditing(false);
+    void app.saveCheckin(data);
   }
 
-  async function logNow() {
-    await app.logFeeling({ mood: logMood, intensity: logIntensity, note: logNote.trim() || undefined });
+  function logNow() {
+    const data = { mood: logMood, intensity: logIntensity, note: logNote.trim() || undefined };
     setLogNote('');
+    void app.logFeeling(data);
   }
 
   return (

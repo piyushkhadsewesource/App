@@ -49,9 +49,11 @@ export default function DeckScreen({ navigation }: any) {
     setAnswer('');
   }
 
-  async function submit() {
-    await app.addDeckResponse(prompt.id, prompt.text, answer.trim());
+  function submit() {
+    // Clear the field immediately; fire the write without blocking on the ack.
+    const a = answer.trim();
     setAnswer('');
+    void app.addDeckResponse(prompt.id, prompt.text, a);
   }
 
   return (

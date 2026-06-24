@@ -109,8 +109,9 @@ export default function IssueDetailScreen({ navigation, route }: any) {
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: async () => {
-          await app.removeIssue(issue.id);
+        onPress: () => {
+          // Leave immediately; fire the removal without blocking on the ack.
+          void app.removeIssue(issue.id);
           navigation.goBack();
         },
       },
