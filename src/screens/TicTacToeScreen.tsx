@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import { tttWinner, tttWinningLine } from '../lib/games';
+import { Celebrate } from '../components/Celebrate';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 
@@ -24,7 +25,8 @@ export default function TicTacToeScreen({ navigation }: any) {
   else status = myTurn ? 'Your turn' : `${partner}'s turn…`;
 
   return (
-    <Screen scroll>
+    <>
+      <Screen scroll>
       <AppHeader title="Tic-Tac-Toe" subtitle="Take turns across the distance" onBack={() => navigation.goBack()} />
 
       {/* Players / whose turn */}
@@ -82,7 +84,9 @@ export default function TicTacToeScreen({ navigation }: any) {
           </Muted>
         ) : null}
       </Card>
-    </Screen>
+      </Screen>
+      <Celebrate play={over && result === myMark} />
+    </>
   );
 }
 

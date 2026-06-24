@@ -5,6 +5,7 @@ import Dice from '../components/Dice';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import { hMedium, hSuccess } from '../lib/haptics';
 import { boardRows, SNL_JUMPS } from '../lib/snakes';
+import { Celebrate } from '../components/Celebrate';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 
@@ -161,7 +162,8 @@ export default function SnakesScreen({ navigation }: any) {
   const tokenSize = cell * 0.62;
 
   return (
-    <Screen scroll>
+    <>
+      <Screen scroll>
       <AppHeader title="Snakes & Ladders" subtitle="First to 100 wins" onBack={() => navigation.goBack()} />
 
       <View style={styles.players}>
@@ -230,7 +232,9 @@ export default function SnakesScreen({ navigation }: any) {
           turn and {partner} sees every move live.
         </Muted>
       </Card>
-    </Screen>
+      </Screen>
+      <Celebrate play={iWon} />
+    </>
   );
 }
 

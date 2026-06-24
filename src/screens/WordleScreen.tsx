@@ -4,6 +4,7 @@ import { AppHeader, Card, Muted, Screen, Title } from '../components/ui';
 import { todayISO } from '../lib/date';
 import { hLight, hSuccess, hWarn } from '../lib/haptics';
 import { dailyWord, keyboardStates, LetterState, MAX_GUESSES, scoreGuess, WORD_LEN } from '../lib/wordle';
+import { Celebrate } from '../components/Celebrate';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 
@@ -92,7 +93,8 @@ export default function WordleScreen({ navigation }: any) {
   }
 
   return (
-    <Screen scroll>
+    <>
+      <Screen scroll>
       <AppHeader title="Daily Wordle" subtitle="One shared word, every day" onBack={() => navigation.goBack()} />
 
       {/* Toast */}
@@ -176,7 +178,9 @@ export default function WordleScreen({ navigation }: any) {
           </View>
         ))}
       </View>
-    </Screen>
+      </Screen>
+      <Celebrate play={solved} />
+    </>
   );
 }
 
