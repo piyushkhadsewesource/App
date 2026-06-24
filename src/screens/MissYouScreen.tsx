@@ -31,6 +31,9 @@ const PINGS: { type: PingType; emoji: string; label: string; sent: string; grad:
 
 const DAY = 86_400_000;
 
+// Only allow inline image data URIs, never an arbitrary URL synced into a doc.
+const dataUri = (s?: string) => (s && s.startsWith('data:image/') ? s : undefined);
+
 // Floating-emoji burst, so reaching out feels alive instead of silent. The
 // emojis launch from near the centre, spread outward and arc back down under a
 // little gravity, like a warm firework.
@@ -108,7 +111,10 @@ export default function MissYouScreen() {
     () => pings.filter((p) => p.fromId !== meId).sort((a, b) => b.createdAt - a.createdAt),
     [pings, meId],
   );
-  const hugsThisWeek = useMemo(() => pings.filter((p) => p.createdAt > Date.now() - 7 * DAY).length, [pings]);
+  const hugsThisWeek = useMemo(
+    () => pings.filter((p) => p.fromId === meId && p.createdAt > Date.now() - 7 * DAY).length,
+    [pings, meId],
+  );
   const leftForThem = useMemo(() => reasons.filter((r) => r.authorId === meId).length, [reasons, meId]);
 
   // Things partner has stored, for my comfort kit.
@@ -265,9 +271,9 @@ export default function MissYouScreen() {
           </Card>
         ) : (
           <View style={{ gap: spacing.md }}>
-            {kitPhoto ? (
+            {kitPhoto && dataUri(kitPhoto.image) ? (
               <Card style={{ padding: 0, overflow: 'hidden' }}>
-                <Image source={{ uri: kitPhoto.image }} style={styles.kitPhoto} resizeMode="cover" />
+                <Image source={{ uri: dataUri(kitPhoto.image) }} style={styles.kitPhoto} resizeMode="cover" />
                 <View style={{ padding: spacing.md }}>
                   <Muted>A moment to hold onto</Muted>
                   {kitPhoto.caption ? <Body style={{ marginTop: 2 }}>{kitPhoto.caption}</Body> : null}
@@ -416,7 +422,6 @@ function ReasonsCarousel({ reasons, partnerName }: { reasons: { id: string; text
 }
 
 const styles = StyleSheet.create({
-  toast: { marginBottom: spacing.md },
 
   reunion: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm },
   reunionTitle: { color: colors.white, fontSize: font.size.lg, fontFamily: font.family.bold },

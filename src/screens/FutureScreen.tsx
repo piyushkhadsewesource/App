@@ -33,10 +33,11 @@ export default function FutureScreen({ navigation }: any) {
 
   const done = app.future.filter((f) => f.done).length;
 
-  async function add() {
+  function add() {
     const t = text.trim();
+    if (!t) return;
     setText('');
-    await app.addFuture(cat, t);
+    void app.addFuture(cat, t);
   }
 
   const startEdit = (id: string, current: string) => {

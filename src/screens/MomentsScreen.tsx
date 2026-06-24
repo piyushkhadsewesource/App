@@ -78,11 +78,17 @@ export default function MomentsScreen() {
 
   async function shareMoment() {
     if (!pending) return;
+    // Clear the composer immediately (offline the cloud ack hangs, but the photo
+    // already lands locally); restore it only if the write genuinely fails.
+    const img = pending;
+    const cap = caption;
+    setPending(null);
+    setCaption('');
     try {
-      await app.addMoment({ image: pending, caption: caption.trim() || undefined });
-      setPending(null);
-      setCaption('');
+      await app.addMoment({ image: img, caption: cap.trim() || undefined });
     } catch (e: any) {
+      setPending(img);
+      setCaption(cap);
       Alert.alert('Could not share', String(e?.message ?? 'Please try again.'));
     }
   }

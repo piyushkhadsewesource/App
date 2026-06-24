@@ -170,11 +170,11 @@ export default function WordleScreen({ navigation }: any) {
       <View style={styles.kb}>
         {ROWS.map((row, ri) => (
           <View key={ri} style={styles.kbRow}>
-            {ri === 2 ? <KeyCap label="↵" wide onPress={onEnter} /> : null}
+            {ri === 2 ? <KeyCap label="↵" wide onPress={onEnter} accessibilityLabel="Enter" /> : null}
             {row.split('').map((k) => (
               <KeyCap key={k} label={k} state={keyStates[k]} onPress={() => onKey(k)} />
             ))}
-            {ri === 2 ? <KeyCap label="⌫" wide onPress={onDelete} /> : null}
+            {ri === 2 ? <KeyCap label="⌫" wide onPress={onDelete} accessibilityLabel="Delete" /> : null}
           </View>
         ))}
       </View>
@@ -184,12 +184,26 @@ export default function WordleScreen({ navigation }: any) {
   );
 }
 
-function KeyCap({ label, state, wide, onPress }: { label: string; state?: LetterState; wide?: boolean; onPress: () => void }) {
+function KeyCap({
+  label,
+  state,
+  wide,
+  onPress,
+  accessibilityLabel,
+}: {
+  label: string;
+  state?: LetterState;
+  wide?: boolean;
+  onPress: () => void;
+  accessibilityLabel?: string;
+}) {
   const bg = state ? STATE_BG[state] : '#E7DED8';
   const fg = state ? colors.white : colors.text;
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       style={({ pressed }) => [styles.key, { backgroundColor: bg, flex: wide ? 1.6 : 1 }, pressed && { opacity: 0.7 }]}
     >
       <Text style={[styles.keyText, { color: fg, fontSize: wide ? 16 : font.size.md }]}>{label}</Text>

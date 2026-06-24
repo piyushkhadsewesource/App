@@ -94,8 +94,8 @@ export default function LudoScreen({ navigation }: any) {
   const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] });
 
   useEffect(() => {
-    if (over) hSuccess();
-  }, [over]);
+    if (iWon) hSuccess(); // only the winner gets the celebratory buzz
+  }, [iWon]);
 
   let status: string;
   if (!g) status = 'Start a game to play together';

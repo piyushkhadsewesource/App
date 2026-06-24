@@ -15,7 +15,7 @@ import {
   setRemindersEnabled,
 } from '../services/notifications';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, spacing } from '../theme';
 
 const MAX_TIMES = 6;
 

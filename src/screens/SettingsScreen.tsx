@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { APP_NAME } from '../config';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen, SectionTitle, Tag, Title } from '../components/ui';
 import { useApp } from '../state/AppContext';
-import { colors, font, spacing } from '../theme';
+import { colors, spacing } from '../theme';
 
 export default function SettingsScreen({ navigation }: any) {
   const app = useApp();

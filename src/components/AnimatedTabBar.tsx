@@ -41,7 +41,14 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
             if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
           };
           return (
-            <TabButton key={route.key} focused={focused} label={label} icon={options.tabBarIcon} onPress={onPress} />
+            <TabButton
+              key={route.key}
+              focused={focused}
+              label={label}
+              accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+              icon={options.tabBarIcon}
+              onPress={onPress}
+            />
           );
         })}
       </View>
@@ -52,11 +59,13 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
 function TabButton({
   focused,
   label,
+  accessibilityLabel,
   icon,
   onPress,
 }: {
   focused: boolean;
   label: string;
+  accessibilityLabel: string;
   icon?: (props: { focused: boolean; color: string; size: number }) => React.ReactNode;
   onPress: () => void;
 }) {
@@ -69,7 +78,14 @@ function TabButton({
   const lift = s.interpolate({ inputRange: [0, 1], outputRange: [0, -2] });
 
   return (
-    <Pressable onPress={onPress} style={styles.tab} hitSlop={6}>
+    <Pressable
+      onPress={onPress}
+      style={styles.tab}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityState={{ selected: focused }}
+      accessibilityLabel={accessibilityLabel}
+    >
       <Animated.View style={{ transform: [{ scale }, { translateY: lift }] }}>
         {icon ? icon({ focused, color: focused ? colors.primary : colors.textFaint, size: 22 }) : null}
       </Animated.View>

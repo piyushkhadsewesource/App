@@ -127,6 +127,7 @@ export default function KnowMeScreen({ navigation }: any) {
                   isPick={isPick}
                   isTruth={!!isTruth}
                   isWrong={!!isWrong}
+                  locked={revealed}
                   onPress={() => app.answerGame('knowme', `${tab === 'me' ? 't' : 'g'}:${q.id}`, k)}
                 />
               );
@@ -176,12 +177,14 @@ function Choice({
   isPick,
   isTruth,
   isWrong,
+  locked,
   onPress,
 }: {
   text: string;
   isPick: boolean;
   isTruth: boolean;
   isWrong: boolean;
+  locked: boolean;
   onPress: () => void;
 }) {
   if (isTruth) {
@@ -200,18 +203,22 @@ function Choice({
       </View>
     );
   }
+  const inner = isPick ? (
+    <LinearGradient colors={gradients.gameGold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.choice, { borderColor: 'transparent' }, shadow.soft]}>
+      <Text style={[styles.choiceText, { color: colors.white }]}>{text}</Text>
+      <Text style={{ color: colors.white, fontFamily: font.family.bold }}>✓</Text>
+    </LinearGradient>
+  ) : (
+    <View style={[styles.choice, styles.choicePlain]}>
+      <Text style={styles.choiceText}>{text}</Text>
+    </View>
+  );
+  // Once the answer is revealed, the guess is final: render it non-pressable so
+  // it cannot be changed after seeing the truth.
+  if (locked) return inner;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && { transform: [{ scale: 0.99 }] }]}>
-      {isPick ? (
-        <LinearGradient colors={gradients.gameGold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.choice, { borderColor: 'transparent' }, shadow.soft]}>
-          <Text style={[styles.choiceText, { color: colors.white }]}>{text}</Text>
-          <Text style={{ color: colors.white, fontFamily: font.family.bold }}>✓</Text>
-        </LinearGradient>
-      ) : (
-        <View style={[styles.choice, styles.choicePlain]}>
-          <Text style={styles.choiceText}>{text}</Text>
-        </View>
-      )}
+      {inner}
     </Pressable>
   );
 }
