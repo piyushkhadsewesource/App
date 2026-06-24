@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 import { spring } from '../theme/motion';
+import { hLight } from '../lib/haptics';
 import { Press } from './Motion';
 
 // ── Screen shell ───────────────────────────────────────────────────────────
@@ -302,7 +303,10 @@ export function LevelSelector({
         {[1, 2, 3, 4, 5].map((n) => (
           <Pressable
             key={n}
-            onPress={() => onChange(n)}
+            onPress={() => {
+              hLight(); // a tactile detent on each step
+              onChange(n);
+            }}
             style={[
               styles.levelDot,
               {

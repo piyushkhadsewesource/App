@@ -14,6 +14,7 @@ import {
 } from '../components/ui';
 import IntensityChart from '../components/IntensityChart';
 import { formatDayMonth, todayISO } from '../lib/date';
+import { hLight } from '../lib/haptics';
 import { todaysFeelings } from '../lib/feelings';
 import { MOODS, moodMeta } from '../lib/mood';
 import {
@@ -89,7 +90,7 @@ export default function PulseScreen() {
                 return (
                   <Pressable
                     key={m.key}
-                    onPress={() => setMood(m.key)}
+                    onPress={() => { hLight(); setMood(m.key); }}
                     style={[
                       styles.moodChip,
                       { backgroundColor: active ? m.color : m.soft, borderColor: active ? m.color : 'transparent' },
@@ -194,7 +195,7 @@ export default function PulseScreen() {
             return (
               <Pressable
                 key={m.key}
-                onPress={() => setLogMood(m.key)}
+                onPress={() => { hLight(); setLogMood(m.key); }}
                 style={[styles.moodChip, { backgroundColor: active ? m.color : m.soft, borderColor: active ? m.color : 'transparent' }]}
               >
                 <Text style={{ fontSize: 18 }}>{m.emoji}</Text>
@@ -211,7 +212,7 @@ export default function PulseScreen() {
             return (
               <Pressable
                 key={n}
-                onPress={() => setLogIntensity(n)}
+                onPress={() => { hLight(); setLogIntensity(n); }}
                 style={[styles.scaleDot, { backgroundColor: on ? moodMeta(logMood).color : colors.surfaceAlt, borderColor: on ? moodMeta(logMood).color : colors.border }]}
               >
                 <Text style={{ fontSize: 11, fontFamily: font.family.bold, color: on ? colors.white : colors.textFaint }}>{n}</Text>
