@@ -21,6 +21,9 @@ import { spring } from '../theme/motion';
 import { hLight } from '../lib/haptics';
 import { Press } from './Motion';
 
+// A pressable whose style can carry an animated value (for the spring scale).
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 // ── Screen shell ───────────────────────────────────────────────────────────
 export function Screen({
   children,
@@ -169,7 +172,10 @@ export function Button({
     </Text>
   );
 
-  // Spring the button inward on press for a satisfying, tactile tap.
+  // Spring the button inward on press for a satisfying, tactile tap. The whole
+  // button is one animated pressable, so a caller's size/layout style (height,
+  // width, padding, flex, margin) merges onto the visible box exactly as before
+  // the spring refactor.
   const scale = useRef(new Animated.Value(1)).current;
   const press = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
   const pressProps = {
@@ -182,24 +188,22 @@ export function Button({
   if (variant === 'primary') {
     const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
     return (
-      <Pressable {...pressProps} style={[disabled ? { opacity: 0.45 } : null, style]}>
-        <Animated.View style={{ transform: [{ scale }] }}>
-          <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.button, shadow.soft]}>
-            {content}
-          </LinearGradient>
-        </Animated.View>
-      </Pressable>
+      <AnimatedPressable {...pressProps} style={[styles.button, shadow.soft, { transform: [{ scale }] }, disabled ? { opacity: 0.45 } : null, style]}>
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, styles.buttonFill]} />
+        {content}
+      </AnimatedPressable>
     );
   }
 
   const bg = variant === 'soft' ? colors.surfaceAlt : 'transparent';
   const border = variant === 'outline' ? { borderWidth: 1.5, borderColor: color } : null;
   return (
-    <Pressable {...pressProps} style={[disabled ? { opacity: 0.45 } : null, style]}>
-      <Animated.View style={[styles.button, { backgroundColor: bg }, border, { transform: [{ scale }] }]}>
-        {content}
-      </Animated.View>
-    </Pressable>
+    <AnimatedPressable
+      {...pressProps}
+      style={[styles.button, { backgroundColor: bg }, border, { transform: [{ scale }] }, disabled ? { opacity: 0.45 } : null, style]}
+    >
+      {content}
+    </AnimatedPressable>
   );
 }
 
@@ -396,6 +400,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
+  buttonFill: { borderRadius: radius.pill },
   buttonText: { fontSize: font.size.md, fontFamily: font.family.bold, letterSpacing: 0.2 },
 
   pill: {
