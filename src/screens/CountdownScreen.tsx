@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen, Title } from '../components/ui';
 import DateTimeModal from '../components/DateTimeModal';
+import { RollingNumber } from '../components/Ticker';
 import { formatDate } from '../lib/date';
 import { countdownTo } from '../lib/countdown';
 import { useApp } from '../state/AppContext';
@@ -45,15 +46,19 @@ export default function CountdownScreen({ navigation }: any) {
   const cd = useMemo(() => (meeting ? countdownTo(meeting.at, now) : null), [meeting, now]);
   const reunionGlow = !!cd && cd.past && now - (meeting?.at ?? 0) < 3 * 86_400_000;
 
-  async function save() {
+  function save() {
     if (!selectedAt) {
       Alert.alert('Pick a date', 'Tap the date field to choose when you meet next.');
       return;
     }
-    await app.setMeeting(selectedAt, label);
+    // Update the UI immediately; fire the write without blocking (offline the
+    // cloud ack can hang, but the meeting lands locally at once).
+    const at = selectedAt;
+    const lbl = label;
     setEditing(false);
     setSelectedAt(null);
     setLabel('');
+    void app.setMeeting(at, lbl);
   }
 
   function confirmClear() {
@@ -158,7 +163,7 @@ export default function CountdownScreen({ navigation }: any) {
 function Unit({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.unit}>
-      <Text style={styles.unitValue}>{value}</Text>
+      <RollingNumber value={value} style={styles.unitValue} height={44} />
       <Text style={styles.unitLabel}>{label}</Text>
     </View>
   );
@@ -190,6 +195,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  unitValue: { fontSize: 32, fontFamily: font.family.display, color: colors.accent },
+  unitValue: { fontSize: 32, lineHeight: 38, fontFamily: font.family.display, color: colors.accent },
   unitLabel: { fontSize: 11, color: colors.textSoft, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: font.family.semibold },
 });
