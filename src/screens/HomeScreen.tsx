@@ -378,7 +378,7 @@ export default function HomeScreen({ navigation }: any) {
       ) : null}
 
       {/* Play together */}
-      <Card tone="violet" onPress={() => navigation.navigate('Games')} style={styles.alert}>
+      <Card tone="violet" onPress={() => navigation.navigate('Games')} style={[styles.alert, { marginTop: spacing.lg }]}>
         <Text style={styles.alertEmoji}>🎮</Text>
         <View style={{ flex: 1 }}>
           <Title>Play together</Title>

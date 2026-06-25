@@ -155,9 +155,10 @@ export default function VaultScreen({ navigation }: any) {
         <View style={{ gap: spacing.md }}>
           {sorted.map((m) => {
             const isOnThisDay = m.date.slice(5) === todayISO().slice(5) && m.date.slice(0, 4) !== todayISO().slice(0, 4);
-            const mine = app.isMine(m.authorId);
+            // Either of you can edit any memory; the author shown below stays put
+            // (updateMemory never rewrites authorId), so credit is preserved.
             return (
-              <Card key={m.id} tone={isOnThisDay ? 'gold' : 'surface'} onPress={mine ? () => openEdit(m) : undefined}>
+              <Card key={m.id} tone={isOnThisDay ? 'gold' : 'surface'} onPress={() => openEdit(m)}>
                 <View style={styles.memHead}>
                   <Text style={{ fontSize: 30 }}>{m.emoji ?? '⭐️'}</Text>
                   <View style={{ flex: 1 }}>
@@ -167,7 +168,7 @@ export default function VaultScreen({ navigation }: any) {
                       {isOnThisDay ? ' · on this day 💫' : ''}
                     </Muted>
                   </View>
-                  {mine ? <Text style={styles.editHint}>Edit ›</Text> : null}
+                  <Text style={styles.editHint}>Edit ›</Text>
                 </View>
                 {m.description ? <Body style={{ marginTop: spacing.sm }}>{m.description}</Body> : null}
               </Card>

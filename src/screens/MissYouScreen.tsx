@@ -29,6 +29,11 @@ const PINGS: { type: PingType; emoji: string; label: string; sent: string; grad:
   { type: 'miss', emoji: '🥺', label: 'Miss you', sent: 'Distance is hard, isn’t it', grad: gradients.gameBerry },
 ];
 
+// The quick-tap buttons: hug, kiss, miss. "Thinking of you" is intentionally
+// left out of this grid because it has its own richer "Send a little thought"
+// composer below. It stays in PINGS so received thoughts still show the 💭 icon.
+const QUICK_PINGS = PINGS.filter((p) => p.type !== 'thinking');
+
 const DAY = 86_400_000;
 
 // Only allow inline image data URIs, never an arbitrary URL synced into a doc.
@@ -209,7 +214,7 @@ export default function MissYouScreen() {
         {/* Reach out */}
         <SectionTitle>Reach out right now</SectionTitle>
         <View style={styles.pingRow}>
-          {PINGS.map((p) => (
+          {QUICK_PINGS.map((p) => (
             <Pressable
               key={p.type}
               onPress={() => send(p.type, p.sent, p.emoji)}
@@ -255,6 +260,28 @@ export default function MissYouScreen() {
             <ReasonsCarousel reasons={myReasons} partnerName={partnerName} />
           </>
         ) : null}
+
+        {/* Leave a reason, right below the ones they left you */}
+        <SectionTitle>Leave {partnerName} a reason you love them</SectionTitle>
+        <Card>
+          <Field value={newReason} onChangeText={setNewReason} placeholder="Something true and specific…" multiline />
+          <Button
+            label="Add to their kit"
+            disabled={!newReason.trim()}
+            onPress={() => {
+              const text = newReason.trim();
+              if (!text) return;
+              setNewReason('');
+              flash('Saved to their comfort kit 🤍', 2200);
+              void app.addReason(text);
+            }}
+          />
+          {leftForThem > 0 ? (
+            <Muted style={{ marginTop: spacing.md }}>
+              You’ve left {leftForThem} reason{leftForThem === 1 ? '' : 's'} for {partnerName}.
+            </Muted>
+          ) : null}
+        </Card>
 
         {/* Connection stats */}
         <View style={styles.statsRow}>
@@ -337,27 +364,6 @@ export default function MissYouScreen() {
           </View>
         )}
 
-        {/* Leave a reason */}
-        <SectionTitle>Leave {partnerName} a reason you love them</SectionTitle>
-        <Card>
-          <Field value={newReason} onChangeText={setNewReason} placeholder="Something true and specific…" multiline />
-          <Button
-            label="Add to their kit"
-            disabled={!newReason.trim()}
-            onPress={() => {
-              const text = newReason.trim();
-              if (!text) return;
-              setNewReason('');
-              flash('Saved to their comfort kit 🤍', 2200);
-              void app.addReason(text);
-            }}
-          />
-          {leftForThem > 0 ? (
-            <Muted style={{ marginTop: spacing.md }}>
-              You’ve left {leftForThem} reason{leftForThem === 1 ? '' : 's'} for {partnerName}.
-            </Muted>
-          ) : null}
-        </Card>
       </Screen>
       {burst.node}
     </View>
@@ -432,7 +438,7 @@ const styles = StyleSheet.create({
   reunionChev: { color: 'rgba(255,255,255,0.8)', fontSize: 26 },
 
   pingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  pingWrap: { width: '47%' },
+  pingWrap: { flex: 1 },
   ping: { borderRadius: radius.lg, paddingVertical: spacing.lg, alignItems: 'center', gap: spacing.sm },
   pingLabel: { fontSize: font.size.sm, fontFamily: font.family.bold, color: colors.white, textAlign: 'center' },
 

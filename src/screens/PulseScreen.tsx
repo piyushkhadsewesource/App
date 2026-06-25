@@ -158,28 +158,6 @@ export default function PulseScreen() {
             <PulseCard who={identity?.partnerName ?? 'Partner'} color={colors.accent} checkin={partnerToday} />
           </View>
 
-          {/* Conversation starters */}
-          <SectionTitle>Conversation starters</SectionTitle>
-          <Card tone="rose">
-            {starters.map((s, i) => (
-              <View key={i} style={[styles.bullet, i > 0 && { marginTop: spacing.md }]}>
-                <Text style={styles.bulletDot}>•</Text>
-                <Body style={{ flex: 1 }}>{s}</Body>
-              </View>
-            ))}
-          </Card>
-
-          {/* Support suggestions */}
-          <SectionTitle>How to support {identity?.partnerName ?? 'them'}</SectionTitle>
-          <Card tone="green">
-            {supports.map((s, i) => (
-              <View key={i} style={[styles.bullet, i > 0 && { marginTop: spacing.md }]}>
-                <Text style={[styles.bulletDot, { color: colors.good }]}>✓</Text>
-                <Body style={{ flex: 1 }}>{s}</Body>
-              </View>
-            ))}
-          </Card>
-
           {/* My recent moods */}
           {history.length > 0 ? (
             <>
@@ -296,6 +274,31 @@ export default function PulseScreen() {
           </>
         )}
       </Card>
+
+      {/* Conversation starters + how to support them, below today's shared log */}
+      {!editing ? (
+        <>
+          <SectionTitle>Conversation starters</SectionTitle>
+          <Card tone="rose">
+            {starters.map((s, i) => (
+              <View key={i} style={[styles.bullet, i > 0 && { marginTop: spacing.md }]}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Body style={{ flex: 1 }}>{s}</Body>
+              </View>
+            ))}
+          </Card>
+
+          <SectionTitle>How to support {identity?.partnerName ?? 'them'}</SectionTitle>
+          <Card tone="green">
+            {supports.map((s, i) => (
+              <View key={i} style={[styles.bullet, i > 0 && { marginTop: spacing.md }]}>
+                <Text style={[styles.bulletDot, { color: colors.good }]}>✓</Text>
+                <Body style={{ flex: 1 }}>{s}</Body>
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }
