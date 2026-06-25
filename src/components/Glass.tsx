@@ -14,6 +14,7 @@ export function Glass({
   tint = 'light',
   overlay = 'rgba(251,248,246,0.6)',
   onLayout,
+  pointerEvents,
 }: {
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -21,9 +22,13 @@ export function Glass({
   tint?: 'light' | 'dark' | 'default';
   overlay?: string;
   onLayout?: (e: LayoutChangeEvent) => void;
+  // Lets callers make the whole blur non-interactive. On Android an expo-blur
+  // BlurView can swallow touches from its children, so any interactive content
+  // should live as a sibling on top and the blur should be pointerEvents="none".
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
 }) {
   return (
-    <BlurView intensity={intensity} tint={tint} style={style} onLayout={onLayout}>
+    <BlurView intensity={intensity} tint={tint} style={style} onLayout={onLayout} pointerEvents={pointerEvents}>
       {overlay ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: overlay }]} /> : null}
       {children}
     </BlurView>

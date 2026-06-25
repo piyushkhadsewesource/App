@@ -46,7 +46,8 @@
     },
     "android": {
       "package": "com.tether.app",
-      "versionCode": 2,
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 3,
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {

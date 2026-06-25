@@ -42,12 +42,15 @@ function useBurst() {
     { id: number; emoji: string; left: number; vx: number; peak: number; fall: number; rot: number; size: number; v: Animated.Value }[]
   >([]);
   const idRef = useRef(0);
+  // Guard so a particle's finish-callback can't setState after the screen unmounts.
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
   const fire = (emoji: string) => {
     const items = Array.from({ length: 9 }).map(() => {
       const v = new Animated.Value(0);
       const id = idRef.current++;
       Animated.timing(v, { toValue: 1, duration: 1300 + Math.random() * 700, useNativeDriver: true }).start(({ finished }) => {
-        if (finished) setParts((p) => p.filter((x) => x.id !== id));
+        if (finished && mounted.current) setParts((p) => p.filter((x) => x.id !== id));
       });
       return {
         id,

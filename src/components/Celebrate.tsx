@@ -22,6 +22,10 @@ export function Celebrate({ play }: { play?: boolean }) {
   const [parts, setParts] = useState<Particle[]>([]);
   const idRef = useRef(0);
   const prev = useRef(!!play);
+  // Guard so a particle's finish-callback can't setState after unmount (e.g. if
+  // you navigate away mid-celebration).
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   const fire = () => {
     const batch: Particle[] = Array.from({ length: 18 }).map(() => {
@@ -29,7 +33,7 @@ export function Celebrate({ play }: { play?: boolean }) {
       const id = idRef.current++;
       const duration = 1500 + Math.random() * 1100;
       Animated.timing(v, { toValue: 1, duration, useNativeDriver: true }).start(({ finished }) => {
-        if (finished) setParts((ps) => ps.filter((x) => x.id !== id));
+        if (finished && mounted.current) setParts((ps) => ps.filter((x) => x.id !== id));
       });
       return {
         id,

@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             },
           ]}
         >
-          <Glass style={styles.toast} overlay="rgba(255,255,255,0.72)">
+          <Glass style={styles.toast} overlay="rgba(255,255,255,0.72)" pointerEvents="none">
             <Text style={styles.text}>{msg}</Text>
           </Glass>
         </Animated.View>

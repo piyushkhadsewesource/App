@@ -24,7 +24,11 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
   }, [state.index, tabW, x]);
 
   return (
-    <Glass style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]} overlay="rgba(251,248,246,0.82)">
+    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      {/* The frosted blur is a non-interactive BACKGROUND layer. On Android an
+          expo-blur BlurView can swallow touches from its children, so the tab
+          Pressables must NOT live inside it; they sit on top as siblings. */}
+      <Glass style={StyleSheet.absoluteFill} overlay="rgba(251,248,246,0.82)" pointerEvents="none" />
       <View style={styles.row} onLayout={(e) => setRowW(e.nativeEvent.layout.width)}>
         {tabW > 0 ? (
           <Animated.View
@@ -52,7 +56,7 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
           );
         })}
       </View>
-    </Glass>
+    </View>
   );
 }
 
