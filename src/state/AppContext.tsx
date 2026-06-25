@@ -287,6 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const named = identity ? personId(identity.partnerName) : '';
     const pools: Array<{ authorId?: string; fromId?: string }> = [
       ...checkins,
+      ...feelings,
       ...reasons,
       ...memories,
       ...letters,
@@ -307,7 +308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (stable) return stable;
     if (cloudEnabled && named) return named;
     return others[0] ?? DEMO_PARTNER_ID;
-  }, [meId, identity, checkins, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
+  }, [meId, identity, checkins, feelings, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
 
   const value: AppValue = {
     ready,

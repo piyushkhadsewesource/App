@@ -259,6 +259,19 @@ export default function PulseScreen() {
         <Card style={{ marginTop: spacing.md }} tone="violet">
           <SectionLabel>{identity?.partnerName ?? 'Partner'}’s day</SectionLabel>
           <IntensityChart items={partnerFeelings} />
+          <View style={{ height: spacing.sm }} />
+          {[...partnerFeelings].reverse().map((f) => (
+            <View key={f.id} style={styles.feelRow}>
+              <Text style={{ fontSize: 20 }}>{moodMeta(f.mood).emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontFamily: font.family.semibold }}>
+                  {moodMeta(f.mood).label} · {f.intensity}/10
+                </Body>
+                {f.note ? <Muted>{f.note}</Muted> : null}
+              </View>
+              <Muted>{clockTime(f.createdAt)}</Muted>
+            </View>
+          ))}
         </Card>
       ) : null}
     </Screen>

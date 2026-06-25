@@ -21,9 +21,6 @@ import { spring } from '../theme/motion';
 import { hLight } from '../lib/haptics';
 import { Press } from './Motion';
 
-// A pressable whose style can carry an animated value (for the spring scale).
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 // ── Screen shell ───────────────────────────────────────────────────────────
 export function Screen({
   children,
@@ -172,38 +169,39 @@ export function Button({
     </Text>
   );
 
-  // Spring the button inward on press for a satisfying, tactile tap. The whole
-  // button is one animated pressable, so a caller's size/layout style (height,
-  // width, padding, flex, margin) merges onto the visible box exactly as before
-  // the spring refactor.
+  // Spring the label inward on press for a satisfying, tactile tap. We use a
+  // plain Pressable (the most reliable touch target on device) and animate an
+  // inner view, rather than an animated Pressable, so onPress always fires and a
+  // caller's size/layout style still merges straight onto the visible box.
   const scale = useRef(new Animated.Value(1)).current;
   const press = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
   const pressProps = {
     onPress,
     disabled,
-    onPressIn: () => !disabled && press(0.97),
+    onPressIn: () => !disabled && press(0.96),
     onPressOut: () => press(1),
   };
+  const inner = <Animated.View style={{ transform: [{ scale }] }}>{content}</Animated.View>;
 
   if (variant === 'primary') {
     const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
     return (
-      <AnimatedPressable {...pressProps} style={[styles.button, shadow.soft, { transform: [{ scale }] }, disabled ? { opacity: 0.45 } : null, style]}>
+      <Pressable {...pressProps} style={[styles.button, shadow.soft, disabled ? { opacity: 0.45 } : null, style]}>
         <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, styles.buttonFill]} />
-        {content}
-      </AnimatedPressable>
+        {inner}
+      </Pressable>
     );
   }
 
   const bg = variant === 'soft' ? colors.surfaceAlt : 'transparent';
   const border = variant === 'outline' ? { borderWidth: 1.5, borderColor: color } : null;
   return (
-    <AnimatedPressable
+    <Pressable
       {...pressProps}
-      style={[styles.button, { backgroundColor: bg }, border, { transform: [{ scale }] }, disabled ? { opacity: 0.45 } : null, style]}
+      style={[styles.button, { backgroundColor: bg }, border, disabled ? { opacity: 0.45 } : null, style]}
     >
-      {content}
-    </AnimatedPressable>
+      {inner}
+    </Pressable>
   );
 }
 

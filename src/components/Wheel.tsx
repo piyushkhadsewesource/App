@@ -39,14 +39,23 @@ export default function Wheel({
     if (i !== center) setCenter(i);
   };
 
-  const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = clamp(Math.round(e.nativeEvent.contentOffset.y / WHEEL_ITEM_H));
+  const commit = (y: number) => {
+    const i = clamp(Math.round(y / WHEEL_ITEM_H));
     ref.current?.scrollTo({ y: i * WHEEL_ITEM_H, animated: true });
     setCenter(i);
     if (i !== idxRef.current) {
       idxRef.current = i;
       onChange(i);
     }
+  };
+
+  // A flick ends with momentum (onMomentumScrollEnd); a slow drag releases with
+  // no momentum, so that event never fires. Commit on drag-end too (only when
+  // there's no fling about to take over) so every settle lands on a value.
+  const onMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => commit(e.nativeEvent.contentOffset.y);
+  const onDragEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const v = e.nativeEvent.velocity?.y ?? 0;
+    if (Math.abs(v) < 0.05) commit(e.nativeEvent.contentOffset.y);
   };
 
   return (
@@ -60,7 +69,8 @@ export default function Wheel({
         scrollEventThrottle={16}
         nestedScrollEnabled
         onScroll={onScroll}
-        onMomentumScrollEnd={onEnd}
+        onScrollEndDrag={onDragEnd}
+        onMomentumScrollEnd={onMomentumEnd}
         contentContainerStyle={{ paddingVertical: PAD }}
       >
         {data.map((d, i) => {

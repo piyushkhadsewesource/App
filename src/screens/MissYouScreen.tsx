@@ -441,8 +441,10 @@ const styles = StyleSheet.create({
   statValue: { fontSize: font.size.xxl, fontFamily: font.family.display, color: colors.primary },
   statLabel: { fontSize: 11, color: colors.textSoft, fontFamily: font.family.body, textAlign: 'center', marginTop: 2 },
 
-  reasonCard: { minHeight: 160, padding: spacing.xl, justifyContent: 'center', borderRadius: radius.lg },
-  reasonMark: { position: 'absolute', top: 6, left: 14, fontSize: 64, color: 'rgba(255,255,255,0.35)', fontFamily: font.family.display },
+  reasonCard: { minHeight: 170, padding: spacing.xl, justifyContent: 'center', borderRadius: radius.lg },
+  // In-flow (not absolute) so the big opening quote sits cleanly above the text
+  // and can never overlap it, however long or short the reason is.
+  reasonMark: { fontSize: 44, lineHeight: 38, color: 'rgba(255,255,255,0.5)', fontFamily: font.family.display, marginBottom: 2 },
   reasonText: { color: colors.white, fontSize: font.size.xl, lineHeight: 30, fontFamily: font.family.displaySemi },
   reasonWho: { color: 'rgba(255,255,255,0.9)', fontSize: font.size.sm, fontFamily: font.family.semibold, marginTop: spacing.md },
   dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: spacing.md, marginBottom: 2 },

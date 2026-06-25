@@ -101,8 +101,13 @@ export default function DateTimeModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+      <View style={styles.backdrop}>
+        {/* The full-screen tap-catcher sits BEHIND the sheet as a sibling (not a
+            parent). Taps outside the sheet dismiss it, while nothing wraps the
+            sheet, its calendar cells, or the time wheels, which need a clean
+            scroll gesture that a surrounding Pressable would otherwise swallow. */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} accessibilityRole="button" accessibilityLabel="Close" />
+        <View style={styles.sheet}>
           {title ? <Text style={styles.title}>{title}</Text> : null}
 
           {mode !== 'time' ? (
@@ -173,8 +178,8 @@ export default function DateTimeModal({
               <Text style={styles.confirmText}>Confirm</Text>
             </Pressable>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
