@@ -13,8 +13,9 @@ import {
   Title,
 } from '../components/ui';
 import IntensityChart from '../components/IntensityChart';
+import { useToast } from '../components/ToastHost';
 import { formatDayMonth, todayISO } from '../lib/date';
-import { hLight } from '../lib/haptics';
+import { hLight, hSuccess } from '../lib/haptics';
 import { todaysFeelings } from '../lib/feelings';
 import { MOODS, moodMeta } from '../lib/mood';
 import {
@@ -30,6 +31,8 @@ import { Mood } from '../types/models';
 export default function PulseScreen() {
   const app = useApp();
   const { meId, partnerId, checkins, identity } = app;
+  const toast = useToast();
+  const partnerName = identity?.partnerName ?? 'Partner';
   const today = todayISO();
   const mine = latestCheckin(checkins, meId);
   const myToday = mine?.date === today ? mine : null;
@@ -57,10 +60,19 @@ export default function PulseScreen() {
 
   // Timestamped "feelings" timeline (logged through the day).
   const [logMood, setLogMood] = useState<Mood>('content');
-  const [logIntensity, setLogIntensity] = useState(5);
+  const [logIntensity, setLogIntensity] = useState(6);
   const [logNote, setLogNote] = useState('');
   const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
   const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
+  // One shared ribbon of today's feelings from both of you, newest first.
+  const timeline = useMemo(
+    () =>
+      [
+        ...myFeelings.map((f) => ({ f, mine: true })),
+        ...partnerFeelings.map((f) => ({ f, mine: false })),
+      ].sort((a, b) => b.f.createdAt - a.f.createdAt),
+    [myFeelings, partnerFeelings],
+  );
 
   function save() {
     // Close the form immediately; fire the write without blocking (offline the
@@ -72,7 +84,9 @@ export default function PulseScreen() {
 
   function logNow() {
     const data = { mood: logMood, intensity: logIntensity, note: logNote.trim() || undefined };
+    hSuccess();
     setLogNote('');
+    toast.show(`${moodMeta(logMood).emoji}  Added to today`);
     void app.logFeeling(data);
   }
 
@@ -185,10 +199,15 @@ export default function PulseScreen() {
         </>
       )}
 
-      {/* Feelings through the day (intensity timeline) */}
+      {/* Feelings through the day, a shared emotional ribbon for the two of you */}
       <SectionTitle>Feelings through the day</SectionTitle>
+      <Muted style={{ marginTop: -spacing.sm, marginBottom: spacing.md }}>
+        Your daily pulse is one big check-in. This is lighter: log a feeling whenever your mood
+        shifts, and you’ll both watch today unfold together.
+      </Muted>
+
       <Card>
-        <SectionLabel>Log how you feel right now</SectionLabel>
+        <SectionLabel>How do you feel right now?</SectionLabel>
         <View style={styles.wheel}>
           {MOODS.map((m) => {
             const active = m.key === logMood;
@@ -204,76 +223,79 @@ export default function PulseScreen() {
             );
           })}
         </View>
+
         <View style={{ height: spacing.md }} />
-        <SectionLabel>How strong is it right now? ({logIntensity}/10)</SectionLabel>
-        <View style={styles.scaleRow}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
-            const on = n <= logIntensity;
-            return (
-              <Pressable
-                key={n}
-                onPress={() => { hLight(); setLogIntensity(n); }}
-                style={[styles.scaleDot, { backgroundColor: on ? moodMeta(logMood).color : colors.surfaceAlt, borderColor: on ? moodMeta(logMood).color : colors.border }]}
-              >
-                <Text style={{ fontSize: 11, fontFamily: font.family.bold, color: on ? colors.white : colors.textFaint }}>{n}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <SectionLabel>How strong is it?</SectionLabel>
+        <IntensityPicker value={logIntensity} color={moodMeta(logMood).color} onChange={setLogIntensity} />
+
         <View style={{ height: spacing.md }} />
-        <Field value={logNote} onChangeText={setLogNote} placeholder="What’s behind it? (optional)" />
-        <Button label="Log this feeling" onPress={logNow} />
+        <Field value={logNote} onChangeText={setLogNote} placeholder={`What’s behind this ${moodMeta(logMood).label.toLowerCase()} feeling? (optional)`} />
+        <Button label="Log this feeling" icon={moodMeta(logMood).emoji} color={moodMeta(logMood).color} onPress={logNow} />
       </Card>
 
-      {myFeelings.length > 0 ? (
-        <Card style={{ marginTop: spacing.md }}>
-          <SectionLabel>Your day so far</SectionLabel>
-          <IntensityChart items={myFeelings} />
-          <View style={{ height: spacing.sm }} />
-          {[...myFeelings].reverse().map((f) => (
-            <View key={f.id} style={styles.feelRow}>
-              <Text style={{ fontSize: 20 }}>{moodMeta(f.mood).emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Body style={{ fontFamily: font.family.semibold }}>
-                  {moodMeta(f.mood).label} · {f.intensity}/10
-                </Body>
-                {f.note ? <Muted>{f.note}</Muted> : null}
-              </View>
-              <Muted>{clockTime(f.createdAt)}</Muted>
-              <Pressable hitSlop={8} onPress={() => app.removeFeeling(f.id)}>
-                <Text style={styles.feelX}>×</Text>
-              </Pressable>
+      {/* The shared ribbon, both of you, newest first */}
+      <Card style={{ marginTop: spacing.md }}>
+        <View style={styles.tlHead}>
+          <SectionLabel>Today together</SectionLabel>
+          <View style={styles.legend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+              <Text style={styles.legendText}>You</Text>
             </View>
-          ))}
-        </Card>
-      ) : (
-        <Card style={{ marginTop: spacing.md }}>
-          <Muted>
-            Log a few feelings through the day and your emotional timeline appears here, a line
-            showing how the intensity rises and falls, and what you felt at each point.
-          </Muted>
-        </Card>
-      )}
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+              <Text style={styles.legendText}>{partnerName}</Text>
+            </View>
+          </View>
+        </View>
 
-      {partnerFeelings.length > 0 ? (
-        <Card style={{ marginTop: spacing.md }} tone="violet">
-          <SectionLabel>{identity?.partnerName ?? 'Partner'}’s day</SectionLabel>
-          <IntensityChart items={partnerFeelings} />
-          <View style={{ height: spacing.sm }} />
-          {[...partnerFeelings].reverse().map((f) => (
-            <View key={f.id} style={styles.feelRow}>
-              <Text style={{ fontSize: 20 }}>{moodMeta(f.mood).emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Body style={{ fontFamily: font.family.semibold }}>
-                  {moodMeta(f.mood).label} · {f.intensity}/10
-                </Body>
-                {f.note ? <Muted>{f.note}</Muted> : null}
-              </View>
-              <Muted>{clockTime(f.createdAt)}</Muted>
-            </View>
-          ))}
-        </Card>
-      ) : null}
+        {timeline.length === 0 ? (
+          <Muted style={{ marginTop: spacing.xs }}>
+            Nothing logged today yet. Tap a mood above the moment something shifts, a flicker of joy,
+            a wave of missing them, and it lands right here for you both.
+          </Muted>
+        ) : (
+          <>
+            <Muted style={{ marginTop: 2, marginBottom: spacing.sm }}>
+              {feelingSummary(myFeelings.length, partnerFeelings.length, partnerName)}
+            </Muted>
+            {myFeelings.length + partnerFeelings.length >= 2 ? (
+              <IntensityChart
+                series={[
+                  { items: myFeelings, color: colors.primary },
+                  { items: partnerFeelings, color: colors.accent },
+                ]}
+              />
+            ) : null}
+            {timeline.map(({ f, mine }) => {
+              const meta = moodMeta(f.mood);
+              const who = mine ? { name: 'You', color: colors.primary } : { name: partnerName, color: colors.accent };
+              return (
+                <View key={f.id} style={styles.tlRow}>
+                  <View style={[styles.tlDot, { backgroundColor: meta.color }]} />
+                  <Text style={{ fontSize: 24 }}>{meta.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.tlTitleRow}>
+                      <Body style={{ fontFamily: font.family.semibold }}>{meta.label}</Body>
+                      <View style={[styles.whoTag, { backgroundColor: who.color + '22' }]}>
+                        <Text style={[styles.whoTagText, { color: who.color }]}>{who.name}</Text>
+                      </View>
+                      <Muted style={{ marginLeft: 'auto' }}>{clockTime(f.createdAt)}</Muted>
+                    </View>
+                    <MiniMeter value={f.intensity} color={meta.color} />
+                    {f.note ? <Muted style={{ marginTop: 3 }}>“{f.note}”</Muted> : null}
+                  </View>
+                  {mine ? (
+                    <Pressable hitSlop={8} onPress={() => app.removeFeeling(f.id)} accessibilityRole="button" accessibilityLabel="Delete this feeling">
+                      <Text style={styles.feelX}>×</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })}
+          </>
+        )}
+      </Card>
     </Screen>
   );
 }
@@ -287,6 +309,45 @@ function clockTime(ts: number): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <Text style={styles.sectionLabel}>{children}</Text>;
+}
+
+// Intensity 1..10 stored, but chosen as five clear, growing steps so it reads at
+// a glance instead of fiddling a 10-dot scale. Step n maps to intensity n*2.
+const INTENSITY_WORDS = ['A little', 'Some', 'Quite a bit', 'A lot', 'So much'];
+
+function IntensityPicker({ value, color, onChange }: { value: number; color: string; onChange: (v: number) => void }) {
+  const level = Math.max(1, Math.min(5, Math.round(value / 2)));
+  return (
+    <View style={styles.barsRow}>
+      {[1, 2, 3, 4, 5].map((b) => {
+        const on = b <= level;
+        return (
+          <Pressable key={b} onPress={() => { hLight(); onChange(b * 2); }} hitSlop={6} style={styles.barTap}>
+            <View style={[styles.bar, { height: 16 + b * 6, backgroundColor: on ? color : colors.surfaceAlt, borderColor: on ? color : colors.border }]} />
+          </Pressable>
+        );
+      })}
+      <Text style={[styles.barWord, { color }]}>{INTENSITY_WORDS[level - 1]}</Text>
+    </View>
+  );
+}
+
+// A compact read-only echo of the same five-step meter, for each timeline row.
+function MiniMeter({ value, color }: { value: number; color: string }) {
+  const level = Math.max(1, Math.min(5, Math.round(value / 2)));
+  return (
+    <View style={styles.miniRow}>
+      {[1, 2, 3, 4, 5].map((b) => (
+        <View key={b} style={[styles.miniBar, { height: 6 + b * 2, backgroundColor: b <= level ? color : colors.surfaceAlt }]} />
+      ))}
+    </View>
+  );
+}
+
+function feelingSummary(mine: number, theirs: number, partner: string): string {
+  if (mine && theirs) return `You logged ${mine}, ${partner} logged ${theirs}`;
+  if (mine) return `You’ve logged ${mine} today · nothing from ${partner} yet`;
+  return `${partner} logged ${theirs} today · none from you yet`;
 }
 
 function PulseCard({
@@ -370,22 +431,32 @@ const styles = StyleSheet.create({
   bullet: { flexDirection: 'row', gap: spacing.sm },
   bulletDot: { fontSize: font.size.lg, color: colors.primary, fontFamily: font.family.bold, lineHeight: 22 },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  scaleRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  scaleDot: {
-    width: 27,
-    height: 30,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  feelRow: {
+
+  // Five-step intensity equalizer (input)
+  barsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
+  barTap: { justifyContent: 'flex-end' },
+  bar: { width: 22, borderRadius: 7, borderWidth: 1.5 },
+  barWord: { marginLeft: 'auto', fontSize: font.size.md, fontFamily: font.family.bold, alignSelf: 'center' },
+
+  // Shared "Today together" timeline
+  tlHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  legend: { flexDirection: 'row', gap: spacing.md },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 9, height: 9, borderRadius: 5 },
+  legendText: { fontSize: 12, color: colors.textSoft, fontFamily: font.family.semibold },
+  tlRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  tlDot: { width: 8, height: 8, borderRadius: 4 },
+  tlTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  whoTag: { paddingHorizontal: 8, paddingVertical: 1, borderRadius: radius.pill },
+  whoTagText: { fontSize: 11, fontFamily: font.family.bold },
+  miniRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 4, height: 16 },
+  miniBar: { width: 5, borderRadius: 2 },
   feelX: { fontSize: 22, color: colors.textFaint, paddingHorizontal: 4 },
 });
