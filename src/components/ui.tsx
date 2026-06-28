@@ -119,7 +119,7 @@ export function Card({
   if (!onPress) return body;
   // Tappable cards gently spring inward on press for a tactile, physical feel.
   return (
-    <Press onPress={onPress} scaleTo={0.985} accessibilityRole="button">
+    <Press onPress={onPress} scaleTo={0.985} haptic accessibilityRole="button">
       {body}
     </Press>
   );
@@ -181,7 +181,11 @@ export function Button({
   const pressProps = {
     onPress,
     disabled,
-    onPressIn: () => !disabled && press(0.96),
+    onPressIn: () => {
+      if (disabled) return;
+      press(0.96);
+      hLight(); // tactile detent on every button tap (no-op on web)
+    },
     onPressOut: () => press(1),
   };
   const inner = <Animated.View style={{ transform: [{ scale }] }}>{content}</Animated.View>;
