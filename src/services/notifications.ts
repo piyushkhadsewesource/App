@@ -476,6 +476,63 @@ export async function syncOccasionReminders(occasions: OccasionLite[]): Promise<
   }
 }
 
+// ── Love letters: notify the recipient when a sealed letter comes due ────────
+const LETTER_CHANNEL = 'letters';
+
+export interface LetterLite {
+  id: string;
+  title: string;
+  deliverAt: number;
+  openedAt?: number | null;
+}
+
+async function ensureLetterChannel() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(LETTER_CHANNEL, {
+      name: 'Love letters',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+  }
+}
+
+/**
+ * Arm a delivery nudge for each sealed letter addressed to me. The author can't
+ * schedule this (a local notification fires on the device that set it), so the
+ * recipient's device arms them as letters sync in. Pass only letters written by
+ * the partner; already-opened and past-due ones are skipped.
+ */
+export async function scheduleLetterDeliveries(letters: LetterLite[], fromName?: string): Promise<void> {
+  if (!supported) return;
+  try {
+    if (!(await hasNotificationPermission())) return;
+    await ensureLetterChannel();
+    await cancelKind('letter');
+    const who = fromName?.trim() || 'your partner';
+    const due = letters
+      .filter((l) => !l.openedAt && l.deliverAt > Date.now() + 1000)
+      .sort((a, b) => a.deliverAt - b.deliverAt);
+    let budget = await remainingBudget();
+    for (const l of due) {
+      if (budget <= 0) break;
+      budget -= 1;
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '💌 A letter just opened',
+          body: `${who}'s letter is ready to read: ${l.title}`,
+          data: { kind: 'letter', id: l.id },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: new Date(l.deliverAt),
+          channelId: LETTER_CHANNEL,
+        },
+      });
+    }
+  } catch {
+    /* notifications unavailable */
+  }
+}
+
 /** Save new reminder times and reschedule. */
 export async function setReminderTimes(
   times: ReminderTime[],

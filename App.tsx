@@ -15,7 +15,7 @@ import SosOverlay from './src/components/SosOverlay';
 import { ToastProvider } from './src/components/ToastHost';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import { refreshPlanReminders, refreshReminders, syncOccasionReminders } from './src/services/notifications';
+import { refreshPlanReminders, refreshReminders, scheduleLetterDeliveries, syncOccasionReminders } from './src/services/notifications';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
 
@@ -29,7 +29,7 @@ const navTheme: Theme = {
 };
 
 function Root() {
-  const { ready, identity, moments, meId, occasions, schedule } = useApp();
+  const { ready, identity, moments, meId, occasions, schedule, letters } = useApp();
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_600SemiBold,
     Fraunces_700Bold,
@@ -66,6 +66,23 @@ function Root() {
   useEffect(() => {
     if (identity) refreshPlanReminders(plannedKey ? Array.from(new Set(plannedKey.split(','))) : [], identity?.partnerName);
   }, [plannedKey, identity?.partnerName, identity]);
+
+  // Arm a delivery nudge for each sealed letter the partner wrote to me, so a
+  // "deliver later" letter actually announces itself when its time arrives.
+  const letterKey = letters
+    .filter((l) => l.authorId !== meId && !l.openedAt && l.deliverAt > Date.now())
+    .map((l) => `${l.id}:${l.deliverAt}`)
+    .sort()
+    .join('|');
+  useEffect(() => {
+    if (identity) {
+      scheduleLetterDeliveries(
+        letters.filter((l) => l.authorId !== meId && !l.openedAt),
+        identity.partnerName,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [letterKey, identity]);
 
   // Schedule local reminders for saved anniversaries and special dates.
   const occKey = occasions
