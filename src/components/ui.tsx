@@ -33,7 +33,10 @@ export function Screen({
 }) {
   const insets = useSafeAreaInsets();
   const base: ViewStyle = { flex: 1, backgroundColor: colors.bg, paddingTop: insets.top };
-  if (!scroll) return <View style={base}>{children}</View>;
+  // Non-scroll screens have no large bottom content padding (the scroll path
+  // already reserves ~100px), so honour the bottom safe-area here to keep
+  // content clear of the home-indicator / gesture bar on button-less phones.
+  if (!scroll) return <View style={[base, { paddingBottom: insets.bottom }]}>{children}</View>;
 
   const list = (
     <ScrollView

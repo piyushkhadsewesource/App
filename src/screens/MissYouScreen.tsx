@@ -110,10 +110,14 @@ export default function MissYouScreen() {
   const [note, setNote] = useState('');
   const burst = useBurst();
 
+  // Mark the partner's pings seen, and re-run whenever the unseen set changes —
+  // pings often haven't hydrated on first mount, so a once-only effect would
+  // leave them "new" (and Home's badge lingering) until the next visit.
+  const unseenKey = pings.filter((p) => p.fromId !== meId && !p.seenAt).map((p) => p.id).join(',');
   useEffect(() => {
-    app.markPingsSeen();
+    if (unseenKey) app.markPingsSeen();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [unseenKey]);
 
   const received = useMemo(
     () => pings.filter((p) => p.fromId !== meId).sort((a, b) => b.createdAt - a.createdAt),
