@@ -80,7 +80,7 @@ export default function VaultScreen({ navigation }: any) {
   };
 
   const confirmRemove = (m: Memory) => {
-    Alert.alert('Delete this memory?', `“${m.title}” will be removed for both of you.`, [
+    Alert.alert('Delete this memory?', `"${m.title}" will be removed for both of you.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -149,7 +149,7 @@ export default function VaultScreen({ navigation }: any) {
 
       {sorted.length === 0 ? (
         <Card>
-          <EmptyState emoji="📸" title="No memories yet" text="Tap ＋ to save your first one. One year from now, you’ll be glad you did." />
+          <EmptyState emoji="📸" title="No memories yet" text="Tap ＋ to save your first one. One year from now, you'll be glad you did." />
         </Card>
       ) : (
         <View style={{ gap: spacing.md }}>

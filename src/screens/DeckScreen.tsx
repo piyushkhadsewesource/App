@@ -82,7 +82,7 @@ export default function DeckScreen({ navigation }: any) {
       {myAnswer ? (
         partnerAnswer ? (
           <Card style={{ marginTop: spacing.md }} tone="green">
-            <Muted>{partnerName}’s answer</Muted>
+            <Muted>{partnerName}'s answer</Muted>
             <Body style={{ marginTop: 4 }}>{partnerAnswer.answer}</Body>
           </Card>
         ) : (
@@ -112,7 +112,7 @@ export default function DeckScreen({ navigation }: any) {
                     <Body style={{ flex: 1 }}>{theirs.answer}</Body>
                   </View>
                 ) : (
-                  <Muted style={{ marginTop: spacing.sm }}>{partnerName} hasn’t answered yet.</Muted>
+                  <Muted style={{ marginTop: spacing.sm }}>{partnerName} hasn't answered yet.</Muted>
                 )}
                 <Muted style={{ marginTop: spacing.sm }}>{mine ? formatRelative(mine.createdAt) : ''}</Muted>
               </Card>

@@ -53,7 +53,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
         ? `No check-in from ${partnerName} in ${gap} days.`
         : `${partnerName} hasn’t checked in yet.`,
       forYou: 'Silence is easy to read as rejection, but withdrawal is often overwhelm. Reach out warmly without keeping score.',
-      together: `Send a low-pressure note: “No need to reply fast, just thinking of you and here when you’re ready.”`,
+      together: `Send a low-pressure note: "No need to reply fast, just thinking of you and here when you’re ready."`,
     });
   }
 
@@ -66,7 +66,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       title: `${partnerName} is carrying a lot`,
       summary: `Stress has averaged ${pStress.toFixed(1)}/5 across their recent check-ins.`,
       forYou: 'Under sustained stress people have less to give, not because they care less. Lower the bar for connection.',
-      together: 'Offer one concrete thing (“I’ll handle our plans this week”) instead of an open-ended “what can I do?”.',
+      together: 'Offer one concrete thing ("I’ll handle our plans this week") instead of an open-ended "what can I do?".',
     });
   }
 
@@ -79,7 +79,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       title: 'Affection has dipped',
       summary: `${partnerName}’s closeness scores have been trending down.`,
       forYou: 'A dip usually signals distance or distraction, not a verdict on the relationship. Don’t over-interpret one low day.',
-      together: 'Re-anchor on warmth: share a favorite memory, or open the “When I Miss You” kit together.',
+      together: 'Re-anchor on warmth: share a favorite memory, or open the "When I Miss You" kit together.',
     });
   }
 
@@ -93,7 +93,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       title: `${partnerName} is reaching for reassurance`,
       summary: 'Their recent needs are about closeness and being heard.',
       forYou: 'These are bids for connection. Meeting them early (a quick, warm reply) prevents the anxious-distant spiral.',
-      together: 'Be explicit and unprompted: “I’m all in on us. The distance is the hard part, not you.”',
+      together: 'Be explicit and unprompted: "I’m all in on us. The distance is the hard part, not you."',
     });
   }
 
@@ -122,7 +122,7 @@ export function analyze({ checkins, meId, partnerId, meName, partnerName }: Anal
       title: `${partnerName} has had ${pStreak.days} hard days`,
       summary: 'Several tough check-ins in a row, worth a real conversation.',
       forYou: 'A streak is different from a bad day. Don’t wait for them to ask; gently go first.',
-      together: 'Make time for an unhurried call. Open with “I’ve noticed it’s been heavy, I’m here, no fixing required.”',
+      together: 'Make time for an unhurried call. Open with "I’ve noticed it’s been heavy, I’m here, no fixing required."',
     });
   }
 

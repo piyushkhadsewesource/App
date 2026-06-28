@@ -106,7 +106,7 @@ export function generateReport(input: Input): Report {
   });
 
   if (memories.length) {
-    const titles = memories.slice(0, 3).map((m) => `“${m.title}”`).join(', ');
+    const titles = memories.slice(0, 3).map((m) => `"${m.title}"`).join(', ');
     sections.push({
       heading: 'Moments you saved',
       body: `You tucked away ${memories.length} memor${memories.length === 1 ? 'y' : 'ies'} this month${titles ? `, including ${titles}` : ''}. Future-you will be grateful.`,
@@ -139,7 +139,7 @@ export function generateReport(input: Input): Report {
     heading: 'Something to nurture',
     body:
       avgAff < 3
-        ? 'Closeness scores dipped this month. Next month, try one unprompted “thinking of you” a day, tiny, but it compounds.'
+        ? 'Closeness scores dipped this month. Next month, try one unprompted "thinking of you" a day, tiny, but it compounds.'
         : 'You’re tending this well. Next month, pick one Future Board dream and take a single real step toward it.',
   });
 

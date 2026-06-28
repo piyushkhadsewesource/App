@@ -32,7 +32,7 @@ export default function InsightsScreen({ navigation }: any) {
       <Card tone="violet" style={{ marginBottom: spacing.lg }}>
         <Body>
           This reads the rhythm of your check-ins and quietly points out patterns, withdrawal,
-          stress, reassurance-seeking, before they become fights. It’s a companion, never a
+          stress, reassurance-seeking, before they become fights. It's a companion, never a
           judge, and it never leaves your space.
         </Body>
       </Card>

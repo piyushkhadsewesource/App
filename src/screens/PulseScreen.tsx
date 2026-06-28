@@ -271,7 +271,7 @@ export default function PulseScreen() {
                       <Muted style={{ marginLeft: 'auto' }}>{clockTime(f.createdAt)}</Muted>
                     </View>
                     <MiniMeter value={f.intensity} color={meta.color} />
-                    {f.note ? <Muted style={{ marginTop: 3 }}>“{f.note}”</Muted> : null}
+                    {f.note ? <Muted style={{ marginTop: 3 }}>"{f.note}"</Muted> : null}
                   </View>
                   {mine ? (
                     <Pressable
@@ -399,7 +399,7 @@ function PulseCard({
       ) : (
         <Muted style={{ marginTop: spacing.sm }}>Nothing shared yet today.</Muted>
       )}
-      {checkin?.need ? <Muted style={{ marginTop: spacing.sm }}>Needs: “{checkin.need}”</Muted> : null}
+      {checkin?.need ? <Muted style={{ marginTop: spacing.sm }}>Needs: "{checkin.need}"</Muted> : null}
       {checkin?.note ? <Muted style={{ marginTop: 4, fontStyle: 'italic' }}>{checkin.note}</Muted> : null}
       {onEdit ? (
         <Pressable onPress={onEdit} style={{ marginTop: spacing.sm }}>

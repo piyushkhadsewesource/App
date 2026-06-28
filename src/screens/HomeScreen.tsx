@@ -125,7 +125,7 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.alertEmoji}>🕊️</Text>
           <View style={{ flex: 1 }}>
             <Title>{identity?.partnerName} wants to clear the air</Title>
-            <Muted>“{tendIssue.title}”. Tap to hear them out and make it right.</Muted>
+            <Muted>"{tendIssue.title}". Tap to hear them out and make it right.</Muted>
           </View>
         </Card>
       ) : null}
@@ -158,13 +158,13 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* Reunion countdown — only shown once a date is set */}
       {meeting ? (
-        <Card tone="violet" onPress={() => navigation.navigate(‘Countdown’)} style={styles.alert}>
+        <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
           <Text style={styles.alertEmoji}>💞</Text>
           <View style={{ flex: 1 }}>
             <Title>
-              {countdownTo(meeting.at).past ? ‘You’re together 💞’ : `Together in ${shortCountdown(meeting.at)}`}
+              {countdownTo(meeting.at).past ? "You're together 💞" : `Together in ${shortCountdown(meeting.at)}`}
             </Title>
-            <Muted>{meeting.label || ‘Tap for the live countdown.’}</Muted>
+            <Muted>{meeting.label || 'Tap for the live countdown.'}</Muted>
           </View>
         </Card>
       ) : null}
@@ -304,7 +304,7 @@ export default function HomeScreen({ navigation }: any) {
         {partnerLatest?.date === today && partnerLatest.need ? (
           <View style={styles.needBox}>
             <Muted>{identity?.partnerName} needs today</Muted>
-            <Body style={{ marginTop: 2 }}>“{partnerLatest.need}”</Body>
+            <Body style={{ marginTop: 2 }}>"{partnerLatest.need}"</Body>
           </View>
         ) : !myCheckedToday ? (
           <View style={styles.needBox}>
@@ -356,13 +356,13 @@ export default function HomeScreen({ navigation }: any) {
       {onThisDay ? (
         <>
           <SectionTitle>On this day</SectionTitle>
-          <Card tone="gold" onPress={() => navigation.navigate(‘Vault’)}>
+          <Card tone="gold" onPress={() => navigation.navigate('Vault')}>
             {(() => {
               const yearsAgo = isoToDate(today).getFullYear() - isoToDate(onThisDay.date).getFullYear();
-              return <Muted>{yearsAgo} year{yearsAgo === 1 ? ‘’ : ‘s’} ago today</Muted>;
+              return <Muted>{yearsAgo} year{yearsAgo === 1 ? '' : 's'} ago today</Muted>;
             })()}
             <Title style={{ marginTop: 2 }}>
-              {onThisDay.emoji ? `${onThisDay.emoji} ` : ‘’}
+              {onThisDay.emoji ? `${onThisDay.emoji} ` : ''}
               {onThisDay.title}
             </Title>
             {onThisDay.description ? <Body style={{ marginTop: 4 }}>{onThisDay.description}</Body> : null}
@@ -376,7 +376,7 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.togetherRow}>
           <Pressable
             style={styles.togetherHalf}
-            onPress={() => navigation.navigate(‘Games’)}
+            onPress={() => navigation.navigate('Games')}
             accessibilityRole="button"
             accessibilityLabel="Play together"
           >
@@ -387,13 +387,13 @@ export default function HomeScreen({ navigation }: any) {
           <View style={styles.togetherDivider} />
           <Pressable
             style={styles.togetherHalf}
-            onPress={() => navigation.navigate(‘Deck’)}
+            onPress={() => navigation.navigate('Deck')}
             accessibilityRole="button"
             accessibilityLabel="Answer today’s closeness question"
           >
             <Text style={{ fontSize: 28 }}>🃏</Text>
             <Text style={styles.togetherTitle}>Ask each other</Text>
-            <Muted numberOfLines={2}>{prompt.text.length > 50 ? `${prompt.text.slice(0, 48)}…` : prompt.text}</Muted>
+            <Muted>{prompt.text.length > 50 ? `${prompt.text.slice(0, 48)}…` : prompt.text}</Muted>
           </Pressable>
         </View>
       </Card>

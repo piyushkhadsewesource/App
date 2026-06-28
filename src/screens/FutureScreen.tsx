@@ -59,7 +59,7 @@ export default function FutureScreen({ navigation }: any) {
 
   return (
     <Screen scroll>
-      <AppHeader title="Future board" subtitle="The life you’re building together" onBack={() => navigation.goBack()} />
+      <AppHeader title="Future board" subtitle="The life you're building together" onBack={() => navigation.goBack()} />
 
       <Card tone="green" style={{ marginBottom: spacing.lg }}>
         <Body>

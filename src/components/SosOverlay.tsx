@@ -84,9 +84,9 @@ export default function SosOverlay() {
         <Text style={styles.sub}>
           Urgent alert{incoming ? ` · ${formatRelative(incoming.createdAt)}` : ''}
         </Text>
-        {incoming?.message ? <Text style={styles.msg}>“{incoming.message}”</Text> : null}
+        {incoming?.message ? <Text style={styles.msg}>"{incoming.message}"</Text> : null}
         <Pressable style={styles.btn} onPress={() => app.markAlertsSeen()}>
-          <Text style={styles.btnText}>I’m here ✓</Text>
+          <Text style={styles.btnText}>I'm here ✓</Text>
         </Pressable>
         <Text style={styles.hint}>Reach {partnerName} as soon as you can.</Text>
       </View>

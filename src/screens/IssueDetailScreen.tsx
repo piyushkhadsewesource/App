@@ -70,7 +70,7 @@ export default function IssueDetailScreen({ navigation, route }: any) {
   };
 
   const confirmRemoveStep = (s: IssueStep) => {
-    Alert.alert('Remove this step?', `“${s.text}” will be removed.`, [
+    Alert.alert('Remove this step?', `"${s.text}" will be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => app.removeIssueStep(s.id) },
     ]);

@@ -99,7 +99,7 @@ export default function LettersScreen({ navigation }: any) {
   }
 
   function confirmRemove(l: (typeof letters)[number]) {
-    Alert.alert('Delete this letter?', `“${l.title}” will be removed before it is delivered.`, [
+    Alert.alert('Delete this letter?', `"${l.title}" will be removed before it is delivered.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -180,7 +180,7 @@ export default function LettersScreen({ navigation }: any) {
       {/* Opened */}
       {opened.length > 0 ? (
         <>
-          <SectionTitle>Letters you’ve opened</SectionTitle>
+          <SectionTitle>Letters you've opened</SectionTitle>
           <View style={{ gap: spacing.md }}>
             {opened.map((l) => (
               <Card key={l.id}>

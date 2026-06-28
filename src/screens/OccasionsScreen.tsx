@@ -67,7 +67,7 @@ export default function OccasionsScreen({ navigation }: any) {
   };
 
   const confirmRemove = (o: Occasion) => {
-    Alert.alert('Remove this date?', `“${o.title}” and its reminders will be removed.`, [
+    Alert.alert('Remove this date?', `"${o.title}" and its reminders will be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',

@@ -61,7 +61,7 @@ export default function SettingsScreen({ navigation }: any) {
         <Body style={{ marginTop: spacing.sm }}>
           {app.cloud
             ? 'Your two phones are syncing live through Firebase. Use the same pairing code on both.'
-            : 'Running on-device. To sync with your partner's phone, add your free Firebase keys in src/config.ts, see SETUP.md for the 5-minute guide.'}
+            : "Running on-device. To sync with your partner's phone, add your free Firebase keys in src/config.ts, see SETUP.md for the 5-minute guide."}
         </Body>
       </Card>
 

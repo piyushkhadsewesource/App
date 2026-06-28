@@ -349,7 +349,7 @@ export default function MissYouScreen() {
             {received.slice(0, 8).map((p) => {
               const meta = PINGS.find((x) => x.type === p.type) ?? PINGS[0];
               const what =
-                p.type === 'hug' ? 'a hug' : p.type === 'kiss' ? 'a kiss' : p.type === 'miss' ? 'an “I miss you”' : 'a thought';
+                p.type === 'hug' ? 'a hug' : p.type === 'kiss' ? 'a kiss' : p.type === 'miss' ? 'an "I miss you"' : 'a thought';
               return (
                 <Card key={p.id} style={styles.hugRow}>
                   <Text style={{ fontSize: 26 }}>{meta.emoji}</Text>
@@ -357,7 +357,7 @@ export default function MissYouScreen() {
                     <Body style={{ fontFamily: font.family.semibold }}>
                       {partnerName} sent {what}
                     </Body>
-                    {p.message ? <Body style={{ marginTop: 2 }}>“{p.message}”</Body> : null}
+                    {p.message ? <Body style={{ marginTop: 2 }}>"{p.message}"</Body> : null}
                     <Muted>{formatRelative(p.createdAt)}</Muted>
                   </View>
                 </Card>

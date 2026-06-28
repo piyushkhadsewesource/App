@@ -84,7 +84,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd031', category: 'vulnerability', text: 'When was the last time you felt lonely even though we’re together?' },
   { id: 'd032', category: 'vulnerability', text: 'What do you worry I’ll think if you say it honestly?' },
   { id: 'd033', category: 'vulnerability', text: 'What’s something you’re struggling with right now that you’ve kept light?' },
-  { id: 'd034', category: 'vulnerability', text: 'What does “feeling safe with someone” mean to you, exactly?' },
+  { id: 'd034', category: 'vulnerability', text: 'What does "feeling safe with someone" mean to you, exactly?' },
   { id: 'd035', category: 'vulnerability', text: 'What old wound still affects how you love?' },
   { id: 'd036', category: 'vulnerability', text: 'When do you feel like you’re too much, and when do you feel like you’re not enough?' },
   { id: 'd037', category: 'vulnerability', text: 'What’s a need of yours that feels embarrassing to ask for?' },
@@ -108,11 +108,11 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd049', category: 'closeness', text: 'What’s a word or phrase that instantly makes you feel close to me?' },
   { id: 'd050', category: 'closeness', text: 'How do you most naturally show love, and how do you most like to receive it?' },
   { id: 'd051', category: 'closeness', text: 'What’s something only the two of us would understand?' },
-  { id: 'd052', category: 'closeness', text: 'When do you feel the most “us”?' },
+  { id: 'd052', category: 'closeness', text: 'When do you feel the most "us"?' },
 
   // ── Future ────────────────────────────────────────────────────────────
   { id: 'p05', category: 'future', text: 'Where do you picture us a year from tonight?' },
-  { id: 'p12', category: 'future', text: 'What does “home” look like when we finally close the distance?' },
+  { id: 'p12', category: 'future', text: 'What does "home" look like when we finally close the distance?' },
   { id: 'p18', category: 'future', text: 'What’s one dream of yours I can help carry?' },
   { id: 'p23', category: 'future', text: 'What tradition do you want us to start when we’re together?' },
   { id: 'd053', category: 'future', text: 'What’s the first thing you want to do the next time we’re in the same room?' },
@@ -122,7 +122,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd057', category: 'future', text: 'What kind of old couple do you hope we become?' },
   { id: 'd058', category: 'future', text: 'What do you want our home to feel like to anyone who walks in?' },
   { id: 'd059', category: 'future', text: 'What’s something you want us to learn or try together someday?' },
-  { id: 'd060', category: 'future', text: 'What does “building a life together” mean to you concretely?' },
+  { id: 'd060', category: 'future', text: 'What does "building a life together" mean to you concretely?' },
   { id: 'd061', category: 'future', text: 'What worry about our future would you feel lighter sharing with me?' },
   { id: 'd062', category: 'future', text: 'What’s one promise you’d like us to make to each other?' },
   { id: 'd063', category: 'future', text: 'How do you imagine us spending our first anniversary in the same city?' },
@@ -135,7 +135,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd065', category: 'playful', text: 'If I were a snack, which one would I be and why?' },
   { id: 'd066', category: 'playful', text: 'What ridiculous thing would you 100% do with me and no one else?' },
   { id: 'd067', category: 'playful', text: 'If we got our own reality show, what would it be called?' },
-  { id: 'd068', category: 'playful', text: 'What’s the most “us” way to waste a perfectly good afternoon?' },
+  { id: 'd068', category: 'playful', text: 'What’s the most "us" way to waste a perfectly good afternoon?' },
   { id: 'd069', category: 'playful', text: 'If you could give me one totally useless superpower, what would it be?' },
   { id: 'd070', category: 'playful', text: 'What nickname have you secretly wanted to call me?' },
   { id: 'd071', category: 'playful', text: 'If our love were a movie genre, what would it be?' },
@@ -216,7 +216,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd136', category: 'values', text: 'What belief shapes the way you move through the world?' },
   { id: 'd137', category: 'values', text: 'What does forgiveness mean to you?' },
   { id: 'd138', category: 'values', text: 'What would you never want us to become?' },
-  { id: 'd139', category: 'values', text: 'What does “home” mean to you beyond a place?' },
+  { id: 'd139', category: 'values', text: 'What does "home" mean to you beyond a place?' },
   { id: 'd140', category: 'values', text: 'What tradition from your upbringing do you want to keep, and what would you drop?' },
 
   // ── Hypothetical / What if ────────────────────────────────────────────
@@ -256,7 +256,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd170', category: 'support', text: 'When you’re sick or low, what makes you feel cared for?' },
   { id: 'd171', category: 'support', text: 'How can I tell when you need support but won’t ask for it?' },
   { id: 'd172', category: 'support', text: 'What’s a worry I could help you carry this week?' },
-  { id: 'd173', category: 'support', text: 'What does “being there for you” look like in practice for you?' },
+  { id: 'd173', category: 'support', text: 'What does "being there for you" look like in practice for you?' },
   { id: 'd174', category: 'support', text: 'When you’re celebrating, how do you most want me to celebrate with you?' },
   { id: 'd175', category: 'support', text: 'What kind of encouragement do you need but rarely get?' },
   { id: 'd176', category: 'support', text: 'What’s one promise about how we’ll handle each other’s hard days?' },
@@ -287,13 +287,13 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd197', category: 'dreams', text: 'What’s something you want us to save up for and do together?' },
   { id: 'd198', category: 'dreams', text: 'If you could build your dream space, what would be in it?' },
   { id: 'd199', category: 'dreams', text: 'What dream of mine do you most want to see come true?' },
-  { id: 'd200', category: 'dreams', text: 'What would “we made it” look like, ten years from now?' },
+  { id: 'd200', category: 'dreams', text: 'What would "we made it" look like, ten years from now?' },
 
   // ── More Memory ───────────────────────────────────────────────────────
   { id: 'd201', category: 'memory', text: 'What’s a moment you realised this was different from anything before?' },
   { id: 'd202', category: 'memory', text: 'What’s the most thoughtful thing I’ve ever given you?' },
   { id: 'd203', category: 'memory', text: 'What’s a small thing I said once that has stayed with you?' },
-  { id: 'd204', category: 'memory', text: 'When did you last feel a rush of “I’m so lucky” about us?' },
+  { id: 'd204', category: 'memory', text: 'When did you last feel a rush of "I’m so lucky" about us?' },
   { id: 'd205', category: 'memory', text: 'What’s our most underrated memory that deserves more credit?' },
 
   // ── More Admiration ───────────────────────────────────────────────────
@@ -328,7 +328,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd226', category: 'playful', text: 'What totally over-the-top gesture would secretly thrill you?' },
   { id: 'd227', category: 'playful', text: 'What’s the pettiest thing you’d want us to win at together?' },
   { id: 'd228', category: 'playful', text: 'What would you name a star if I bought you one?' },
-  { id: 'd229', category: 'playful', text: 'What’s a “we have to do this someday” idea that makes you grin?' },
+  { id: 'd229', category: 'playful', text: 'What’s a "we have to do this someday" idea that makes you grin?' },
   { id: 'd230', category: 'playful', text: 'If we had a couple’s catchphrase, what should it be?' },
 
   // ── More Gratitude ────────────────────────────────────────────────────
@@ -347,7 +347,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd239', category: 'growth', text: 'What has loving me asked you to grow into?' },
   { id: 'd240', category: 'growth', text: 'What’s a pattern you’re proud to be breaking?' },
   { id: 'd241', category: 'growth', text: 'What do you want to be braver about?' },
-  { id: 'd242', category: 'growth', text: 'What would “thriving, not just surviving” look like for you right now?' },
+  { id: 'd242', category: 'growth', text: 'What would "thriving, not just surviving" look like for you right now?' },
 
   // ── More Repair ───────────────────────────────────────────────────────
   { id: 'd243', category: 'repair', text: 'What helps you trust that we’re okay after a rough patch?' },
@@ -381,12 +381,12 @@ export const DECK_PROMPTS: Prompt[] = [
 
   // ── More Everyday ─────────────────────────────────────────────────────
   { id: 'd263', category: 'everyday', text: 'What’s something tiny that made you smile today?' },
-  { id: 'd264', category: 'everyday', text: 'What’s the last thing that made you think “I have to tell them this”?' },
+  { id: 'd264', category: 'everyday', text: 'What’s the last thing that made you think "I have to tell them this"?' },
   { id: 'd265', category: 'everyday', text: 'What’s been your soundtrack this week?' },
   { id: 'd266', category: 'everyday', text: 'What’s one thing you’re proud you did today, however small?' },
 
   // ── More Dreams ───────────────────────────────────────────────────────
-  { id: 'd267', category: 'dreams', text: 'What’s a “someday when we’re together” plan you think about most?' },
+  { id: 'd267', category: 'dreams', text: 'What’s a "someday when we’re together" plan you think about most?' },
   { id: 'd268', category: 'dreams', text: 'What’s a skill you’d love for us to learn side by side?' },
   { id: 'd269', category: 'dreams', text: 'What would your ideal shared home look and feel like?' },
   { id: 'd270', category: 'dreams', text: 'What’s a wild dream you’d chase if you knew I’d catch you?' },
@@ -429,7 +429,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd305', category: 'closeness', text: 'How do you like to drift off when we’re on a call together?' },
   { id: 'd306', category: 'closeness', text: 'When do you feel safest telling me absolutely anything?' },
   { id: 'd307', category: 'closeness', text: 'How would you want us to end every single day?' },
-  { id: 'd308', category: 'closeness', text: 'What does “I’ve got you” look like coming from me?' },
+  { id: 'd308', category: 'closeness', text: 'What does "I’ve got you" look like coming from me?' },
   { id: 'd309', category: 'closeness', text: 'What makes you feel most like we’re a we?' },
   { id: 'd310', category: 'future', text: 'Describe one room of the first home we’ll share.' },
   { id: 'd311', category: 'future', text: 'What morning routine do you want to have with me?' },
@@ -438,7 +438,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd314', category: 'future', text: 'Where will we celebrate the day we finally close the distance?' },
   { id: 'd315', category: 'future', text: 'What’s the first thing we’ll learn together once we live in one place?' },
   { id: 'd316', category: 'future', text: 'What will our lazy weekends look like?' },
-  { id: 'd317', category: 'future', text: 'What does “settled, together” look like in a way that excites you?' },
+  { id: 'd317', category: 'future', text: 'What does "settled, together" look like in a way that excites you?' },
   { id: 'd318', category: 'future', text: 'What’s the promise you most want us to keep forever?' },
   { id: 'd319', category: 'future', text: 'What part of a shared future are you most impatient for?' },
   { id: 'd320', category: 'playful', text: 'If we were a duo with one superpower, what would it be?' },
@@ -478,7 +478,7 @@ export const DECK_PROMPTS: Prompt[] = [
   { id: 'd354', category: 'repair', text: 'How do you want me to own it when I’m wrong?' },
   { id: 'd355', category: 'repair', text: 'What rebuilds your trust the fastest?' },
   { id: 'd356', category: 'repair', text: 'What phrase calms you in the middle of an argument?' },
-  { id: 'd357', category: 'values', text: 'What does “showing up” mean to you?' },
+  { id: 'd357', category: 'values', text: 'What does "showing up" mean to you?' },
   { id: 'd358', category: 'values', text: 'What line would you never cross for anyone?' },
   { id: 'd359', category: 'values', text: 'What do you want our love to be known for?' },
   { id: 'd360', category: 'values', text: 'What value do you most hope we pass on?' },

@@ -122,7 +122,7 @@ export default function ScheduleScreen({ navigation }: any) {
   };
 
   const confirmDelete = (it: ScheduleItem) => {
-    Alert.alert('Remove this plan?', `“${it.title}” will be removed from your day.`, [
+    Alert.alert('Remove this plan?', `"${it.title}" will be removed from your day.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',

@@ -171,16 +171,16 @@ export function conversationStarters(
   if (partner) {
     const m = moodMeta(partner.mood);
     if (partner.need?.trim()) {
-      out.push(`${partnerName} said they need “${partner.need.trim()}”. Ask how you can help with that today.`);
+      out.push(`${partnerName} said they need "${partner.need.trim()}". Ask how you can help with that today.`);
     }
     if (m.valence <= -1) {
-      out.push(`They’re feeling ${m.label.toLowerCase()}. Try: “I saw your check-in, want to talk it out, or just have company?”`);
+      out.push(`They’re feeling ${m.label.toLowerCase()}. Try: "I saw your check-in, want to talk it out, or just have company?"`);
     }
     if (partner.stress >= 4) {
-      out.push(`Stress is high for ${partnerName}. Ask: “What’s the heaviest thing on your plate right now?”`);
+      out.push(`Stress is high for ${partnerName}. Ask: "What’s the heaviest thing on your plate right now?"`);
     }
     if (partner.affection >= 4 && m.valence >= 1) {
-      out.push(`They’re feeling close, lean in: “Tell me the best part of your day.”`);
+      out.push(`They’re feeling close, lean in: "Tell me the best part of your day."`);
     }
   }
   if (me && partner) {
@@ -189,7 +189,7 @@ export function conversationStarters(
     if (meV >= 1 && pV <= -1) {
       out.push(`You’re steadier than ${partnerName} today, a good day to be the calm one.`);
     } else if (meV <= -1 && pV <= -1) {
-      out.push(`You’re both having a heavy day. Name it together: “Neither of us is at our best, let’s be gentle.”`);
+      out.push(`You’re both having a heavy day. Name it together: "Neither of us is at our best, let’s be gentle."`);
     }
   }
   const dayNum = Math.floor(Date.now() / 86_400_000);
@@ -207,11 +207,11 @@ export function supportSuggestions(partner: CheckIn | null, partnerName: string)
     return [
       pickByDay(
         [
-          `No check-in from ${partnerName} yet today, a simple “thinking of you” goes a long way.`,
-          `${partnerName} hasn’t shared today. A warm “no pressure, just thinking of you” lands well.`,
+          `No check-in from ${partnerName} yet today, a simple "thinking of you" goes a long way.`,
+          `${partnerName} hasn’t shared today. A warm "no pressure, just thinking of you" lands well.`,
           `Quiet from ${partnerName} so far. A gentle hello with no ask can mean a lot.`,
           `Before you hear from ${partnerName} today, send something small and kind.`,
-          `${partnerName} hasn’t checked in. A short “you crossed my mind” is enough.`,
+          `${partnerName} hasn’t checked in. A short "you crossed my mind" is enough.`,
         ],
         day,
       ),
@@ -225,7 +225,7 @@ export function supportSuggestions(partner: CheckIn | null, partnerName: string)
         [
           'Low energy, keep it light. A voice note may feel easier than a call.',
           'They’re running on empty, lower the bar: a meme or a heart, not a deep talk.',
-          'Tired day for them. Offer rest, not plans: “no need to reply, just resting with you in spirit.”',
+          'Tired day for them. Offer rest, not plans: "no need to reply, just resting with you in spirit."',
           'Energy is low, take something off their plate instead of adding to it.',
         ],
         day,
@@ -236,9 +236,9 @@ export function supportSuggestions(partner: CheckIn | null, partnerName: string)
     tips.push(
       pickByDay(
         [
-          'High stress, offer specific help, not just “let me know if you need anything.”',
+          'High stress, offer specific help, not just "let me know if you need anything."',
           'They’re overwhelmed. Name one concrete thing you’ll handle this week.',
-          'Stress is high, ask “what’s the heaviest thing right now?” and just listen.',
+          'Stress is high, ask "what’s the heaviest thing right now?" and just listen.',
           'Under pressure they need calm, not solutions. Slow your pace to match.',
         ],
         day,
@@ -251,7 +251,7 @@ export function supportSuggestions(partner: CheckIn | null, partnerName: string)
         [
           'Affection is low, send a warm, no-pressure reminder that they’re loved.',
           'They feel distant. Reconnect gently with a favourite memory, no demands.',
-          'Closeness dipped, a soft “I’m here, no rush” reassures without pressure.',
+          'Closeness dipped, a soft "I’m here, no rush" reassures without pressure.',
           'Low affection often means overwhelm, not distance. Lead with patience.',
         ],
         day,
@@ -262,10 +262,10 @@ export function supportSuggestions(partner: CheckIn | null, partnerName: string)
     tips.push(
       pickByDay(
         [
-          'Lead with validation before solutions: “that sounds really hard.”',
-          'Sit with the feeling first: “you don’t have to be okay right now.”',
-          'Resist fixing. “I’m here, tell me more” beats advice today.',
-          'Acknowledge the weight: “that’s a lot to carry, and I see it.”',
+          'Lead with validation before solutions: "that sounds really hard."',
+          'Sit with the feeling first: "you don’t have to be okay right now."',
+          'Resist fixing. "I’m here, tell me more" beats advice today.',
+          'Acknowledge the weight: "that’s a lot to carry, and I see it."',
         ],
         day,
       ),
@@ -289,7 +289,7 @@ export function supportSuggestions(partner: CheckIn | null, partnerName: string)
       pickByDay(
         [
           'Steady day, a tiny surprise (a photo, an old memory) keeps the spark alive.',
-          'All calm, send an unprompted “thinking of you” just because.',
+          'All calm, send an unprompted "thinking of you" just because.',
           'Nothing urgent today, a small specific compliment goes a long way.',
           'Quiet and steady, plant something small to look forward to together.',
         ],
