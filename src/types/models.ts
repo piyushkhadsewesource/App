@@ -191,6 +191,17 @@ export interface TicTacToe {
   updatedAt: Millis;
 }
 
+// Our Shared Canvas: one co-op pixel grid per space. `pixels` is a flat string
+// of size*size chars, each a single palette index ('0' = empty). Kept as a
+// compact string so the whole grid is a tiny (~256 byte) Firestore doc.
+export interface Canvas {
+  id: 'current';
+  pixels: string;
+  size: number; // grid dimension (16)
+  updatedAt: Millis;
+  updatedBy: string; // authorId of the last person to paint
+}
+
 /** One person's result for a given day's Wordle (shared daily word). */
 export interface WordleResult {
   id: string; // `${date}:${authorId}`
@@ -309,6 +320,7 @@ export const COLLECTIONS = [
   'wordle',
   'snakes',
   'ludo',
+  'canvas',
   'schedule',
   'occasions',
   'issues',

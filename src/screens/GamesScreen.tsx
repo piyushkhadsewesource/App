@@ -10,6 +10,14 @@ export default function GamesScreen({ navigation }: any) {
   const partner = identity?.partnerName ?? 'them';
   const games = [
     {
+      grad: gradients.gameBerry,
+      emoji: '🎨',
+      title: 'Our Shared Canvas',
+      sub: 'Draw together on a co-op pixel grid',
+      meta: 'Live & async',
+      go: () => navigation.navigate('Canvas'),
+    },
+    {
       grad: gradients.gameGreen,
       emoji: '🟩',
       title: 'Daily Wordle',

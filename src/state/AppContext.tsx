@@ -24,6 +24,7 @@ import {
 } from '../services/identity';
 import { DEMO_PARTNER_ID, maybeSeed } from '../services/seed';
 import {
+  Canvas,
   CheckIn,
   DeckResponse,
   DeviceToken,
@@ -75,6 +76,7 @@ interface AppValue {
   meeting: Meeting | null;
   gameAnswers: GameAnswer[];
   tictactoe: TicTacToe | null;
+  canvas: Canvas | null;
   wordle: WordleResult[];
   snakes: SnakesGame | null;
   ludo: LudoGame | null;
@@ -141,6 +143,8 @@ interface AppValue {
   answerGame(game: GameKind, promptId: string, choice: number): Promise<void>;
   newTicTacToe(): Promise<void>;
   playTicTacToe(index: number): Promise<void>;
+  saveCanvas(pixels: string): Promise<void>;
+  clearCanvas(): Promise<void>;
   recordWordle(data: { date: string; guesses: string[]; solved: boolean }): Promise<void>;
   newSnakes(): Promise<void>;
   rollSnakes(): Promise<void>;
@@ -195,6 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [wordle, setWordle] = useState<WordleResult[]>([]);
   const [snakes, setSnakes] = useState<SnakesGame[]>([]);
   const [ludo, setLudo] = useState<LudoGame[]>([]);
+  const [canvasArr, setCanvas] = useState<Canvas[]>([]);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [occasions, setOccasions] = useState<Occasion[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -240,6 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<WordleResult>('wordle', setWordle),
         db.watch<SnakesGame>('snakes', setSnakes),
         db.watch<LudoGame>('ludo', setLudo),
+        db.watch<Canvas>('canvas', setCanvas),
         db.watch<ScheduleItem>('schedule', setSchedule),
         db.watch<Occasion>('occasions', setOccasions),
         db.watch<Issue>('issues', setIssues),
@@ -338,6 +344,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     wordle,
     snakes: snakes.find((s) => s.id === 'current') ?? null,
     ludo: ludo.find((l) => l.id === 'current') ?? null,
+    canvas: canvasArr.find((c) => c.id === 'current') ?? null,
     schedule,
     occasions,
     issues,
@@ -388,6 +395,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setWordle([]);
       setSnakes([]);
       setLudo([]);
+      setCanvas([]);
       setSchedule([]);
       setOccasions([]);
       setIssues([]);
@@ -658,6 +666,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const board = game.board.substring(0, index) + mark + game.board.substring(index + 1);
       const nextTurn = game.turn === game.xId ? game.oId : game.xId;
       await db.update<TicTacToe>('tictactoe', 'current', { board, turn: nextTurn, updatedAt: now() });
+    },
+    async saveCanvas(pixels) {
+      const db = dbRef.current;
+      if (!db) return;
+      // The whole grid is one tiny doc; the screen debounces these so a stroke
+      // is a single write. clampReq caps length defensively (256 chars normally).
+      await db.add('canvas', {
+        id: 'current',
+        pixels: clampReq(pixels, 1024),
+        size: 16,
+        updatedAt: now(),
+        updatedBy: meId,
+      });
+    },
+    async clearCanvas() {
+      const db = dbRef.current;
+      if (!db) return;
+      await db.add('canvas', {
+        id: 'current',
+        pixels: '0'.repeat(256),
+        size: 16,
+        updatedAt: now(),
+        updatedBy: meId,
+      });
     },
     async recordWordle({ date, guesses, solved }) {
       const db = dbRef.current;
@@ -957,7 +989,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, meId, partnerId, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, meId, partnerId, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

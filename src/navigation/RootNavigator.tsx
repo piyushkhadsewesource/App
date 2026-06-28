@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import AnimatedTabBar from '../components/AnimatedTabBar';
+import CanvasScreen from '../screens/CanvasScreen';
 import ChoiceGameScreen from '../screens/ChoiceGameScreen';
 import CountdownScreen from '../screens/CountdownScreen';
 import DeckScreen from '../screens/DeckScreen';
@@ -79,6 +80,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Wordle" component={WordleScreen} />
       <Stack.Screen name="Snakes" component={SnakesScreen} />
       <Stack.Screen name="Ludo" component={LudoScreen} />
+      <Stack.Screen name="Canvas" component={CanvasScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Occasions" component={OccasionsScreen} />
       <Stack.Screen name="Issues" component={IssuesScreen} />
