@@ -174,7 +174,7 @@ export default function ScheduleScreen({ navigation }: any) {
           <View style={[styles.dot, { backgroundColor: accent }]} />
         </View>
         <View style={{ flex: 1 }}>
-          {mine ? <Pressable onPress={() => openEdit(it)}>{card}</Pressable> : card}
+          {mine ? <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{card}</Pressable> : card}
         </View>
       </View>
     );
@@ -321,7 +321,7 @@ export default function ScheduleScreen({ navigation }: any) {
                     </View>
                   );
                   return (
-                    <View key={it.id}>{mine ? <Pressable onPress={() => openEdit(it)}>{row}</Pressable> : row}</View>
+                    <View key={it.id}>{mine ? <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{row}</Pressable> : row}</View>
                   );
                 })
               )}

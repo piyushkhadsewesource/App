@@ -5,6 +5,7 @@ import {
   Body,
   Button,
   Card,
+  EmptyState,
   Field,
   LevelSelector,
   Muted,
@@ -258,10 +259,11 @@ export default function PulseScreen() {
         </View>
 
         {timeline.length === 0 ? (
-          <Muted style={{ marginTop: spacing.xs }}>
-            Nothing logged today yet. Tap a mood above the moment something shifts, a flicker of joy,
-            a wave of missing them, and it lands right here for you both.
-          </Muted>
+          <EmptyState
+            emoji="🌙"
+            title="Nothing logged yet today"
+            text="Tap a mood above the moment something shifts, a flicker of joy, a wave of missing them, and it lands right here for you both."
+          />
         ) : (
           <>
             <Muted style={{ marginTop: 2, marginBottom: spacing.sm }}>

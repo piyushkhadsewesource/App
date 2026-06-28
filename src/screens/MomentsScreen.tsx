@@ -167,7 +167,7 @@ export default function MomentsScreen() {
                 <Text style={styles.dayHeader}>{dayLabel(g.date)}</Text>
                 <View style={styles.grid}>
                   {g.items.map((m) => (
-                    <Pressable key={m.id} style={styles.thumbWrap} onPress={() => setViewing(m)}>
+                    <Pressable key={m.id} style={({ pressed }) => [styles.thumbWrap, pressed ? { opacity: 0.82 } : null]} onPress={() => setViewing(m)}>
                       <Image source={{ uri: dataUri(m.image) }} style={styles.thumb} contentFit="cover" transition={250} />
                       <View style={styles.thumbTag}>
                         <Text style={styles.thumbTagText}>{app.isMine(m.authorId) ? 'You' : app.authorName(m.authorId)}</Text>
@@ -323,7 +323,7 @@ function CalendarView({
       ) : (
         <View style={{ gap: spacing.md }}>
           {selectedMoments.map((m) => (
-            <Pressable key={m.id} onPress={() => onOpen(m)}>
+            <Pressable key={m.id} onPress={() => onOpen(m)} style={({ pressed }) => (pressed ? { opacity: 0.85 } : null)}>
               <Card style={{ padding: 0, overflow: 'hidden' }}>
                 <Image source={{ uri: dataUri(m.image) }} style={styles.bigPhoto} contentFit="cover" transition={250} />
                 <View style={{ padding: spacing.md }}>
