@@ -23,6 +23,10 @@ export const radius = {
 
 export const font = {
   size: { xs: 12, sm: 13, md: 15, lg: 17, xl: 21, xxl: 27, huge: 36 },
+  // Letter-spacing scale. The big editorial serif reads best set tight; small
+  // UI labels and all-caps tags read best a touch open. Centralising these keeps
+  // the typographic voice consistent across every screen.
+  tracking: { display: -0.9, heading: -0.4, body: 0.05, label: 0.1, caps: 0.6 },
   weight: {
     regular: '400',
     medium: '500',

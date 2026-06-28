@@ -372,8 +372,8 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   back: { marginBottom: spacing.sm },
   backText: { color: colors.textSoft, fontSize: font.size.md, fontFamily: font.family.semibold },
-  h1: { fontSize: 30, fontFamily: font.family.display, color: colors.text, letterSpacing: -0.6 },
-  sub: { fontSize: font.size.md, color: colors.textSoft, marginTop: 3, fontFamily: font.family.body },
+  h1: { fontSize: 32, lineHeight: 38, fontFamily: font.family.display, color: colors.text, letterSpacing: font.tracking.display },
+  sub: { fontSize: font.size.md, lineHeight: 21, color: colors.textSoft, marginTop: 4, fontFamily: font.family.body, letterSpacing: font.tracking.label },
 
   card: {
     borderRadius: radius.lg,
@@ -381,9 +381,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(90,46,64,0.06)',
   },
-  title: { fontSize: font.size.lg + 1, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: -0.2 },
-  body: { fontSize: font.size.md, color: colors.text, lineHeight: 23, fontFamily: font.family.body },
-  muted: { fontSize: font.size.sm, color: colors.textSoft, lineHeight: 20, fontFamily: font.family.body },
+  title: { fontSize: font.size.lg + 1, lineHeight: 24, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: font.tracking.heading },
+  body: { fontSize: font.size.md, color: colors.text, lineHeight: 24, fontFamily: font.family.body, letterSpacing: font.tracking.body },
+  muted: { fontSize: font.size.sm, color: colors.textSoft, lineHeight: 20, fontFamily: font.family.body, letterSpacing: font.tracking.label },
 
   sectionTitleRow: {
     flexDirection: 'row',
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
-  sectionTitle: { fontSize: font.size.xl, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: font.size.xl + 1, lineHeight: 27, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: font.tracking.heading },
 
   button: {
     height: 54,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   buttonFill: { borderRadius: radius.pill },
-  buttonText: { fontSize: font.size.md, fontFamily: font.family.bold, letterSpacing: 0.2 },
+  buttonText: { fontSize: font.size.md, fontFamily: font.family.bold, letterSpacing: 0.3 },
 
   pill: {
     paddingHorizontal: spacing.md,
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
 
   avatar: { alignItems: 'center', justifyContent: 'center' },
 
-  fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs },
+  fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs, letterSpacing: font.tracking.label },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -447,8 +447,8 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', borderRadius: radius.pill },
 
   empty: { alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg },
-  emptyTitle: { fontSize: font.size.lg, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: 4 },
-  emptyText: { fontSize: font.size.md, color: colors.textSoft, textAlign: 'center', lineHeight: 22, fontFamily: font.family.body },
+  emptyTitle: { fontSize: font.size.lg + 1, lineHeight: 24, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: 4, letterSpacing: font.tracking.heading },
+  emptyText: { fontSize: font.size.md, color: colors.textSoft, textAlign: 'center', lineHeight: 23, fontFamily: font.family.body, letterSpacing: font.tracking.body },
 
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
 });
