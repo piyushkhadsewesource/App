@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimeModal from '../components/DateTimeModal';
-import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../components/ui';
+import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
 import { isoToDate, todayISO } from '../lib/date';
 import { hLight } from '../lib/haptics';
 import { daysUntil, nextOccurrence, ordinal, sortByNext, untilLabel, yearsAt } from '../lib/occasions';
@@ -144,10 +144,11 @@ export default function OccasionsScreen({ navigation }: any) {
 
       {list.length === 0 ? (
         <Card tone="surface">
-          <Muted style={{ textAlign: 'center' }}>
-            Add your anniversary, birthdays and the little dates that matter. We'll count down to each
-            and remind you both before they arrive.
-          </Muted>
+          <EmptyState
+            emoji="🎀"
+            title="No dates saved yet"
+            text="Add your anniversary, birthdays and the little dates that matter, we’ll count down to each and remind you both."
+          />
         </Card>
       ) : (
         list.map((o) => {

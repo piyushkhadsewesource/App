@@ -104,7 +104,7 @@ export default function MomentsScreen() {
       {/* Capture / compose */}
       {pending ? (
         <Card style={{ marginBottom: spacing.lg }}>
-          <Image source={{ uri: pending }} style={styles.preview} contentFit="cover" />
+          <Image source={{ uri: pending }} style={styles.preview} contentFit="cover" transition={250} />
           <Field
             value={caption}
             onChangeText={setCaption}
@@ -151,7 +151,7 @@ export default function MomentsScreen() {
                 <View style={styles.grid}>
                   {g.items.map((m) => (
                     <Pressable key={m.id} style={styles.thumbWrap} onPress={() => setViewing(m)}>
-                      <Image source={{ uri: dataUri(m.image) }} style={styles.thumb} contentFit="cover" />
+                      <Image source={{ uri: dataUri(m.image) }} style={styles.thumb} contentFit="cover" transition={250} />
                       <View style={styles.thumbTag}>
                         <Text style={styles.thumbTagText}>{app.isMine(m.authorId) ? 'You' : app.authorName(m.authorId)}</Text>
                       </View>
@@ -184,7 +184,7 @@ export default function MomentsScreen() {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setViewing(null)} />
           {viewing ? (
             <View style={styles.modalCard}>
-              <Image source={{ uri: dataUri(viewing.image) }} style={styles.modalImage} contentFit="contain" />
+              <Image source={{ uri: dataUri(viewing.image) }} style={styles.modalImage} contentFit="contain" transition={200} />
               <View style={{ padding: spacing.lg }}>
                 <Muted>
                   {dayLabel(viewing.date)} · {app.isMine(viewing.authorId) ? 'You' : app.authorName(viewing.authorId)}
@@ -287,7 +287,7 @@ function CalendarView({
                 <Pressable key={ci} style={styles.cell} onPress={() => onSelectDay(cell.date!)}>
                   <View style={[styles.cellInner, isSel && styles.cellSelected]}>
                     {has && thumb ? (
-                      <Image source={{ uri: dataUri(thumb.image) }} style={styles.cellImage} contentFit="cover" />
+                      <Image source={{ uri: dataUri(thumb.image) }} style={styles.cellImage} contentFit="cover" transition={250} />
                     ) : null}
                     <Text style={[styles.cellDay, has && styles.cellDayOnImage]}>{cell.day}</Text>
                   </View>
@@ -308,7 +308,7 @@ function CalendarView({
           {selectedMoments.map((m) => (
             <Pressable key={m.id} onPress={() => onOpen(m)}>
               <Card style={{ padding: 0, overflow: 'hidden' }}>
-                <Image source={{ uri: dataUri(m.image) }} style={styles.bigPhoto} contentFit="cover" />
+                <Image source={{ uri: dataUri(m.image) }} style={styles.bigPhoto} contentFit="cover" transition={250} />
                 <View style={{ padding: spacing.md }}>
                   <Muted>{authorName(m.authorId)}</Muted>
                   {m.caption ? <Body style={{ marginTop: 2 }}>{m.caption}</Body> : null}

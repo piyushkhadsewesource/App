@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimeModal from '../components/DateTimeModal';
-import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../components/ui';
+import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
 import { addDaysISO, isoToDate, todayISO } from '../lib/date';
 import { hLight } from '../lib/haptics';
 import { useApp } from '../state/AppContext';
@@ -286,9 +286,11 @@ export default function ScheduleScreen({ navigation }: any) {
       {mode === 'day' ? (
         dayItems.length === 0 ? (
           <Card tone="surface">
-            <Muted style={{ textAlign: 'center' }}>
-              Nothing planned for {dayLabel(viewDate).toLowerCase()} yet. Add what your day looks like so {partner} knows when you're free.
-            </Muted>
+            <EmptyState
+              emoji="🗓️"
+              title={`Nothing planned ${dayLabel(viewDate).toLowerCase()}`}
+              text={`Add what your day looks like so ${partner} knows when you’re free.`}
+            />
           </Card>
         ) : (
           dayItems.map(renderItem)

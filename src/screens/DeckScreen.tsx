@@ -13,6 +13,7 @@ import {
   Title,
 } from '../components/ui';
 import { formatRelative } from '../lib/date';
+import { useToast } from '../components/ToastHost';
 import { CATEGORY_LABEL, DECK, nextPromptFor, Prompt } from '../lib/intimacy';
 import { useApp } from '../state/AppContext';
 import { colors, font, spacing } from '../theme';
@@ -21,6 +22,7 @@ export default function DeckScreen({ navigation }: any) {
   const app = useApp();
   const { deck, meId, partnerId, identity } = app;
   const partnerName = identity?.partnerName ?? 'them';
+  const toast = useToast();
 
   const [prompt, setPrompt] = useState<Prompt>(() => nextPromptFor(deck, meId));
   const [answer, setAnswer] = useState('');
@@ -53,6 +55,7 @@ export default function DeckScreen({ navigation }: any) {
     // Clear the field immediately; fire the write without blocking on the ack.
     const a = answer.trim();
     setAnswer('');
+    toast.show('Answer shared 🤍');
     void app.addDeckResponse(prompt.id, prompt.text, a);
   }
 

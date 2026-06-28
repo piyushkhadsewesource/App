@@ -2,7 +2,8 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import {
   AppHeader,
   Body,
@@ -374,7 +375,7 @@ export default function MissYouScreen() {
           <View style={{ gap: spacing.md }}>
             {kitPhoto && dataUri(kitPhoto.image) ? (
               <Card style={{ padding: 0, overflow: 'hidden' }}>
-                <Image source={{ uri: dataUri(kitPhoto.image) }} style={styles.kitPhoto} resizeMode="cover" />
+                <Image source={{ uri: dataUri(kitPhoto.image) }} style={styles.kitPhoto} contentFit="cover" transition={250} />
                 <View style={{ padding: spacing.md }}>
                   <Muted>A moment to hold onto</Muted>
                   {kitPhoto.caption ? <Body style={{ marginTop: 2 }}>{kitPhoto.caption}</Body> : null}

@@ -97,6 +97,8 @@ export default function PulseScreen() {
     // cloud ack can hang, but the check-in lands locally at once).
     const data = { mood, need: need.trim(), energy, stress, affection, note: note.trim() || undefined };
     setEditing(false);
+    hSuccess();
+    toast.show(myToday ? 'Pulse updated ✓' : 'Pulse shared 💛');
     void app.saveCheckin(data);
   }
 
