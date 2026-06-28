@@ -23,6 +23,7 @@ import {
   momentsForDate,
 } from '../lib/moments';
 import { capturePhoto, PhotoSource } from '../services/photo';
+import { Skeleton, useInitialHydrate } from '../components/Skeleton';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { ISODate, Moment } from '../types/models';
@@ -42,6 +43,11 @@ function dataUri(s?: string): string | undefined {
 export default function MomentsScreen() {
   const app = useApp();
   const { moments, meId } = app;
+
+  // Show placeholders only while a cloud space is settling on first load; on
+  // device (local-first, instant) this stays false so nothing ever flashes.
+  const hydrating = useInitialHydrate();
+  const loadingMoments = app.cloud && hydrating && moments.length === 0;
 
   const [view, setView] = useState<'feed' | 'calendar'>('feed');
   const [pending, setPending] = useState<string | null>(null);
@@ -140,9 +146,20 @@ export default function MomentsScreen() {
 
       {view === 'feed' ? (
         groups.length === 0 ? (
-          <Card>
-            <EmptyState emoji="📸" title="No moments yet" text="Capture your first photo above. A year from now, this gallery will mean everything." />
-          </Card>
+          loadingMoments ? (
+            <View>
+              <Skeleton style={{ width: 120, height: 16, marginBottom: spacing.sm }} />
+              <View style={styles.grid}>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} style={{ width: '31.8%', aspectRatio: 1, borderRadius: radius.md }} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Card>
+              <EmptyState emoji="📸" title="No moments yet" text="Capture your first photo above. A year from now, this gallery will mean everything." />
+            </Card>
+          )
         ) : (
           <View style={{ gap: spacing.xl }}>
             {groups.map((g) => (
