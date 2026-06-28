@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
@@ -46,6 +46,24 @@ export default function PulseScreen() {
   const [stress, setStress] = useState(myToday?.stress ?? 3);
   const [affection, setAffection] = useState(myToday?.affection ?? 4);
   const [note, setNote] = useState(myToday?.note ?? '');
+
+  // `checkins` hydrate after first render (AsyncStorage / Firestore both emit
+  // asynchronously), so the form fields above can seed with defaults before
+  // today's real check-in arrives. When it does, refill the form from it and
+  // drop out of edit mode — otherwise tapping "Update" would overwrite a real
+  // pulse with blank defaults (silent data loss). Keyed on the record id so it
+  // fires once on hydration and never yanks the user mid-edit of a new entry.
+  useEffect(() => {
+    if (!myToday) return;
+    setMood(myToday.mood);
+    setNeed(myToday.need ?? '');
+    setEnergy(myToday.energy);
+    setStress(myToday.stress);
+    setAffection(myToday.affection);
+    setNote(myToday.note ?? '');
+    setEditing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myToday?.id]);
 
   const starters = useMemo(
     () => conversationStarters(partnerToday, myToday, identity?.partnerName ?? 'them'),
