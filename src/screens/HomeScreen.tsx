@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
@@ -91,6 +92,20 @@ export default function HomeScreen({ navigation }: any) {
   const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
   // Presence: if your partner did anything in the last hour, their pulse face beats.
   const partnerActive = useMemo(() => recent.some((e) => !e.mine && e.at > now - 60 * 60 * 1000), [recent, now]);
+
+  // A one-time hint the first time the partner's presence lights up, teaching
+  // what the green heartbeat means. Seen-flag persisted like other UI prefs.
+  const [activeHintSeen, setActiveHintSeen] = useState(true);
+  useEffect(() => {
+    AsyncStorage.getItem('@tether/seen/activeNowHint')
+      .then((v) => setActiveHintSeen(v === '1'))
+      .catch(() => {});
+  }, []);
+  const showActiveHint = partnerActive && !activeHintSeen;
+  function dismissActiveHint() {
+    setActiveHintSeen(true);
+    AsyncStorage.setItem('@tether/seen/activeNowHint', '1').catch(() => {});
+  }
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
 
@@ -386,6 +401,15 @@ export default function HomeScreen({ navigation }: any) {
         ) : null}
       </Card>
 
+      {showActiveHint ? (
+        <Pressable onPress={dismissActiveHint} style={styles.coach} accessibilityRole="button" accessibilityLabel="Got it">
+          <Text style={{ fontSize: 18 }}>💚</Text>
+          <Text style={styles.coachText}>
+            The green heartbeat means {partnerName} is active right now. Tap to dismiss.
+          </Text>
+        </Pressable>
+      ) : null}
+
       {/* Feelings through the day (intensity timeline) */}
       <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Log</Text></Pressable>}>
         Feelings through the day
@@ -563,6 +587,8 @@ const styles = StyleSheet.create({
   heroMetricLabel: { color: 'rgba(255,255,255,0.8)', fontSize: font.size.xs, marginTop: 2, fontFamily: font.family.body },
   heroBegin: { color: colors.white, fontSize: 26, fontFamily: font.family.display, lineHeight: 32, marginTop: spacing.sm },
   heroBeginSub: { color: 'rgba(255,255,255,0.9)', fontSize: font.size.md, fontFamily: font.family.body, lineHeight: 22, marginTop: spacing.sm },
+  coach: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.goodSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm },
+  coachText: { flex: 1, fontSize: font.size.sm, color: colors.text, fontFamily: font.family.medium, lineHeight: 19 },
   firstStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   firstStepLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
   firstStepHint: { fontSize: font.size.xs, color: colors.textSoft, fontFamily: font.family.body, marginTop: 1 },
