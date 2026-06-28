@@ -17,6 +17,27 @@ const CHANNEL_ID = 'daily-moments';
 const WINDOW_DAYS = 8;
 const supported = Platform.OS !== 'web';
 
+// iOS silently caps an app at 64 pending local notifications and drops the
+// overflow. With up to 6 photo times over an 8-day window (48), plus plan
+// reminders, occasions and letters, a normal config can blow past it. Keep a
+// safe ceiling and let each scheduler claim only the budget still free, so the
+// newest reminders never vanish without a trace.
+const MAX_PENDING = 58;
+
+/** How many notifications we currently have scheduled (0 on any failure). */
+async function pendingCount(): Promise<number> {
+  try {
+    return (await Notifications.getAllScheduledNotificationsAsync()).length;
+  } catch {
+    return 0;
+  }
+}
+
+/** Remaining headroom under the ceiling for a scheduler about to run. */
+async function remainingBudget(): Promise<number> {
+  return Math.max(0, MAX_PENDING - (await pendingCount()));
+}
+
 // Daily "plan your day" reminders for the shared timetable.
 const PLAN_CHANNEL = 'daily-plan';
 const PLAN_KEY = '@tether/planReminder'; // legacy on/off flag (migrated)
@@ -171,15 +192,19 @@ async function scheduleSmart(cfg: ReminderConfig, postedDates: string[], partner
   const who = partnerName?.trim() || 'your partner';
   const posted = new Set(postedDates);
   const base = new Date();
+  let budget = await remainingBudget();
 
   for (let d = 0; d < WINDOW_DAYS; d += 1) {
+    if (budget <= 0) break;
     const day = new Date(base.getFullYear(), base.getMonth(), base.getDate() + d);
     if (posted.has(isoOf(day))) continue; // smart skip: already shared that day
     const epochDay = Math.floor(day.getTime() / 86_400_000);
     for (let si = 0; si < cfg.times.length; si += 1) {
+      if (budget <= 0) break;
       const t = cfg.times[si];
       const when = new Date(day.getFullYear(), day.getMonth(), day.getDate(), t.hour, t.minute, 0, 0);
       if (when.getTime() <= Date.now() + 1000) continue; // skip times already passed
+      budget -= 1;
       await Notifications.scheduleNotificationAsync({
         // Deterministic per day+slot so each reminder differs and they rotate.
         content: { title: '📸 Tether', body: reminderBody(who, epochDay * 10 + si), data: { kind: 'moment' } },
@@ -275,8 +300,11 @@ async function schedulePlan(plannedDates: string[], who: string) {
   await ensureChannel(PLAN_CHANNEL, 'Daily plan');
   const planned = new Set(plannedDates);
   const base = new Date();
+  let budget = await remainingBudget();
   const fire = async (when: Date, title: string, body: string) => {
+    if (budget <= 0) return;
     if (when.getTime() <= Date.now() + 1000) return;
+    budget -= 1;
     await Notifications.scheduleNotificationAsync({
       content: { title, body, data: { kind: 'plan' } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when, channelId: PLAN_CHANNEL },
@@ -437,7 +465,12 @@ export async function syncOccasionReminders(occasions: OccasionLite[]): Promise<
     if (!(await hasNotificationPermission())) return;
     await ensureOccasionChannel();
     await cancelKind('occasion');
-    for (const o of occasions) await scheduleOccasion(o);
+    let budget = await remainingBudget();
+    for (const o of occasions) {
+      if (budget <= 0) break;
+      budget -= 1;
+      await scheduleOccasion(o);
+    }
   } catch {
     /* notifications unavailable */
   }

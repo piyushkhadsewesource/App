@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Muted, Screen, Title } from '../components/ui';
 import {
@@ -43,9 +43,32 @@ export default function RemindersScreen({ navigation }: any) {
     getPlanConfig().then(setPlan);
   }, []);
 
-  async function persist(next: ReminderTime[]) {
+  // Each stepper tap updates the visible time immediately, but rescheduling all
+  // photo notifications (up to ~48 OS calls) is debounced so dragging a time up
+  // or down doesn't cancel-and-reschedule the whole set on every single tap.
+  const scheduleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTimes = useRef<ReminderTime[] | null>(null);
+
+  const flushSchedule = () => {
+    if (scheduleTimer.current) {
+      clearTimeout(scheduleTimer.current);
+      scheduleTimer.current = null;
+    }
+    const next = pendingTimes.current;
+    if (next) {
+      pendingTimes.current = null;
+      void setReminderTimes(next, myDates, partnerName);
+    }
+  };
+
+  // Make sure a pending reschedule isn't lost if the screen closes mid-debounce.
+  useEffect(() => () => flushSchedule(), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function persist(next: ReminderTime[]) {
     setTimes(next);
-    await setReminderTimes(next, myDates, partnerName);
+    pendingTimes.current = next;
+    if (scheduleTimer.current) clearTimeout(scheduleTimer.current);
+    scheduleTimer.current = setTimeout(flushSchedule, 450);
   }
 
   async function savePlan(next: PlanConfig, isEnabling = false) {
