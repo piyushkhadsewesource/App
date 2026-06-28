@@ -9,6 +9,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { ensureNotificationPermission, hasNotificationPermission } from './permission';
 
 const CONFIG_KEY = '@tether/reminders.v2';
 const LEGACY_KEY = '@tether/reminders';
@@ -198,9 +199,7 @@ export async function refreshReminders(postedDates: string[], partnerName?: stri
   try {
     const cfg = await getReminderConfig();
     if (!cfg.enabled) return;
-    let perm = await Notifications.getPermissionsAsync();
-    if (perm.status === 'undetermined') perm = await Notifications.requestPermissionsAsync();
-    if (perm.granted) await scheduleSmart(cfg, postedDates, partnerName);
+    if (await ensureNotificationPermission()) await scheduleSmart(cfg, postedDates, partnerName);
   } catch {
     /* notifications unavailable */
   }
@@ -317,9 +316,7 @@ export async function refreshPlanReminders(plannedDates: string[], partnerName?:
       await cancelKind('plan');
       return;
     }
-    let perm = await Notifications.getPermissionsAsync();
-    if (perm.status === 'undetermined') perm = await Notifications.requestPermissionsAsync();
-    if (perm.granted) await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
+    if (await ensureNotificationPermission()) await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
   } catch {
     /* notifications unavailable */
   }
@@ -336,9 +333,7 @@ export async function setPlanConfig(
     if (!cfg.enabled) await cancelKind('plan');
     return false;
   }
-  let perm = await Notifications.getPermissionsAsync();
-  if (perm.status === 'undetermined' || !perm.granted) perm = await Notifications.requestPermissionsAsync();
-  if (!perm.granted) return false;
+  if (!(await ensureNotificationPermission())) return false;
   await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
   return true;
 }
@@ -359,8 +354,7 @@ export async function setRemindersEnabled(
     await saveConfig({ ...cfg, enabled: false });
     return false;
   }
-  const perm = await Notifications.requestPermissionsAsync();
-  if (!perm.granted) {
+  if (!(await ensureNotificationPermission())) {
     await saveConfig({ ...cfg, enabled: false });
     return false;
   }
@@ -438,11 +432,9 @@ async function scheduleOccasion(o: OccasionLite) {
 export async function syncOccasionReminders(occasions: OccasionLite[]): Promise<void> {
   if (!supported) return;
   try {
-    let perm = await Notifications.getPermissionsAsync();
-    if (perm.status === 'undetermined' && occasions.length > 0) {
-      perm = await Notifications.requestPermissionsAsync();
-    }
-    if (!perm.granted) return;
+    // Don't prompt for permission solely to sync occasions; only schedule if
+    // permission is already granted (the launch flow handles the one request).
+    if (!(await hasNotificationPermission())) return;
     await ensureOccasionChannel();
     await cancelKind('occasion');
     for (const o of occasions) await scheduleOccasion(o);
@@ -462,7 +454,6 @@ export async function setReminderTimes(
   const next: ReminderConfig = { enabled: cfg.enabled, times: sorted.length ? sorted : DEFAULT_TIMES };
   await saveConfig(next);
   if (supported && next.enabled) {
-    const perm = await Notifications.getPermissionsAsync();
-    if (perm.granted) await scheduleSmart(next, postedDates, partnerName);
+    if (await hasNotificationPermission()) await scheduleSmart(next, postedDates, partnerName);
   }
 }

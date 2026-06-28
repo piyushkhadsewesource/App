@@ -13,6 +13,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { EAS_PROJECT_ID } from '../config';
+import { ensureNotificationPermission } from './permission';
 
 const SOS_CHANNEL = 'sos';
 const PING_CHANNEL = 'pings';
@@ -64,12 +65,9 @@ export async function ensureSosChannel(): Promise<void> {
 export async function registerForPush(): Promise<string | null> {
   if (!supported) return null;
   try {
-    const perm = await Notifications.getPermissionsAsync();
-    let granted = perm.granted;
-    if (!granted) {
-      const req = await Notifications.requestPermissionsAsync();
-      granted = req.granted;
-    }
+    // Shared, single-flight permission request, so this never races with the
+    // reminder schedulers that also need notification permission at launch.
+    const granted = await ensureNotificationPermission();
     if (!granted) return null;
     await ensureSosChannel();
     await ensurePingChannel();
