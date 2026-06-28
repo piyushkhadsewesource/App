@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
   Body,
@@ -18,6 +18,8 @@ import {
 import { useToast } from '../components/ToastHost';
 import { shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
+import { hasNotificationPermission } from '../services/permission';
+import { registerForPush } from '../services/push';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, spacing } from '../theme';
 import { PingType } from '../types/models';
@@ -111,6 +113,38 @@ export default function MissYouScreen() {
   const [peek, setPeek] = useState(0); // which miss-o-meter heart is being pressed
   const burst = useBurst();
 
+  // Contextual, SOS-framed pre-prompt for notifications: shown here (next to the
+  // emergency alert it justifies) only when permission isn't already granted.
+  // Asking in context, where the value is obvious, beats a cold launch prompt.
+  const [notifGranted, setNotifGranted] = useState<boolean | null>(null);
+  const [notifDismissed, setNotifDismissed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    hasNotificationPermission().then((ok) => alive && setNotifGranted(ok)).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const showNotifPrompt = Platform.OS !== 'web' && notifGranted === false && !notifDismissed;
+
+  async function enableAlerts() {
+    try {
+      await registerForPush();
+    } catch {
+      /* best-effort */
+    }
+    const ok = await hasNotificationPermission();
+    setNotifGranted(ok);
+    if (ok) {
+      toast.show('Alerts on, you’ll always hear them 🔔', 2400);
+    } else {
+      Alert.alert(
+        'Allow notifications',
+        `To make sure ${partnerName}'s emergency reaches you even when Tether is closed, turn on notifications for Tether in your phone's Settings.`,
+      );
+    }
+  }
+
   // Mark the partner's pings seen, and re-run whenever the unseen set changes —
   // pings often haven't hydrated on first mount, so a once-only effect would
   // leave them "new" (and Home's badge lingering) until the next visit.
@@ -199,6 +233,25 @@ export default function MissYouScreen() {
             <Text style={styles.sosSub}>Instantly sound {partnerName}’s phone when you need them now</Text>
           </View>
         </Pressable>
+
+        {/* Contextual notification pre-prompt, framed around the SOS above */}
+        {showNotifPrompt ? (
+          <Card tone="gold" style={{ marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Text style={{ fontSize: 26 }}>🔔</Text>
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontFamily: font.family.semibold }}>Turn on alerts</Body>
+                <Muted style={{ marginTop: 2 }}>
+                  So {partnerName}’s emergency reaches you even when Tether is closed.
+                </Muted>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+              <Button label="Enable alerts" onPress={enableAlerts} style={{ flex: 1 }} />
+              <Button label="Not now" variant="ghost" onPress={() => setNotifDismissed(true)} style={{ flex: 1 }} />
+            </View>
+          </Card>
+        ) : null}
 
         {/* Reunion countdown */}
         <Pressable onPress={() => navigation.navigate('Countdown')}>
