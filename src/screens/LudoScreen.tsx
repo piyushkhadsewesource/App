@@ -60,6 +60,23 @@ export default function LudoScreen({ navigation }: any) {
     [g, myTurn, myTokens],
   );
 
+  // One action per synced state: a roll or a move consumes the current
+  // updatedAt, so a second tap before the snapshot returns is ignored rather
+  // than overwriting the first.
+  const actionLock = useRef<number | null>(null);
+  const rollDice = () => {
+    if (!g || actionLock.current === g.updatedAt) return;
+    actionLock.current = g.updatedAt;
+    hMedium();
+    app.rollLudo();
+  };
+  const moveToken = (i: number) => {
+    if (!g || actionLock.current === g.updatedAt) return;
+    actionLock.current = g.updatedAt;
+    hMedium();
+    app.moveLudo(i);
+  };
+
   // Animated pawn positions.
   const anims = useRef({
     a: [0, 1, 2, 3].map(() => new Animated.ValueXY()),
@@ -170,10 +187,7 @@ export default function LudoScreen({ navigation }: any) {
                   >
                     <Pressable
                       disabled={!movable}
-                      onPress={() => {
-                        hMedium();
-                        app.moveLudo(i);
-                      }}
+                      onPress={() => moveToken(i)}
                       style={{ flex: 1 }}
                     >
                       <Animated.View style={[styles.pawn, movable && styles.pawnMovable, movable && { transform: [{ scale: pulseScale }] }]}>
@@ -195,7 +209,7 @@ export default function LudoScreen({ navigation }: any) {
         <Body style={{ marginTop: spacing.md, fontFamily: font.family.semibold, textAlign: 'center' }}>{status}</Body>
         <View style={{ height: spacing.md }} />
         {g && !over && myTurn && !g.mustMove ? (
-          <Button label="🎲  Roll the dice" color={myGrad[1]} onPress={() => { hMedium(); app.rollLudo(); }} style={{ alignSelf: 'stretch' }} />
+          <Button label="🎲  Roll the dice" color={myGrad[1]} onPress={rollDice} style={{ alignSelf: 'stretch' }} />
         ) : g && !over ? (
           <Button label={g.mustMove && myTurn ? 'Tap a glowing token above' : `Waiting for ${partner}…`} onPress={() => {}} disabled style={{ alignSelf: 'stretch' }} />
         ) : (

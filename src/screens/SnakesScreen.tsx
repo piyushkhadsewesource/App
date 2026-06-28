@@ -153,6 +153,15 @@ export default function SnakesScreen({ navigation }: any) {
     if (iWon) hSuccess(); // only the winner gets the celebratory buzz
   }, [iWon]);
 
+  // One roll per synced state: ignore a second tap until the next snapshot.
+  const rollLock = useRef<number | null>(null);
+  const roll = () => {
+    if (!g || rollLock.current === g.updatedAt) return;
+    rollLock.current = g.updatedAt;
+    hMedium();
+    app.rollSnakes();
+  };
+
   let status: string;
   if (!g) status = 'Start a game to play together';
   else if (over) status = iWon ? 'You reached 100, you win! 🎉' : `${partner} reached 100 first 💫`;
@@ -214,10 +223,7 @@ export default function SnakesScreen({ navigation }: any) {
         {g && !over ? (
           <Button
             label={myTurn ? '🎲  Roll the dice' : `Waiting for ${partner}…`}
-            onPress={() => {
-              hMedium();
-              app.rollSnakes();
-            }}
+            onPress={roll}
             disabled={!myTurn}
             style={{ alignSelf: 'stretch' }}
           />

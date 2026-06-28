@@ -1,7 +1,7 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
-import { tttWinner, tttWinningLine } from '../lib/games';
+import { EMPTY_BOARD, tttWinner, tttWinningLine } from '../lib/games';
 import { Celebrate } from '../components/Celebrate';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -23,6 +23,28 @@ export default function TicTacToeScreen({ navigation }: any) {
   else if (result === 'draw') status = "It's a draw 🤝";
   else if (over) status = result === myMark ? 'You won! 🎉' : `${partner} won 💫`;
   else status = myTurn ? 'Your turn' : `${partner}'s turn…`;
+
+  // Guard against a second tap landing on the same synced board state before the
+  // write round-trips (which would overwrite the first move). Each board state
+  // (by updatedAt) accepts one move; the next arrives with a new stamp.
+  const moveLock = useRef<number | null>(null);
+  const play = (i: number) => {
+    if (!game || moveLock.current === game.updatedAt) return;
+    moveLock.current = game.updatedAt;
+    app.playTicTacToe(i);
+  };
+
+  const startOrReset = () => {
+    const inProgress = !!game && !over && game.board !== EMPTY_BOARD;
+    if (!inProgress) {
+      app.newTicTacToe();
+      return;
+    }
+    Alert.alert('Start a new game?', `This clears the current game for you and ${partner}.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'New game', style: 'destructive', onPress: () => app.newTicTacToe() },
+    ]);
+  };
 
   return (
     <>
@@ -48,7 +70,7 @@ export default function TicTacToeScreen({ navigation }: any) {
             <Pressable
               key={i}
               disabled={!playable}
-              onPress={() => app.playTicTacToe(i)}
+              onPress={() => play(i)}
               style={({ pressed }) => [
                 styles.cell,
                 winning && styles.cellWin,
@@ -71,7 +93,7 @@ export default function TicTacToeScreen({ navigation }: any) {
       </View>
 
       <View style={{ height: spacing.lg }} />
-      <Button label={game ? 'New game' : 'Start a game'} onPress={() => app.newTicTacToe()} />
+      <Button label={game ? 'New game' : 'Start a game'} onPress={startOrReset} />
 
       <Card tone="surface" style={{ marginTop: spacing.lg }}>
         <Body>
