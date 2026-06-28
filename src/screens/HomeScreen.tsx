@@ -16,6 +16,7 @@ import {
 import { Heartbeat } from '../components/Heartbeat';
 import IntensityChart from '../components/IntensityChart';
 import { Reveal } from '../components/Motion';
+import { useToast } from '../components/ToastHost';
 import { buildActivity, withinHours } from '../lib/activity';
 import { formatDayMonth, formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { averageIntensity, todaysFeelings } from '../lib/feelings';
@@ -38,6 +39,8 @@ export default function HomeScreen({ navigation }: any) {
   // A slow tick so presence ("Active now") and the next-plan window stay honest
   // without waiting for the next data change.
   const now = useNow(60_000);
+  const toast = useToast();
+  const partnerName = identity?.partnerName ?? 'them';
 
   const health = useMemo(
     () => computeHealth({ checkins, memories, letters: app.letters, pings, deck: app.deck, moments: app.moments, meId, partnerId }),
@@ -49,6 +52,12 @@ export default function HomeScreen({ navigation }: any) {
   const partnerStreak = strugglingStreak(checkins, partnerId);
   const unseenPings = pings.filter((p) => p.fromId !== meId && !p.seenAt);
   const tendIssue = useMemo(() => issueNeedingYou(app.issues, meId), [app.issues, meId]);
+  // A delivered, still-sealed letter from the partner — surface it on Home so a
+  // "deliver later" letter isn't only discoverable by opening the Letters screen.
+  const readyLetter = useMemo(
+    () => app.letters.find((l) => l.authorId !== meId && l.deliverAt <= now && !l.openedAt) ?? null,
+    [app.letters, meId, now],
+  );
   const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
   const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
   const momentDoneToday = hasMomentToday(app.moments, meId);
@@ -115,6 +124,11 @@ export default function HomeScreen({ navigation }: any) {
     pings.length > 0 ||
     app.deck.length > 0;
 
+  function sendFirstHug() {
+    app.sendPing('hug');
+    toast.show(`Hug on its way to ${partnerName} 🤗`);
+  }
+
   return (
     <Screen scroll>
       <AppHeader
@@ -141,6 +155,17 @@ export default function HomeScreen({ navigation }: any) {
           <View style={{ flex: 1 }}>
             <Title>{identity?.partnerName} wants to clear the air</Title>
             <Muted>"{tendIssue.title}". Tap to hear them out and make it right.</Muted>
+          </View>
+        </Card>
+      ) : null}
+
+      {/* A sealed letter just unlocked */}
+      {readyLetter ? (
+        <Card tone="gold" onPress={() => navigation.navigate('Letters')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>💌</Text>
+          <View style={{ flex: 1 }}>
+            <Title>A letter from {partnerName} is ready</Title>
+            <Muted>“{readyLetter.title}”. Tap to open it.</Muted>
           </View>
         </Card>
       ) : null}
@@ -316,6 +341,17 @@ export default function HomeScreen({ navigation }: any) {
         </LinearGradient>
       )}
 
+      {/* First steps — only on day one; disappears once the space has any life */}
+      {!hasSignal ? (
+        <Card style={{ marginTop: spacing.lg }}>
+          <Title>First steps together</Title>
+          <Muted style={{ marginTop: 2, marginBottom: spacing.sm }}>A few taps and your space comes alive.</Muted>
+          <FirstStep emoji="🤗" label={`Send ${partnerName} a hug`} hint="They feel it on their phone right away" onPress={sendFirstHug} />
+          <FirstStep emoji="💛" label="Share how you feel" hint="Your first daily check-in" onPress={() => navigation.navigate('Pulse')} />
+          <FirstStep emoji="📸" label="Capture a moment" hint="One photo, shared just with them" onPress={() => navigation.navigate('Moments')} />
+        </Card>
+      ) : null}
+
       {/* Today's pulse */}
       <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Open</Text></Pressable>}>
         Today’s pulse
@@ -445,6 +481,34 @@ function minLabel(min: number): string {
   return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 }
 
+function FirstStep({
+  emoji,
+  label,
+  hint,
+  onPress,
+}: {
+  emoji: string;
+  label: string;
+  hint: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.firstStep, pressed ? { opacity: 0.7 } : null]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Text style={{ fontSize: 24 }}>{emoji}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.firstStepLabel}>{label}</Text>
+        <Text style={styles.firstStepHint}>{hint}</Text>
+      </View>
+      <Text style={styles.actChevron}>›</Text>
+    </Pressable>
+  );
+}
+
 function HeroMetric({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
@@ -499,6 +563,9 @@ const styles = StyleSheet.create({
   heroMetricLabel: { color: 'rgba(255,255,255,0.8)', fontSize: font.size.xs, marginTop: 2, fontFamily: font.family.body },
   heroBegin: { color: colors.white, fontSize: 26, fontFamily: font.family.display, lineHeight: 32, marginTop: spacing.sm },
   heroBeginSub: { color: 'rgba(255,255,255,0.9)', fontSize: font.size.md, fontFamily: font.family.body, lineHeight: 22, marginTop: spacing.sm },
+  firstStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  firstStepLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
+  firstStepHint: { fontSize: font.size.xs, color: colors.textSoft, fontFamily: font.family.body, marginTop: 1 },
 
   healthTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
   metricsRow: { flexDirection: 'row', marginTop: spacing.lg },
