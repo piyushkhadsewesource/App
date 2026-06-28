@@ -14,6 +14,7 @@ import {
   Title,
 } from '../components/ui';
 import { formatCountdown, formatDate, isoToDate, now, todayISO } from '../lib/date';
+import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
 import { colors, font, spacing } from '../theme';
 
@@ -37,7 +38,9 @@ export default function LettersScreen({ navigation }: any) {
   const [preset, setPreset] = useState('week');
   const [customDate, setCustomDate] = useState('');
 
-  const t = Date.now();
+  // Ticks so a letter crossing its delivery time moves from "sealed" to "ready"
+  // while the screen is open, instead of only on the next unrelated re-render.
+  const t = useNow(30_000);
   const ready = useMemo(
     () => letters.filter((l) => l.authorId !== meId && l.deliverAt <= t && !l.openedAt).sort((a, b) => b.deliverAt - a.deliverAt),
     [letters, meId, t],

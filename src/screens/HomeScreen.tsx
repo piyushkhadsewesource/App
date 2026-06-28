@@ -27,6 +27,7 @@ import { countdownTo, shortCountdown } from '../lib/countdown';
 import { issueNeedingYou } from '../lib/issues';
 import { occasionsOnThisDay, ordinal, untilLabel, upcomingOccasion } from '../lib/occasions';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
+import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 
@@ -34,6 +35,9 @@ export default function HomeScreen({ navigation }: any) {
   const app = useApp();
   const { identity, meId, partnerId, checkins, pings, memories } = app;
   const today = todayISO();
+  // A slow tick so presence ("Active now") and the next-plan window stay honest
+  // without waiting for the next data change.
+  const now = useNow(60_000);
 
   const health = useMemo(
     () => computeHealth({ checkins, memories, letters: app.letters, pings, deck: app.deck, moments: app.moments, meId, partnerId }),
@@ -77,7 +81,7 @@ export default function HomeScreen({ navigation }: any) {
   const recent = useMemo(() => withinHours(activity, 36), [activity]);
   const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
   // Presence: if your partner did anything in the last hour, their pulse face beats.
-  const partnerActive = useMemo(() => recent.some((e) => !e.mine && e.at > Date.now() - 60 * 60 * 1000), [recent]);
+  const partnerActive = useMemo(() => recent.some((e) => !e.mine && e.at > now - 60 * 60 * 1000), [recent, now]);
   const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
 
@@ -87,7 +91,7 @@ export default function HomeScreen({ navigation }: any) {
     const ids = new Set(occToday.map((x) => x.occasion.id));
     return upcomingOccasion(app.occasions.filter((o) => !ids.has(o.id)), 31, 0);
   }, [app.occasions, occToday]);
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMin = new Date(now).getHours() * 60 + new Date(now).getMinutes();
   const nextPlan = useMemo(() => {
     const todays = app.schedule.filter((s) => s.date === today).sort((a, b) => a.startMin - b.startMin);
     return todays.find((s) => s.startMin >= nowMin - 30) ?? null;
