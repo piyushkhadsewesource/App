@@ -17,7 +17,9 @@ import {
 import { Heartbeat } from '../components/Heartbeat';
 import IntensityChart from '../components/IntensityChart';
 import { Reveal } from '../components/Motion';
+import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
+import { isBlank, normalizeCanvas } from '../lib/canvas';
 import { buildActivity, withinHours } from '../lib/activity';
 import { formatDayMonth, formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { averageIntensity, todaysFeelings } from '../lib/feelings';
@@ -127,6 +129,16 @@ export default function HomeScreen({ navigation }: any) {
   }, [memories, today]);
 
   const prompt = promptForDay();
+
+  // Shared-canvas preview for the Home entry (null/short-data safe).
+  const canvasPixels = normalizeCanvas(app.canvas?.pixels);
+  const canvasEmpty = isBlank(canvasPixels);
+  const canvasPartnerNew = !!app.canvas && !app.isMine(app.canvas.updatedBy) && !canvasEmpty;
+  const canvasSub = canvasEmpty
+    ? 'A blank page, start a drawing together'
+    : canvasPartnerNew
+      ? `${partnerName} added to it, tap to watch`
+      : 'Your shared drawing, tap to add';
 
   // Day-one: until there's anything to score, an inviting "begin" hero reads far
   // warmer than "10/100 · Getting started" as the first message about the
@@ -494,6 +506,18 @@ export default function HomeScreen({ navigation }: any) {
           </Pressable>
         </View>
       </Card>
+
+      {/* Our shared canvas — a live thumbnail of the couple's drawing */}
+      <Card onPress={() => navigation.navigate('Canvas')} style={{ marginTop: spacing.md }}>
+        <View style={styles.canvasRow}>
+          <CanvasMini pixels={canvasPixels} size={62} />
+          <View style={{ flex: 1 }}>
+            <Title>Our shared canvas</Title>
+            <Muted style={{ marginTop: 4 }}>{canvasSub}</Muted>
+          </View>
+          {canvasPartnerNew ? <View style={styles.canvasDot} /> : <Text style={styles.actChevron}>›</Text>}
+        </View>
+      </Card>
     </Screen>
   );
 }
@@ -613,6 +637,8 @@ const styles = StyleSheet.create({
   newBadge: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
   newBadgeText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11 },
   feedCard: { padding: 0, overflow: 'hidden' },
+  canvasRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  canvasDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
   togetherRow: { flexDirection: 'row', alignItems: 'flex-start' },
   togetherHalf: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.xs },
   togetherDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: spacing.xs },
