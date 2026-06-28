@@ -36,8 +36,8 @@ export default function HomeScreen({ navigation }: any) {
   const today = todayISO();
 
   const health = useMemo(
-    () => computeHealth({ checkins, memories, letters: app.letters, pings, deck: app.deck, meId, partnerId }),
-    [checkins, memories, app.letters, pings, app.deck, meId, partnerId],
+    () => computeHealth({ checkins, memories, letters: app.letters, pings, deck: app.deck, moments: app.moments, meId, partnerId }),
+    [checkins, memories, app.letters, pings, app.deck, app.moments, meId, partnerId],
   );
   const myToday = latestCheckin(checkins, meId);
   const myCheckedToday = myToday?.date === today;
@@ -68,9 +68,11 @@ export default function HomeScreen({ navigation }: any) {
         issues: app.issues,
         letters: app.letters,
         pings,
+        wordle: app.wordle,
+        tictactoe: app.tictactoe,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [meId, checkins, app.feelings, app.moments, memories, app.reasons, app.future, app.deck, app.schedule, app.occasions, app.issues, app.letters, pings],
+    [meId, checkins, app.feelings, app.moments, memories, app.reasons, app.future, app.deck, app.schedule, app.occasions, app.issues, app.letters, pings, app.wordle, app.tictactoe],
   );
   const recent = useMemo(() => withinHours(activity, 36), [activity]);
   const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
@@ -154,28 +156,20 @@ export default function HomeScreen({ navigation }: any) {
         </Card>
       ) : null}
 
-      {/* Reunion countdown */}
+      {/* Reunion countdown — only shown once a date is set */}
       {meeting ? (
-        <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
+        <Card tone="violet" onPress={() => navigation.navigate(‘Countdown’)} style={styles.alert}>
           <Text style={styles.alertEmoji}>💞</Text>
           <View style={{ flex: 1 }}>
             <Title>
-              {countdownTo(meeting.at).past ? 'You’re together 💞' : `Together in ${shortCountdown(meeting.at)}`}
+              {countdownTo(meeting.at).past ? ‘You’re together 💞’ : `Together in ${shortCountdown(meeting.at)}`}
             </Title>
-            <Muted>{meeting.label || 'Tap for the live countdown.'}</Muted>
+            <Muted>{meeting.label || ‘Tap for the live countdown.’}</Muted>
           </View>
         </Card>
-      ) : (
-        <Card onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>💞</Text>
-          <View style={{ flex: 1 }}>
-            <Title>Set your reunion date</Title>
-            <Muted>Add when you meet next and watch the countdown.</Muted>
-          </View>
-        </Card>
-      )}
+      ) : null}
 
-      {/* A year ago today (from your saved dates) */}
+      {/* Today's occasion */}
       {anniToday ? (
         <Card tone="gold" onPress={() => navigation.navigate('Occasions')} style={styles.alert}>
           <Text style={styles.alertEmoji}>{anniToday.occasion.icon || '🎉'}</Text>
@@ -362,14 +356,13 @@ export default function HomeScreen({ navigation }: any) {
       {onThisDay ? (
         <>
           <SectionTitle>On this day</SectionTitle>
-          <Card tone="gold" onPress={() => navigation.navigate('Vault')}>
-            <Muted>
-              {today.slice(0, 4) === onThisDay.date.slice(0, 4)
-                ? formatDayMonth(onThisDay.date)
-                : `${isoToDate(today).getFullYear() - isoToDate(onThisDay.date).getFullYear()} year(s) ago today`}
-            </Muted>
+          <Card tone="gold" onPress={() => navigation.navigate(‘Vault’)}>
+            {(() => {
+              const yearsAgo = isoToDate(today).getFullYear() - isoToDate(onThisDay.date).getFullYear();
+              return <Muted>{yearsAgo} year{yearsAgo === 1 ? ‘’ : ‘s’} ago today</Muted>;
+            })()}
             <Title style={{ marginTop: 2 }}>
-              {onThisDay.emoji ? `${onThisDay.emoji} ` : ''}
+              {onThisDay.emoji ? `${onThisDay.emoji} ` : ‘’}
               {onThisDay.title}
             </Title>
             {onThisDay.description ? <Body style={{ marginTop: 4 }}>{onThisDay.description}</Body> : null}
@@ -377,20 +370,32 @@ export default function HomeScreen({ navigation }: any) {
         </>
       ) : null}
 
-      {/* Play together */}
-      <Card tone="violet" onPress={() => navigation.navigate('Games')} style={[styles.alert, { marginTop: spacing.lg }]}>
-        <Text style={styles.alertEmoji}>🎮</Text>
-        <View style={{ flex: 1 }}>
-          <Title>Play together</Title>
-          <Muted>Daily Wordle, Ludo, Snakes & Ladders, Tic-Tac-Toe, and more.</Muted>
+      {/* Together today: games + daily prompt in one compact card */}
+      <SectionTitle>Together today</SectionTitle>
+      <Card>
+        <View style={styles.togetherRow}>
+          <Pressable
+            style={styles.togetherHalf}
+            onPress={() => navigation.navigate(‘Games’)}
+            accessibilityRole="button"
+            accessibilityLabel="Play together"
+          >
+            <Text style={{ fontSize: 28 }}>🎮</Text>
+            <Text style={styles.togetherTitle}>Play together</Text>
+            <Muted>Wordle, Ludo & more</Muted>
+          </Pressable>
+          <View style={styles.togetherDivider} />
+          <Pressable
+            style={styles.togetherHalf}
+            onPress={() => navigation.navigate(‘Deck’)}
+            accessibilityRole="button"
+            accessibilityLabel="Answer today’s closeness question"
+          >
+            <Text style={{ fontSize: 28 }}>🃏</Text>
+            <Text style={styles.togetherTitle}>Ask each other</Text>
+            <Muted numberOfLines={2}>{prompt.text.length > 50 ? `${prompt.text.slice(0, 48)}…` : prompt.text}</Muted>
+          </Pressable>
         </View>
-      </Card>
-
-      {/* Daily prompt teaser */}
-      <SectionTitle>Today’s closeness question</SectionTitle>
-      <Card tone="violet" onPress={() => navigation.navigate('Deck')}>
-        <Body style={{ fontFamily: font.family.semibold }}>{prompt.text}</Body>
-        <Muted style={{ marginTop: spacing.sm }}>Tap to answer together →</Muted>
       </Card>
     </Screen>
   );
@@ -476,6 +481,10 @@ const styles = StyleSheet.create({
   newBadge: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
   newBadgeText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11 },
   feedCard: { padding: 0, overflow: 'hidden' },
+  togetherRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  togetherHalf: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.xs },
+  togetherDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: spacing.xs },
+  togetherTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
   actText: { fontSize: font.size.md, color: colors.text, fontFamily: font.family.body, lineHeight: 21 },
   actRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: 18 },
   actDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },

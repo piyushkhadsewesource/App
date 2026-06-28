@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
   Body,
@@ -105,6 +105,9 @@ export default function PulseScreen() {
                   <Pressable
                     key={m.key}
                     onPress={() => { hLight(); setMood(m.key); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={m.label}
+                    accessibilityState={{ selected: active }}
                     style={[
                       styles.moodChip,
                       { backgroundColor: active ? m.color : m.soft, borderColor: active ? m.color : 'transparent' },
@@ -164,12 +167,16 @@ export default function PulseScreen() {
               <SectionTitle>Your week</SectionTitle>
               <Card>
                 <View style={styles.weekRow}>
-                  {history.map((c) => (
-                    <View key={c.id} style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 24 }}>{moodMeta(c.mood).emoji}</Text>
-                      <Muted style={{ marginTop: 4 }}>{formatDayMonth(c.date).split(' ')[1]}</Muted>
-                    </View>
-                  ))}
+                  {history.map((c) => {
+                    const d = new Date(c.date + 'T12:00:00');
+                    const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+                    return (
+                      <View key={c.id} style={{ alignItems: 'center' }}>
+                        <Text style={{ fontSize: 24 }}>{moodMeta(c.mood).emoji}</Text>
+                        <Muted style={{ marginTop: 4 }}>{wd}</Muted>
+                      </View>
+                    );
+                  })}
                 </View>
               </Card>
             </>
@@ -193,6 +200,9 @@ export default function PulseScreen() {
               <Pressable
                 key={m.key}
                 onPress={() => { hLight(); setLogMood(m.key); }}
+                accessibilityRole="button"
+                accessibilityLabel={m.label}
+                accessibilityState={{ selected: active }}
                 style={[styles.moodChip, { backgroundColor: active ? m.color : m.soft, borderColor: active ? m.color : 'transparent' }]}
               >
                 <Text style={{ fontSize: 18 }}>{m.emoji}</Text>
@@ -264,7 +274,17 @@ export default function PulseScreen() {
                     {f.note ? <Muted style={{ marginTop: 3 }}>“{f.note}”</Muted> : null}
                   </View>
                   {mine ? (
-                    <Pressable hitSlop={8} onPress={() => app.removeFeeling(f.id)} accessibilityRole="button" accessibilityLabel="Delete this feeling">
+                    <Pressable
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete this feeling"
+                      onPress={() =>
+                        Alert.alert('Remove this feeling?', 'This entry will be deleted.', [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Remove', style: 'destructive', onPress: () => app.removeFeeling(f.id) },
+                        ])
+                      }
+                    >
                       <Text style={styles.feelX}>×</Text>
                     </Pressable>
                   ) : null}

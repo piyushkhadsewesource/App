@@ -17,7 +17,10 @@ import {
   PingType,
   Reason,
   ScheduleItem,
+  TicTacToe,
+  WordleResult,
 } from '../types/models';
+import { tttWinner } from './games';
 import { moodMeta } from './mood';
 
 export interface ActivityEvent {
@@ -46,6 +49,8 @@ export interface ActivitySources {
   issues: Issue[];
   letters: Letter[];
   pings: Ping[];
+  wordle: WordleResult[];
+  tictactoe: TicTacToe | null;
 }
 
 function pingIcon(t: PingType): string {
@@ -115,6 +120,32 @@ export function buildActivity(s: ActivitySources): ActivityEvent[] {
   }
   for (const p of s.pings) {
     push({ id: `pg_${p.id}`, actorId: p.fromId, icon: pingIcon(p.type), at: p.createdAt, route: 'MissYou', text: `${who(p.fromId)} sent ${pingWord(p.type)}` });
+  }
+  for (const w of s.wordle) {
+    push({
+      id: `wl_${w.id}`,
+      actorId: w.authorId,
+      icon: w.solved ? '🟩' : '🟥',
+      at: w.updatedAt,
+      route: 'Wordle',
+      text: w.solved
+        ? `${who(w.authorId)} solved today's Wordle in ${w.guesses.length} ${w.guesses.length === 1 ? 'guess' : 'guesses'}`
+        : `${who(w.authorId)} tried today's Wordle`,
+    });
+  }
+  if (s.tictactoe) {
+    const mark = tttWinner(s.tictactoe.board);
+    if (mark === 'X' || mark === 'O') {
+      const winnerId = mark === 'X' ? s.tictactoe.xId : s.tictactoe.oId;
+      push({
+        id: `ttt_${s.tictactoe.updatedAt}`,
+        actorId: winnerId,
+        icon: '🎮',
+        at: s.tictactoe.updatedAt,
+        route: 'TicTacToe',
+        text: `${who(winnerId)} won tic-tac-toe`,
+      });
+    }
   }
 
   return ev.sort((a, b) => b.at - a.at);

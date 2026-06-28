@@ -218,6 +218,8 @@ export default function MissYouScreen() {
             <Pressable
               key={p.type}
               onPress={() => send(p.type, p.sent, p.emoji)}
+              accessibilityRole="button"
+              accessibilityLabel={`Send a ${p.label}`}
               style={({ pressed }) => [styles.pingWrap, pressed ? { transform: [{ scale: 0.96 }] } : null]}
             >
               <LinearGradient colors={p.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ping}>

@@ -9,7 +9,7 @@ import React, {
   useState,
 } from 'react';
 import { Platform } from 'react-native';
-import { now } from '../lib/date';
+import { now, todayISO } from '../lib/date';
 import { createDb, Db, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
 import { registerForPush, sendPush, sendSosPush } from '../services/push';
@@ -310,7 +310,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return others[0] ?? DEMO_PARTNER_ID;
   }, [meId, identity, checkins, feelings, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
 
-  const value: AppValue = {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const value = useMemo<AppValue>(() => ({
     ready,
     cloud: cloudEnabled,
     identity,
@@ -392,10 +393,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async saveCheckin(data) {
       const db = dbRef.current;
       if (!db) return;
-      const today = new Date();
-      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-        today.getDate(),
-      ).padStart(2, '0')}`;
+      const date = todayISO();
       const existing = checkins.find((c) => c.authorId === meId && c.date === date);
       const item: CheckIn = {
         id: existing?.id ?? genId('c_'),
@@ -411,10 +409,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async logFeeling(data) {
       const db = dbRef.current;
       if (!db) return;
-      const today = new Date();
-      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-        today.getDate(),
-      ).padStart(2, '0')}`;
+      const date = todayISO();
       await db.add('feelings', {
         id: genId('fl_'),
         authorId: meId,
@@ -566,12 +561,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!data.image || data.image.length > MAX_IMAGE_CHARS) {
         throw new Error('That photo is too large to share. Please try another one.');
       }
-      const today = new Date();
-      const date =
-        data.date ??
-        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-          today.getDate(),
-        ).padStart(2, '0')}`;
+      const date = data.date ?? todayISO();
       const ok = await db.add('moments', {
         id: genId('p_'),
         authorId: meId,
@@ -954,7 +944,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async removeIssueStep(id) {
       await dbRef.current?.remove('issueSteps', id);
     },
-  };
+  // Recreate only when actual state changes, not on every parent render.
+  }), [ready, identity, meId, partnerId, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

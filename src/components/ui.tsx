@@ -116,7 +116,7 @@ export function Card({
   if (!onPress) return body;
   // Tappable cards gently spring inward on press for a tactile, physical feel.
   return (
-    <Press onPress={onPress} scaleTo={0.985}>
+    <Press onPress={onPress} scaleTo={0.985} accessibilityRole="button">
       {body}
     </Press>
   );
