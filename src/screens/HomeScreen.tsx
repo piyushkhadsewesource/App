@@ -104,6 +104,17 @@ export default function HomeScreen({ navigation }: any) {
 
   const prompt = promptForDay();
 
+  // Day-one: until there's anything to score, an inviting "begin" hero reads far
+  // warmer than "10/100 · Getting started" as the first message about the
+  // relationship. Any of these signals means the score is meaningful.
+  const hasSignal =
+    checkins.length > 0 ||
+    app.feelings.length > 0 ||
+    app.moments.length > 0 ||
+    memories.length > 0 ||
+    pings.length > 0 ||
+    app.deck.length > 0;
+
   return (
     <Screen scroll>
       <AppHeader
@@ -171,7 +182,18 @@ export default function HomeScreen({ navigation }: any) {
             <Muted>{meeting.label || 'Tap for the live countdown.'}</Muted>
           </View>
         </Card>
-      ) : null}
+      ) : (
+        // Zero-state: nudge the most emotional feature so a live countdown is one
+        // tap away on the very first Home view. Disappears once a date is set.
+        <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
+          <Text style={styles.alertEmoji}>💞</Text>
+          <View style={{ flex: 1 }}>
+            <Title>Set your reunion date</Title>
+            <Muted>Start a live countdown to the next time you’re together.</Muted>
+          </View>
+          <Text style={styles.actChevron}>›</Text>
+        </Card>
+      )}
 
       {/* Today's occasion */}
       {anniToday ? (
@@ -257,31 +279,42 @@ export default function HomeScreen({ navigation }: any) {
       ) : null}
 
       {/* Relationship health hero */}
-      <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
-        <View style={styles.healthTop}>
-          <View>
-            <Text style={styles.heroLabel}>Closeness today</Text>
-            <Text style={styles.heroScore}>
-              {health.closeness}
-              <Text style={styles.heroScoreMax}>/100</Text>
-            </Text>
+      {hasSignal ? (
+        <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
+          <View style={styles.healthTop}>
+            <View>
+              <Text style={styles.heroLabel}>Closeness today</Text>
+              <Text style={styles.heroScore}>
+                {health.closeness}
+                <Text style={styles.heroScoreMax}>/100</Text>
+              </Text>
+            </View>
+            <View style={styles.heroTag}>
+              <Text style={styles.heroTagText}>{health.label}</Text>
+            </View>
           </View>
-          <View style={styles.heroTag}>
-            <Text style={styles.heroTagText}>{health.label}</Text>
+          <View style={styles.heroTrack}>
+            <View style={[styles.heroFill, { width: `${Math.max(4, Math.min(100, health.closeness))}%` }]} />
           </View>
-        </View>
-        <View style={styles.heroTrack}>
-          <View style={[styles.heroFill, { width: `${Math.max(4, Math.min(100, health.closeness))}%` }]} />
-        </View>
-        <View style={styles.metricsRow}>
-          <HeroMetric label="Mood sync" value={`${health.moodAlignment}%`} />
-          <HeroMetric label="This week" value={`${health.sharedThisWeek}`} />
-          <HeroMetric
-            label="Together"
-            value={health.daysSinceTogether == null ? 'not yet' : health.daysSinceTogether === 0 ? 'today' : `${health.daysSinceTogether}d ago`}
-          />
-        </View>
-      </LinearGradient>
+          <View style={styles.metricsRow}>
+            <HeroMetric label="Mood sync" value={`${health.moodAlignment}%`} />
+            <HeroMetric label="This week" value={`${health.sharedThisWeek}`} />
+            <HeroMetric
+              label="Together"
+              value={health.daysSinceTogether == null ? 'not yet' : health.daysSinceTogether === 0 ? 'today' : `${health.daysSinceTogether}d ago`}
+            />
+          </View>
+        </LinearGradient>
+      ) : (
+        <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
+          <Text style={styles.heroLabel}>Closeness today</Text>
+          <Text style={styles.heroBegin}>Your story starts now 🤍</Text>
+          <Text style={styles.heroBeginSub}>
+            Check in, share a moment, send {identity?.partnerName ?? 'them'} a hug, and watch your
+            closeness grow right here.
+          </Text>
+        </LinearGradient>
+      )}
 
       {/* Today's pulse */}
       <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Open</Text></Pressable>}>
@@ -464,6 +497,8 @@ const styles = StyleSheet.create({
   heroFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.white },
   heroMetricValue: { color: colors.white, fontSize: font.size.lg, fontFamily: font.family.bold },
   heroMetricLabel: { color: 'rgba(255,255,255,0.8)', fontSize: font.size.xs, marginTop: 2, fontFamily: font.family.body },
+  heroBegin: { color: colors.white, fontSize: 26, fontFamily: font.family.display, lineHeight: 32, marginTop: spacing.sm },
+  heroBeginSub: { color: 'rgba(255,255,255,0.9)', fontSize: font.size.md, fontFamily: font.family.body, lineHeight: 22, marginTop: spacing.sm },
 
   healthTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
   metricsRow: { flexDirection: 'row', marginTop: spacing.lg },
