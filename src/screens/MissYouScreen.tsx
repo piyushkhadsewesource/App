@@ -108,6 +108,7 @@ export default function MissYouScreen() {
   const [shuffle, setShuffle] = useState(0);
   const [newReason, setNewReason] = useState('');
   const [note, setNote] = useState('');
+  const [peek, setPeek] = useState(0); // which miss-o-meter heart is being pressed
   const burst = useBurst();
 
   // Mark the partner's pings seen, and re-run whenever the unseen set changes —
@@ -239,8 +240,19 @@ export default function MissYouScreen() {
           <Body style={{ fontFamily: font.family.semibold }}>How much do you miss them right now?</Body>
           <View style={styles.meterRow}>
             {[1, 2, 3, 4, 5].map((n) => (
-              <Pressable key={n} onPress={() => sendMiss(n)} hitSlop={6} style={styles.meterHeart}>
-                <Text style={{ fontSize: 30 }}>💗</Text>
+              <Pressable
+                key={n}
+                onPressIn={() => setPeek(n)}
+                onPressOut={() => setPeek(0)}
+                onPress={() => sendMiss(n)}
+                hitSlop={6}
+                style={styles.meterHeart}
+                accessibilityRole="button"
+                accessibilityLabel={`Miss you ${n} out of 5`}
+              >
+                {/* Hearts grow left→right so the row reads as a 1–5 scale at
+                    rest, and while pressing heart N the ones beyond it dim. */}
+                <Text style={{ fontSize: 22 + n * 3, opacity: peek === 0 || n <= peek ? 1 : 0.25 }}>💗</Text>
               </Pressable>
             ))}
           </View>

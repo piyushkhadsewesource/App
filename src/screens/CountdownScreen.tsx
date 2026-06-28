@@ -51,6 +51,10 @@ export default function CountdownScreen({ navigation }: any) {
       Alert.alert('Pick a date', 'Tap the date field to choose when you meet next.');
       return;
     }
+    if (selectedAt <= Date.now()) {
+      Alert.alert('Pick a future time', 'Your reunion is something to look forward to, choose a date and time still ahead.');
+      return;
+    }
     // Update the UI immediately; fire the write without blocking (offline the
     // cloud ack can hang, but the meeting lands locally at once).
     const at = selectedAt;

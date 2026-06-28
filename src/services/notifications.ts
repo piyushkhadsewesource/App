@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { ensureNotificationPermission, hasNotificationPermission } from './permission';
+import { nextOccurrence } from '../lib/occasions';
 
 const CONFIG_KEY = '@tether/reminders.v2';
 const LEGACY_KEY = '@tether/reminders';
@@ -413,13 +414,7 @@ async function ensureOccasionChannel() {
   }
 }
 
-function parseISO(s: string): Date {
-  const [y, m, d] = s.split('-').map((x) => parseInt(x, 10));
-  return new Date(y || 2024, (m || 1) - 1, d || 1);
-}
-
 async function scheduleOccasion(o: OccasionLite) {
-  const anchor = parseISO(o.date);
   const remind = Math.max(0, Math.min(60, Math.round(o.remindDaysBefore || 0)));
   const icon = o.icon || '💗';
   const when = remind === 0 ? 'today' : remind === 1 ? 'tomorrow' : `in ${remind} days`;
@@ -428,32 +423,20 @@ async function scheduleOccasion(o: OccasionLite) {
     body: remind === 0 ? `${o.title} is today! 🎉` : `${o.title} is ${when}.`,
     data: { kind: 'occasion', id: o.id },
   };
-  const T = Notifications.SchedulableTriggerInputTypes;
 
-  if (o.recurrence === 'once') {
-    const d = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - remind, 9, 0, 0, 0);
-    if (d.getTime() > Date.now() + 1000) {
-      await Notifications.scheduleNotificationAsync({ content, trigger: { type: T.DATE, date: d, channelId: OCC_CHANNEL } });
-    }
-    return;
-  }
-  if (o.recurrence === 'yearly') {
-    const r = new Date(2024, anchor.getMonth(), anchor.getDate());
-    r.setDate(r.getDate() - remind);
+  // Fire on exactly the date the app displays — nextOccurrence(), minus the
+  // reminder lead, at 9am — as a one-shot that syncOccasionReminders re-arms on
+  // each launch. The old recurring YEARLY/MONTHLY triggers clamped month-end and
+  // Feb-29 dates to the 28th, so the reminder fired on a different day than the
+  // card showed; routing both through nextOccurrence keeps them in agreement.
+  const occ = nextOccurrence(o);
+  const fire = new Date(occ.getFullYear(), occ.getMonth(), occ.getDate() - remind, 9, 0, 0, 0);
+  if (fire.getTime() > Date.now() + 1000) {
     await Notifications.scheduleNotificationAsync({
       content,
-      trigger: { type: T.YEARLY, month: r.getMonth(), day: r.getDate(), hour: 9, minute: 0, channelId: OCC_CHANNEL },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire, channelId: OCC_CHANNEL },
     });
-    return;
   }
-  // monthly
-  let day = anchor.getDate() - remind;
-  if (day < 1) day = 1;
-  if (day > 28) day = 28;
-  await Notifications.scheduleNotificationAsync({
-    content,
-    trigger: { type: T.MONTHLY, day, hour: 9, minute: 0, channelId: OCC_CHANNEL },
-  });
 }
 
 /** Re-schedule local reminders for the couple's saved occasions. */

@@ -1,18 +1,22 @@
 import { Occasion } from '../types/models';
 
+// The minimal shape the date math needs, so callers like the notification
+// scheduler (which holds a lighter occasion type) can reuse it without casts.
+type RecurringDate = { date: string; recurrence: 'yearly' | 'monthly' | 'once' };
+
 function startOfToday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-export function anchorDate(o: Occasion): Date {
+export function anchorDate(o: RecurringDate): Date {
   const [y, m, d] = o.date.split('-').map((n) => parseInt(n, 10));
   return new Date(y || 2024, (m || 1) - 1, d || 1);
 }
 
 /** The next date this occasion happens, from `from` onward. */
-export function nextOccurrence(o: Occasion, from = new Date()): Date {
+export function nextOccurrence(o: RecurringDate, from = new Date()): Date {
   const anchor = anchorDate(o);
   const base = new Date(from);
   base.setHours(0, 0, 0, 0);

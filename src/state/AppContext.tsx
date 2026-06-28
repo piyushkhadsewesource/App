@@ -812,10 +812,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const db = dbRef.current;
       if (!db || fromDate === toDate) return;
       const mine = schedule.filter((s) => s.date === fromDate && s.authorId === meId);
+      // Skip items that already exist on the target day (same title + start), so
+      // tapping "Copy" twice doesn't silently double every plan.
+      const existing = schedule.filter((s) => s.date === toDate && s.authorId === meId);
+      const isDupe = (s: ScheduleItem) =>
+        existing.some((e) => e.title === s.title && e.startMin === s.startMin);
       // Fire the copies concurrently: a single write can stall offline (the
       // cloud ack never arrives), and a sequential await would block the rest.
       await Promise.all(
-        mine.map((s) =>
+        mine
+          .filter((s) => !isDupe(s))
+          .map((s) =>
           db.add('schedule', {
             id: genId('sc_'),
             authorId: meId,

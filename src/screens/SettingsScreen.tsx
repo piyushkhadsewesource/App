@@ -63,6 +63,13 @@ export default function SettingsScreen({ navigation }: any) {
             ? 'Your two phones are syncing live through Firebase. Use the same pairing code on both.'
             : "Running on-device. To sync with your partner's phone, add your free Firebase keys in src/config.ts, see SETUP.md for the 5-minute guide."}
         </Body>
+        {app.cloud ? (
+          <Muted style={{ marginTop: spacing.sm }}>
+            Pairing check: this phone is "{app.meId}", linked to "{app.partnerId}". Your partner's
+            phone should show the mirror of this. If a turn-based game ever sticks on "their turn",
+            it means the names don't line up, re-enter each other's names the same way on both phones.
+          </Muted>
+        ) : null}
       </Card>
 
       <SectionTitle>Daily photo reminders</SectionTitle>
