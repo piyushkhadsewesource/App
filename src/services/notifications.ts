@@ -225,7 +225,9 @@ export async function refreshReminders(postedDates: string[], partnerName?: stri
   try {
     const cfg = await getReminderConfig();
     if (!cfg.enabled) return;
-    if (await ensureNotificationPermission()) await scheduleSmart(cfg, postedDates, partnerName);
+    // Launch path: never prompt here (the in-app card asks in context). Only
+    // schedule if permission is already granted.
+    if (await hasNotificationPermission()) await scheduleSmart(cfg, postedDates, partnerName);
   } catch {
     /* notifications unavailable */
   }
@@ -345,7 +347,8 @@ export async function refreshPlanReminders(plannedDates: string[], partnerName?:
       await cancelKind('plan');
       return;
     }
-    if (await ensureNotificationPermission()) await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
+    // Launch path: never prompt here; only schedule if already granted.
+    if (await hasNotificationPermission()) await schedulePlan(plannedDates, partnerName?.trim() || 'your partner');
   } catch {
     /* notifications unavailable */
   }

@@ -12,6 +12,7 @@ import { Platform } from 'react-native';
 import { now, todayISO } from '../lib/date';
 import { createDb, Db, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
+import { hasNotificationPermission } from '../services/permission';
 import { registerForPush, sendPush, sendSosPush } from '../services/push';
 import {
   clearIdentity,
@@ -258,6 +259,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!identity || !cloudEnabled) return;
     let cancelled = false;
     (async () => {
+      // Don't prompt for notifications at launch — the in-app card on Miss You
+      // asks in context. Only fetch/store the push token if permission is
+      // already granted (re-runs on a later launch once the user enables it).
+      if (!(await hasNotificationPermission())) return;
       const token = await registerForPush();
       if (cancelled || !token) return;
       try {
