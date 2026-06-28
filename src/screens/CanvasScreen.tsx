@@ -1,9 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import { Skeleton, useInitialHydrate } from '../components/Skeleton';
-import { hLight, hMedium } from '../lib/haptics';
+import { hLight, hMedium, hSuccess } from '../lib/haptics';
 import {
+  CANVAS_CELLS,
   CANVAS_SIZE,
   CANVAS_SWATCHES,
   EMPTY_CANVAS,
@@ -15,52 +17,161 @@ import {
 } from '../lib/canvas';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
-
-const haptic = (fn: () => void) => {
-  if (Platform.OS !== 'web') fn();
-};
+import { spring as springs } from '../theme/motion';
 
 export default function CanvasScreen({ navigation }: any) {
   const app = useApp();
   const canvas = app.canvas;
   const partner = app.identity?.partnerName ?? 'them';
+  const seenKey = app.identity?.spaceId ? `@tether/canvasSeen/${app.identity.spaceId}` : null;
 
-  // Skeleton only while a cloud space is still settling on first load.
   const hydrating = useInitialHydrate();
-  const loading = app.cloud && hydrating && !canvas;
 
-  const [pixels, setPixels] = useState<string>(() => normalizeCanvas(canvas?.pixels));
+  const [pixels, setPixels] = useState<string>(EMPTY_CANVAS);
   const [color, setColor] = useState<string>(CANVAS_SWATCHES[1].ch); // default: Rose
   const [box, setBox] = useState(0); // measured grid side length (px)
+  const [replaying, setReplaying] = useState(false);
+  const [seenLoaded, setSeenLoaded] = useState(false);
 
-  // The PanResponder is created once; these refs keep its handlers reading the
-  // latest values (color, cell size, current pixels) with no stale closures.
+  // The whole grid + first "seen" record must be ready before we paint anything,
+  // so the discovery replay starts from what the user last saw (not a flash of
+  // the final image).
+  const loading = (!seenLoaded || (app.cloud && hydrating && !canvas)) && !replaying;
+
+  // Refs keep the once-created PanResponder reading the latest values.
   const pixelsRef = useRef(pixels);
   const colorRef = useRef(color);
   const cellRef = useRef(0);
   const drawingRef = useRef(false);
-  const lastSyncedRef = useRef(pixels); // what we believe is already on the server
+  const replayingRef = useRef(false);
+  const lastSyncedRef = useRef<string>(EMPTY_CANVAS); // what we believe is on the server
+  const lastSeenRef = useRef<string | null>(null); // what the user has actually watched
+  const replayTargetRef = useRef<string>(EMPTY_CANVAS);
+  const didInitialRef = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const replayTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastHapticRef = useRef(0);
   pixelsRef.current = pixels;
   colorRef.current = color;
   cellRef.current = box > 0 ? box / CANVAS_SIZE : 0;
+  replayingRef.current = replaying;
 
-  // Adopt incoming updates (the partner's strokes, or the first load) only when
-  // we're not mid-stroke, so a live edit is never clobbered underfoot.
+  // Load the last-seen board for this space (UI memory, like other prefs).
   useEffect(() => {
-    if (!canvas) return;
-    const incoming = normalizeCanvas(canvas.pixels);
-    if (!drawingRef.current && incoming !== lastSyncedRef.current) {
-      lastSyncedRef.current = incoming;
-      setPixels(incoming);
+    let alive = true;
+    if (!seenKey) {
+      setSeenLoaded(true);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvas?.updatedAt, canvas?.updatedBy]);
+    AsyncStorage.getItem(seenKey)
+      .then((v) => {
+        if (!alive) return;
+        lastSeenRef.current = v;
+        setSeenLoaded(true);
+      })
+      .catch(() => alive && setSeenLoaded(true));
+    return () => {
+      alive = false;
+    };
+  }, [seenKey]);
 
-  // Flush any pending write on unmount.
+  const markSeen = (p: string) => {
+    lastSeenRef.current = p;
+    if (seenKey) AsyncStorage.setItem(seenKey, p).catch(() => {});
+  };
+
+  // A gentle, throttled "drawing" tick (no-ops on web via hLight's guard).
+  const tickHaptic = (gapMs: number) => {
+    const t = Date.now();
+    if (t - lastHapticRef.current >= gapMs) {
+      lastHapticRef.current = t;
+      hLight();
+    }
+  };
+
+  function finishReplay(target: string) {
+    if (replayTimer.current) {
+      clearInterval(replayTimer.current);
+      replayTimer.current = null;
+    }
+    pixelsRef.current = target;
+    setPixels(target);
+    lastSyncedRef.current = target;
+    markSeen(target);
+    setReplaying(false);
+    hSuccess(); // the partner's piece has fully "arrived"
+  }
+
+  // Reveal the changed cells from `base` to `target`, staggered over ~1–1.5s,
+  // so the partner's drawing appears to be drawn in front of you.
+  function startReplay(base: string, target: string) {
+    const changed: number[] = [];
+    for (let i = 0; i < CANVAS_CELLS; i += 1) if (base[i] !== target[i]) changed.push(i);
+    if (changed.length === 0) {
+      pixelsRef.current = target;
+      setPixels(target);
+      lastSyncedRef.current = target;
+      markSeen(target);
+      return;
+    }
+    replayTargetRef.current = target;
+    setReplaying(true);
+    let work = base;
+    pixelsRef.current = base;
+    setPixels(base);
+    const duration = Math.min(1500, Math.max(700, changed.length * 14));
+    const tickMs = 40;
+    const perTick = Math.max(1, Math.ceil(changed.length / Math.ceil(duration / tickMs)));
+    let idx = 0;
+    if (replayTimer.current) clearInterval(replayTimer.current);
+    replayTimer.current = setInterval(() => {
+      for (let k = 0; k < perTick && idx < changed.length; k += 1, idx += 1) {
+        const ci = changed[idx];
+        work = work.slice(0, ci) + target[ci] + work.slice(ci + 1);
+      }
+      pixelsRef.current = work;
+      setPixels(work);
+      tickHaptic(90);
+      if (idx >= changed.length) finishReplay(target);
+    }, tickMs);
+  }
+
+  function skipReplay() {
+    finishReplay(replayTargetRef.current);
+  }
+
+  // Decide what to do when the synced canvas changes. The first time we see the
+  // board on this open, if the partner drew it, play the discovery replay; after
+  // that, live updates adopt instantly so co-drawing stays snappy.
+  useEffect(() => {
+    if (!seenLoaded || !canvas) return;
+    if (drawingRef.current || replayingRef.current) return;
+    const incoming = normalizeCanvas(canvas.pixels);
+    if (incoming === lastSyncedRef.current) return;
+    const partnerDrew = !app.isMine(canvas.updatedBy);
+    const base = normalizeCanvas(lastSeenRef.current ?? lastSyncedRef.current);
+
+    if (!didInitialRef.current) {
+      didInitialRef.current = true;
+      if (partnerDrew && incoming !== base && !isBlank(incoming)) {
+        lastSyncedRef.current = incoming;
+        startReplay(base, incoming);
+        return;
+      }
+    }
+    // Default: adopt instantly (our own echo, or live partner stroke).
+    lastSyncedRef.current = incoming;
+    pixelsRef.current = incoming;
+    setPixels(incoming);
+    markSeen(incoming);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvas?.updatedAt, canvas?.updatedBy, seenLoaded]);
+
+  // Cleanup timers on unmount.
   useEffect(
     () => () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (replayTimer.current) clearInterval(replayTimer.current);
     },
     [],
   );
@@ -71,9 +182,10 @@ export default function CanvasScreen({ navigation }: any) {
       saveTimer.current = null;
     }
     const p = pixelsRef.current;
-    if (p === lastSyncedRef.current) return; // nothing new since last sync
+    if (p === lastSyncedRef.current) return;
     lastSyncedRef.current = p;
-    void app.saveCanvas(p); // AppContext write is wrapped + never rejects
+    markSeen(p);
+    void app.saveCanvas(p); // wrapped write, never rejects
   };
   const scheduleSave = () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -85,9 +197,11 @@ export default function CanvasScreen({ navigation }: any) {
     if (next === pixelsRef.current) return; // already that colour
     pixelsRef.current = next;
     setPixels(next);
+    tickHaptic(45); // light tick per freshly-filled pixel
     scheduleSave();
   };
   const paintFromEvent = (evt: { nativeEvent: { locationX: number; locationY: number } }) => {
+    if (replayingRef.current) return; // drawing is locked during the replay
     const cs = cellRef.current;
     if (!cs) return;
     const { locationX, locationY } = evt.nativeEvent;
@@ -97,15 +211,10 @@ export default function CanvasScreen({ navigation }: any) {
     paintIndex(row * CANVAS_SIZE + col);
   };
 
-  // Keep the responder calling the freshest closures via a handlers ref.
-  const handlers = useRef({
-    grant: (_e: any) => {},
-    move: (_e: any) => {},
-    release: () => {},
-  });
+  const handlers = useRef({ grant: (_e: any) => {}, move: (_e: any) => {}, release: () => {} });
   handlers.current.grant = (e) => {
+    if (replayingRef.current) return;
     drawingRef.current = true;
-    haptic(hLight);
     paintFromEvent(e);
   };
   handlers.current.move = (e) => paintFromEvent(e);
@@ -126,11 +235,11 @@ export default function CanvasScreen({ navigation }: any) {
 
   function selectColor(ch: string) {
     setColor(ch);
-    haptic(hMedium);
+    hMedium();
   }
 
   function confirmClear() {
-    if (isBlank(pixelsRef.current)) return; // nothing to erase
+    if (isBlank(pixelsRef.current)) return;
     Alert.alert(
       'Clear the canvas?',
       `This erases everything you and ${partner} drew here. It can't be undone.`,
@@ -142,8 +251,9 @@ export default function CanvasScreen({ navigation }: any) {
           onPress: () => {
             pixelsRef.current = EMPTY_CANVAS;
             lastSyncedRef.current = EMPTY_CANVAS;
+            markSeen(EMPTY_CANVAS);
             setPixels(EMPTY_CANVAS);
-            haptic(hMedium);
+            hSuccess();
             void app.clearCanvas();
           },
         },
@@ -159,9 +269,11 @@ export default function CanvasScreen({ navigation }: any) {
       <AppHeader title="Our Shared Canvas" subtitle="Draw together, in real time" onBack={() => navigation.goBack()} />
 
       <Muted style={{ marginBottom: spacing.md }}>
-        {lastBy
-          ? `Last touched by ${lastBy}. Pick a colour and draw, ${partner} sees every pixel as you go.`
-          : `A blank page for the two of you. Pick a colour and draw, ${partner} sees every pixel as you go.`}
+        {replaying
+          ? `${partner} drew this, watch it appear…`
+          : lastBy
+            ? `Last touched by ${lastBy}. Pick a colour and draw, ${partner} sees every pixel as you go.`
+            : `A blank page for the two of you. Pick a colour and draw, ${partner} sees every pixel as you go.`}
       </Muted>
 
       {/* The grid */}
@@ -185,51 +297,27 @@ export default function CanvasScreen({ navigation }: any) {
                 ))
               : null}
           </View>
+
+          {/* Skip the discovery replay */}
+          {replaying ? (
+            <Pressable onPress={skipReplay} style={styles.skip} accessibilityRole="button" accessibilityLabel="Skip replay">
+              <Text style={styles.skipText}>Skip ›</Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
 
       {/* Palette */}
       <Text style={styles.paletteLabel}>Colours</Text>
       <View style={styles.palette}>
-        {CANVAS_SWATCHES.map((s) => {
-          const on = color === s.ch;
-          return (
-            <Pressable
-              key={s.ch}
-              onPress={() => selectColor(s.ch)}
-              accessibilityRole="button"
-              accessibilityLabel={s.name}
-              accessibilityState={{ selected: on }}
-              hitSlop={6}
-              style={({ pressed }) => (pressed ? { transform: [{ scale: 0.92 }] } : null)}
-            >
-              <View style={[styles.swatch, { backgroundColor: s.color }, on && styles.swatchOn]} />
-            </Pressable>
-          );
-        })}
-        {/* Eraser paints the empty cell */}
-        <Pressable
-          onPress={() => selectColor(EMPTY_CELL)}
-          accessibilityRole="button"
-          accessibilityLabel="Eraser"
-          accessibilityState={{ selected: color === EMPTY_CELL }}
-          hitSlop={6}
-          style={({ pressed }) => (pressed ? { transform: [{ scale: 0.92 }] } : null)}
-        >
-          <View style={[styles.swatch, styles.eraser, color === EMPTY_CELL && styles.swatchOn]}>
-            <Text style={{ fontSize: 15 }}>⌫</Text>
-          </View>
-        </Pressable>
+        {CANVAS_SWATCHES.map((s) => (
+          <Swatch key={s.ch} color={s.color} name={s.name} selected={color === s.ch} onPress={() => selectColor(s.ch)} />
+        ))}
+        <Swatch eraser name="Eraser" selected={color === EMPTY_CELL} onPress={() => selectColor(EMPTY_CELL)} />
       </View>
 
       <View style={{ height: spacing.lg }} />
-      <Button
-        label="Clear canvas"
-        variant="outline"
-        color={colors.danger}
-        disabled={blank}
-        onPress={confirmClear}
-      />
+      <Button label="Clear canvas" variant="outline" color={colors.danger} disabled={blank || replaying} onPress={confirmClear} />
 
       <Card tone="surface" style={{ marginTop: spacing.lg }}>
         <Body>
@@ -241,12 +329,52 @@ export default function CanvasScreen({ navigation }: any) {
   );
 }
 
+/** A palette swatch that springs in when selected. */
+function Swatch({
+  color,
+  name,
+  selected,
+  onPress,
+  eraser,
+}: {
+  color?: string;
+  name: string;
+  selected: boolean;
+  onPress: () => void;
+  eraser?: boolean;
+}) {
+  const scale = useRef(new Animated.Value(selected ? 1.1 : 1)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: selected ? 1.1 : 1, useNativeDriver: true, ...springs.bouncy }).start();
+  }, [selected, scale]);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={name}
+      accessibilityState={{ selected }}
+      hitSlop={6}
+    >
+      <Animated.View
+        style={[
+          styles.swatch,
+          eraser ? styles.eraser : { backgroundColor: color },
+          selected && styles.swatchOn,
+          { transform: [{ scale }] },
+        ]}
+      >
+        {eraser ? <Text style={{ fontSize: 15 }}>⌫</Text> : null}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 const GRID_BORDER = 'rgba(90,46,64,0.06)';
 
 const styles = StyleSheet.create({
   gridWrap: {
     borderRadius: radius.lg,
-    padding: 6,
+    padding: spacing.xs + 2,
     backgroundColor: colors.surface,
     ...shadow.card,
   },
@@ -259,11 +387,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   row: { flex: 1, flexDirection: 'row' },
-  cell: {
-    flex: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: GRID_BORDER,
+  cell: { flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: GRID_BORDER },
+
+  skip: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    backgroundColor: 'rgba(46,42,42,0.62)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
   },
+  skipText: { color: colors.white, fontFamily: font.family.bold, fontSize: font.size.sm, letterSpacing: 0.3 },
 
   paletteLabel: {
     fontSize: font.size.sm,
@@ -273,12 +408,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  palette: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    alignItems: 'center',
-  },
+  palette: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, alignItems: 'center' },
   swatch: {
     width: 38,
     height: 38,
@@ -289,10 +419,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadow.soft,
   },
-  swatchOn: {
-    borderWidth: 3,
-    borderColor: colors.text,
-    transform: [{ scale: 1.08 }],
-  },
+  swatchOn: { borderWidth: 3, borderColor: colors.text },
   eraser: { backgroundColor: colors.surfaceAlt },
 });
