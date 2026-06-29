@@ -4,6 +4,10 @@ import { colors } from './colors';
 export { colors };
 export type { ColorKey } from './colors';
 
+// Layout spacing follows a strict 8px grid with 4px half-steps. Use these tokens
+// (or sums of them, e.g. `spacing.lg + spacing.xs` = 20) for all margins, gaps
+// and padding. Sub-component optical nudges (a 2px lift under a title, a slim
+// pill) may stay off-grid on purpose — the grid governs layout, not micro-tuning.
 export const spacing = {
   xs: 4,
   sm: 8,

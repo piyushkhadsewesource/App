@@ -132,8 +132,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.22)',
     borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingHorizontal: spacing.md, // grid-aligned (was 10)
+    paddingVertical: 3, // optical: a slim pill reads better than a grid 4
   },
   metaText: { fontSize: 10, color: colors.white, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.6 },
   arrow: { fontSize: 28, color: 'rgba(255,255,255,0.9)', fontFamily: font.family.bold },

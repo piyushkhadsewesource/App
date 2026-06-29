@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   togetherDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: spacing.xs },
   togetherTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
   actText: { fontSize: font.size.md, color: colors.text, fontFamily: font.family.body, lineHeight: 21 },
-  actRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: 18 },
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg + spacing.xs },
   actDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   actPartner: { backgroundColor: colors.primarySoft },
   actChevron: { fontSize: 24, color: colors.primary },

@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
 
   card: {
     borderRadius: radius.lg,
-    padding: 18,
+    padding: spacing.lg + spacing.xs, // 20 — grid-aligned (was an off-grid 18)
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(90,46,64,0.06)',
   },
