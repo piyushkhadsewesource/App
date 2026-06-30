@@ -64,5 +64,25 @@ if (!html.includes('rel="manifest"')) {
   html = html.replace('</head>', `  ${tags}\n  </head>`);
 }
 
+// 4) Web UX fixes — guard against re-injection.
+if (!html.includes('tether-web-fixes')) {
+  const webStyle = `<style id="tether-web-fixes">
+    /* Inactive React Navigation scenes stay in the DOM as absoluteFill divs.
+       aria-hidden="true" is set on them by React Navigation; making them
+       pointer-events:none ensures they never intercept clicks on active content. */
+    [aria-hidden="true"], [aria-hidden="true"] * { pointer-events: none !important; }
+
+    /* Desktop: centre the mobile-sized app with a dark surround instead of
+       stretching it to fill a 1280 px viewport. */
+    @media (min-width: 520px) {
+      html, body { background: #2E2A2A !important; display: flex; justify-content: center; }
+      #root { width: 100%; max-width: 480px; min-height: 100vh;
+              box-shadow: 0 0 80px rgba(0,0,0,0.35); overflow: hidden; }
+    }
+  </style>`;
+  html = html.replace('</head>', `  ${webStyle}\n  </head>`);
+}
+
+
 writeFileSync(indexHtml, html);
 console.log('✓ PWA ready: manifest.json + apple-touch-icon.png written, iOS meta tags injected into dist/index.html');
