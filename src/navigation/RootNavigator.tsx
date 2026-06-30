@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text } from 'react-native';
 import AnimatedTabBar from '../components/AnimatedTabBar';
 import ChoiceGameScreen from '../screens/ChoiceGameScreen';
 import CountdownScreen from '../screens/CountdownScreen';
@@ -61,7 +61,15 @@ function Tabs() {
 
 export default function RootNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+    <Stack.Navigator screenOptions={{
+      headerShown: false,
+      // On web, react-native-screens' JS fallback can leave inactive scene
+      // containers in the DOM as absoluteFill divs with pointer-events:auto and
+      // a solid background-color — they sit on top of the active screen and eat
+      // all clicks. Removing contentStyle on web fixes this: each Screen already
+      // supplies its own backgroundColor, so the visual output is identical.
+      contentStyle: Platform.OS !== 'web' ? { backgroundColor: colors.bg } : undefined,
+    }}>
       <Stack.Screen name="Tabs" component={Tabs} />
       <Stack.Screen name="Vault" component={VaultScreen} />
       <Stack.Screen name="Letters" component={LettersScreen} />
