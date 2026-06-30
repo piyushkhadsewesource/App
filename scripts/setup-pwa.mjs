@@ -72,12 +72,24 @@ if (!html.includes('tether-web-fixes')) {
        pointer-events:none ensures they never intercept clicks on active content. */
     [aria-hidden="true"], [aria-hidden="true"] * { pointer-events: none !important; }
 
+    /* Premium desktop feel: every tappable (anything React Native Web tagged
+       with accessibilityRole="button") shows a pointer cursor on hover.
+       Disabled buttons keep the default arrow. */
+    [role="button"] { cursor: pointer; }
+    [role="button"][aria-disabled="true"] { cursor: default; }
+
     /* Desktop: centre the mobile-sized app with a dark surround instead of
-       stretching it to fill a 1280 px viewport. */
+       stretching it to fill a 1280 px viewport.
+
+       IMPORTANT: do NOT make <body> a flex container. Expo's reset sets
+       #root { flex: 1 } (flex-basis: 0%); inside a flex <body> that collapses
+       the app to 0 width. Keep <body> a block and centre #root with margin
+       auto — Expo's height:100% chain (html/body/#root) stays intact so the
+       app still fills the viewport vertically. */
     @media (min-width: 520px) {
-      html, body { background: #2E2A2A !important; display: flex; justify-content: center; }
-      #root { width: 100%; max-width: 480px; min-height: 100vh;
-              box-shadow: 0 0 80px rgba(0,0,0,0.35); overflow: hidden; }
+      html, body { background: #2E2A2A !important; }
+      #root { max-width: 480px; margin: 0 auto;
+              box-shadow: 0 0 80px rgba(0,0,0,0.35); }
     }
   </style>`;
   html = html.replace('</head>', `  ${webStyle}\n  </head>`);

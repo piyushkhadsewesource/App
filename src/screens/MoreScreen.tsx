@@ -38,6 +38,8 @@ export default function MoreScreen({ navigation }: any) {
           <Pressable
             key={`${t.route}-${i}`}
             onPress={() => navigation.navigate(t.route)}
+            accessibilityRole="button"
+            accessibilityLabel={t.label}
             style={({ pressed }) => [styles.tile, pressed ? styles.tilePressed : null]}
           >
             <View style={[styles.tileBadge, { backgroundColor: t.tint }]}>
@@ -56,6 +58,8 @@ export default function MoreScreen({ navigation }: any) {
           <Pressable
             key={l.route}
             onPress={() => navigation.navigate(l.route)}
+            accessibilityRole="button"
+            accessibilityLabel={l.label}
             style={({ pressed }) => [styles.row, shadow.card, pressed ? { opacity: 0.85 } : null]}
           >
             <Text style={{ fontSize: 28 }}>{l.emoji}</Text>

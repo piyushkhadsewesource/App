@@ -312,6 +312,8 @@ export default function HomeScreen({ navigation }: any) {
               <Reveal key={e.id} delay={i * 55}>
                 <Pressable
                   onPress={() => navigation.navigate(e.route, e.params)}
+                  accessibilityRole="button"
+                  accessibilityLabel={e.text}
                   style={({ pressed }) => [styles.actRow, i > 0 ? styles.actDivider : null, !e.mine ? styles.actPartner : null, pressed ? { opacity: 0.7 } : null]}
                 >
                   <Text style={{ fontSize: 22 }}>{e.icon}</Text>

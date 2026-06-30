@@ -77,7 +77,7 @@ export function AppHeader({
   return (
     <View style={styles.header}>
       {onBack ? (
-        <Pressable onPress={onBack} hitSlop={12} style={styles.back}>
+        <Pressable onPress={onBack} hitSlop={12} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
           <Text style={styles.backText}>‹ Back</Text>
         </Pressable>
       ) : null}
@@ -193,7 +193,12 @@ export function Button({
   if (variant === 'primary') {
     const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
     return (
-      <Pressable {...pressProps} style={[styles.button, shadow.soft, disabled ? { opacity: 0.45 } : null, style]}>
+      <Pressable
+        {...pressProps}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !!disabled }}
+        style={[styles.button, shadow.soft, disabled ? { opacity: 0.45 } : null, style]}
+      >
         <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, styles.buttonFill]} />
         {inner}
       </Pressable>
@@ -205,6 +210,8 @@ export function Button({
   return (
     <Pressable
       {...pressProps}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       style={[styles.button, { backgroundColor: bg }, border, disabled ? { opacity: 0.45 } : null, style]}
     >
       {inner}
@@ -227,6 +234,8 @@ export function Pill({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!active }}
       style={[
         styles.pill,
         active
@@ -316,6 +325,9 @@ export function LevelSelector({
               hLight(); // a tactile detent on each step
               onChange(n);
             }}
+            accessibilityRole="button"
+            accessibilityLabel={`Level ${n}`}
+            accessibilityState={{ selected: n <= value }}
             style={[
               styles.levelDot,
               {
