@@ -1,0 +1,44 @@
+name: CI
+
+# Catch the cheap-to-find breakage before it reaches the live web link:
+# type errors and a failed web build. (Runtime layout regressions — like an
+# app that builds fine but collapses to 0px wide on desktop — are NOT caught
+# here; that needs the browser smoke test, see the note at the bottom.)
+
+on:
+  push:
+    branches: [claude/trusting-tesla-udokel]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build web export
+        run: npm run build:web
+
+      - name: Assert the desktop-centering CSS is present in the build
+        # A targeted guard against re-introducing the width:0 collapse: the
+        # injected style must centre #root with margin:auto and must NOT turn
+        # <body> into a flex container (which is what collapsed the app).
+        run: |
+          html="dist/index.html"
+          grep -q 'id="tether-web-fixes"' "$html" || { echo "✗ web-fixes style block missing"; exit 1; }
+          grep -q 'margin: 0 auto' "$html" || { echo "✗ #root centering (margin:0 auto) missing"; exit 1; }
+          if grep -A6 'min-width: 520px' "$html" | grep -q 'body.*display: flex'; then
+            echo "✗ <body> is a flex container in the desktop media query — this collapses #root to width:0"; exit 1;
+          fi
+          echo "✓ desktop-centering CSS present and safe"
