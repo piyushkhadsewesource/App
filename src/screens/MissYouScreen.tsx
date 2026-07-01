@@ -1,6 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -19,6 +18,7 @@ import {
 import { useToast } from '../components/ToastHost';
 import { shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
+import { hSuccess, hWarn } from '../lib/haptics';
 import { hasNotificationPermission } from '../services/permission';
 import { registerForPush } from '../services/push';
 import { useApp } from '../state/AppContext';
@@ -181,7 +181,7 @@ export default function MissYouScreen() {
   }
 
   function send(type: PingType, sentMsg: string, emoji: string, message?: string) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    hSuccess(); // guarded: no-ops on web, matching the rest of the app
     burst.fire(emoji);
     flash(`${sentMsg} 🤍`);
     // Fire the write without blocking: offline the cloud ack can hang, but the
@@ -212,7 +212,7 @@ export default function MissYouScreen() {
           onPress: () => {
             // Confirm instantly; fire the SOS without blocking (the alarm reaches
             // the partner via live sync / push, never gated on the cloud ack).
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+            hWarn(); // guarded: no-ops on web, matching the rest of the app
             flash(`Emergency alert sent to ${partnerName} 🆘`, 2800);
             void app.sendSos();
           },
