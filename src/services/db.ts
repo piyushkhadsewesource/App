@@ -11,6 +11,21 @@ import { Cloud, cloudEnabled, getCloud } from './firebase';
 
 export type Unsubscribe = () => void;
 
+// ── Sync health ──────────────────────────────────────────────────────────
+// A tiny pub/sub so the UI can show "we're having trouble syncing" instead of
+// silently sitting on stale data when a listener errors (dropped network,
+// blocked connection, etc). Deliberately collection-agnostic: any one
+// listener erroring is a signal the whole cloud connection is unhealthy.
+type SyncListener = (trouble: boolean) => void;
+const syncListeners = new Set<SyncListener>();
+export function onSyncHealth(cb: SyncListener): Unsubscribe {
+  syncListeners.add(cb);
+  return () => syncListeners.delete(cb);
+}
+function reportSyncTrouble(trouble: boolean) {
+  syncListeners.forEach((cb) => cb(trouble));
+}
+
 export interface Db {
   readonly cloud: boolean;
   watch<T extends HasId>(name: CollectionName, cb: (items: T[]) => void): Unsubscribe;
@@ -120,8 +135,21 @@ class FirestoreDb implements Db {
   watch<T extends HasId>(name: CollectionName, cb: (items: T[]) => void): Unsubscribe {
     return this.c.fns.onSnapshot(
       this.col(name),
-      (snap: QuerySnapshot) => cb(snap.docs.map((d: QueryDocumentSnapshot) => d.data() as T)),
-      (err: FirestoreError) => console.warn('[tether] sync error:', err.message),
+      (snap: QuerySnapshot) => {
+        // TEMP diagnostic: confirms whether a snapshot is a genuine server
+        // push or just the local cache replaying — the exact question behind
+        // "my partner's answer isn't showing up: is the listener not picking
+        // up new data?" Check `fromCache` here against the Expo console.
+        if (__DEV__) {
+          console.log(`[tether:sync] ${name} snapshot: ${snap.docs.length} doc(s), fromCache=${snap.metadata.fromCache}`);
+        }
+        reportSyncTrouble(false); // a snapshot of any kind means the listener is alive
+        cb(snap.docs.map((d: QueryDocumentSnapshot) => d.data() as T));
+      },
+      (err: FirestoreError) => {
+        console.warn(`[tether] sync error (${name}):`, err.message);
+        reportSyncTrouble(true);
+      },
     );
   }
 

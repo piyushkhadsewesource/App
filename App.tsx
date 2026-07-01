@@ -63,7 +63,7 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
 }
 
 function Root() {
-  const { ready, identity, moments, meId, occasions, schedule, letters } = useApp();
+  const { ready, identity, moments, meId, occasions, schedule, letters, syncTrouble } = useApp();
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_600SemiBold,
     Fraunces_700Bold,
@@ -154,6 +154,19 @@ function Root() {
       <NavigationContainer ref={navigationRef} theme={navTheme}>
         <RootNavigator />
       </NavigationContainer>
+      {/* A syncing problem is otherwise silent — the screen just quietly stops
+          updating with no indication why. This turns that into something
+          visible, so "did my partner's answer arrive?" has an honest answer
+          on-screen instead of a guess. Clears itself the moment sync recovers. */}
+      {syncTrouble ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' }}>
+          <View style={{ marginTop: 8, backgroundColor: '#2E2A2A', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>
+              Having trouble syncing — we'll keep trying 🤍
+            </Text>
+          </View>
+        </View>
+      ) : null}
       <SosOverlay />
     </>
   );

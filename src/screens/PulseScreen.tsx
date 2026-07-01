@@ -93,14 +93,22 @@ export default function PulseScreen() {
     [myFeelings, partnerFeelings],
   );
 
-  function save() {
+  async function save() {
     // Close the form immediately; fire the write without blocking (offline the
-    // cloud ack can hang, but the check-in lands locally at once).
+    // cloud ack can hang, but the check-in lands locally at once). Nothing in
+    // the form is cleared, so if the write actually fails we can safely reopen
+    // it with the same values already filled in — no re-entry needed.
     const data = { mood, need: need.trim(), energy, stress, affection, note: note.trim() || undefined };
     setEditing(false);
     hSuccess();
-    toast.show(myToday ? 'Pulse updated ✓' : 'Pulse shared 💛');
-    void app.saveCheckin(data);
+    if (__DEV__) console.log('[tether:sync] pulse submit →', data);
+    const ok = await app.saveCheckin(data);
+    if (ok) {
+      toast.show(myToday ? 'Pulse updated ✓' : 'Pulse shared 💛');
+    } else {
+      setEditing(true);
+      toast.show("Couldn't send — check your connection and try again");
+    }
   }
 
   function logNow() {

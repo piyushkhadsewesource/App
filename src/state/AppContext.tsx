@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 import { now, todayISO } from '../lib/date';
-import { createDb, Db, Unsubscribe } from '../services/db';
+import { createDb, Db, onSyncHealth, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
 import { hasNotificationPermission } from '../services/permission';
 import { registerForPush, sendPush, sendSosPush } from '../services/push';
@@ -59,6 +59,7 @@ import { absCell, legalTokens, movedPos, SAFE, Side } from '../lib/ludo';
 interface AppValue {
   ready: boolean;
   cloud: boolean;
+  syncTrouble: boolean;
   identity: Identity | null;
   meId: string;
   partnerId: string;
@@ -104,7 +105,7 @@ interface AppValue {
     stress: number;
     affection: number;
     note?: string;
-  }): Promise<void>;
+  }): Promise<boolean>;
   logFeeling(data: { mood: Mood; intensity: number; note?: string }): Promise<void>;
   removeFeeling(id: string): Promise<void>;
   sendPing(type: PingType, message?: string): Promise<void>;
@@ -133,7 +134,7 @@ interface AppValue {
   toggleFuture(id: string, done: boolean): Promise<void>;
   updateFuture(id: string, text: string): Promise<void>;
   removeFuture(id: string): Promise<void>;
-  addDeckResponse(promptId: string, promptText: string, answer: string): Promise<void>;
+  addDeckResponse(promptId: string, promptText: string, answer: string): Promise<boolean>;
   addMoment(data: { image: string; caption?: string; date?: string }): Promise<void>;
   removeMoment(id: string): Promise<void>;
   sendSos(message?: string): Promise<void>;
@@ -181,6 +182,11 @@ const Ctx = createContext<AppValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [identity, setIdentity] = useState<Identity | null>(null);
+  // True when a Firestore listener has reported an actual error (dropped
+  // connection, permission failure, etc) — not the normal, brief "still on
+  // local cache while the network catches up" moment every cold start has.
+  const [syncTrouble, setSyncTrouble] = useState(false);
+  useEffect(() => onSyncHealth(setSyncTrouble), []);
 
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
   const [feelings, setFeelings] = useState<FeelingEntry[]>([]);
@@ -227,15 +233,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (async () => {
       await maybeSeed(db, identity);
       if (!active) return;
+      // TEMP diagnostic: on every snapshot of the two collections behind this
+      // bug report, log doc count + which authors are present. If a partner's
+      // write never shows up here, the listener/space is the problem; if it
+      // shows up here but not on screen, the problem is in the screen's own
+      // filtering (e.g. a stale partnerId).
+      const logSnapshot = (name: 'checkins' | 'deck') => (items: { authorId?: string }[]) => {
+        if (__DEV__) {
+          const authors = [...new Set(items.map((i) => i.authorId).filter(Boolean))];
+          console.log(`[tether:sync] ${name} snapshot ← ${items.length} doc(s), authors: ${JSON.stringify(authors)}`);
+        }
+      };
       unsubs = [
-        db.watch<CheckIn>('checkins', setCheckins),
+        db.watch<CheckIn>('checkins', (items) => { logSnapshot('checkins')(items); setCheckins(items); }),
         db.watch<FeelingEntry>('feelings', setFeelings),
         db.watch<Ping>('pings', setPings),
         db.watch<Letter>('letters', setLetters),
         db.watch<Memory>('memories', setMemories),
         db.watch<Reason>('reasons', setReasons),
         db.watch<FutureItem>('future', setFuture),
-        db.watch<DeckResponse>('deck', setDeck),
+        db.watch<DeckResponse>('deck', (items) => { logSnapshot('deck')(items); setDeck(items); }),
         db.watch<Moment>('moments', setMoments),
         db.watch<SosAlert>('alerts', setAlerts),
         db.watch<Meeting>('meetings', setMeetings),
@@ -314,17 +331,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const a = it.authorId ?? it.fromId;
       if (a && a !== meId && !others.includes(a)) others.push(a);
     }
-    if (named && others.includes(named)) return named; // partner is posting under it
-    const stable = others.find((a) => a.startsWith('p_'));
-    if (stable) return stable;
-    if (cloudEnabled && named) return named;
-    return others[0] ?? DEMO_PARTNER_ID;
+    let resolved: string;
+    if (named && others.includes(named)) resolved = named; // partner is posting under it
+    else {
+      const stable = others.find((a) => a.startsWith('p_'));
+      resolved = stable ?? (cloudEnabled && named ? named : others[0] ?? DEMO_PARTNER_ID);
+    }
+    // TEMP diagnostic: partnerId is derived (not a fixed value), by matching
+    // your typed partner-name against whichever other authors' writes have
+    // synced in. If a partner's check-in/deck answer is arriving (see the
+    // "snapshot" logs above) but never appears on screen, compare `resolved`
+    // here against the `authors` list in those logs — a mismatch means the
+    // screen is filtering for the wrong id, not that sync itself is broken.
+    if (__DEV__) console.log(`[tether:sync] partnerId resolved → "${resolved}" (named guess: "${named}", others seen: ${JSON.stringify(others)})`);
+    return resolved;
   }, [meId, identity, checkins, feelings, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo<AppValue>(() => ({
     ready,
     cloud: cloudEnabled,
+    syncTrouble,
     identity,
     meId,
     partnerId,
@@ -405,7 +432,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     async saveCheckin(data) {
       const db = dbRef.current;
-      if (!db) return;
+      if (!db) return false;
       const date = todayISO();
       const existing = checkins.find((c) => c.authorId === meId && c.date === date);
       const item: CheckIn = {
@@ -417,7 +444,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         need: clampReq(data.need, 280),
         note: clamp(data.note, 2000),
       };
-      await db.add('checkins', item);
+      // TEMP diagnostic: confirms the exact payload and destination path a
+      // check-in write takes, so a "partner can't see my check-in" report can
+      // be verified from the Expo console (which spaceId, which authorId).
+      if (__DEV__) console.log('[tether:sync] checkin write →', db.cloud ? 'cloud' : 'local', item);
+      const ok = await db.add('checkins', item);
+      if (__DEV__) console.log('[tether:sync] checkin write result:', ok);
+      return ok;
     },
     async logFeeling(data) {
       const db = dbRef.current;
@@ -558,15 +591,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async addDeckResponse(promptId, promptText, answer) {
       const db = dbRef.current;
-      if (!db) return;
-      await db.add('deck', {
+      if (!db) return false;
+      const item = {
         id: genId('d_'),
         authorId: meId,
         promptId,
         promptText: clampReq(promptText, 280),
         answer: clampReq(answer, 4000),
         createdAt: now(),
-      });
+      };
+      // TEMP diagnostic: confirms the deck answer actually reaches the shared
+      // space document (spaceId + authorId visible here), so a "partner never
+      // sees my answer" report can be checked against the real payload.
+      if (__DEV__) console.log('[tether:sync] deck answer write →', db.cloud ? 'cloud' : 'local', item);
+      const ok = await db.add('deck', item);
+      if (__DEV__) console.log('[tether:sync] deck answer write result:', ok);
+      return ok;
     },
     async addMoment(data) {
       const db = dbRef.current;
@@ -989,7 +1029,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, meId, partnerId, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
