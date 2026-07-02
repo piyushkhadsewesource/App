@@ -5,6 +5,7 @@ import { Platform, StyleSheet, Text } from 'react-native';
 import AnimatedTabBar from '../components/AnimatedTabBar';
 import CanvasScreen from '../screens/CanvasScreen';
 import ChoiceGameScreen from '../screens/ChoiceGameScreen';
+import CompassScreen from '../screens/CompassScreen';
 import CountdownScreen from '../screens/CountdownScreen';
 import DeckScreen from '../screens/DeckScreen';
 import FutureScreen from '../screens/FutureScreen';
@@ -91,6 +92,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Ludo" component={LudoScreen} />
       <Stack.Screen name="Canvas" component={CanvasScreen} />
       <Stack.Screen name="Glass" component={GlassScreen} />
+      <Stack.Screen name="Compass" component={CompassScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Occasions" component={OccasionsScreen} />
       <Stack.Screen name="Issues" component={IssuesScreen} />

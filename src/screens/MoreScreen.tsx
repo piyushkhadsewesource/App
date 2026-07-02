@@ -8,6 +8,7 @@ import { colors, font, radius, shadow, spacing } from '../theme';
 const TILES: { route: string; emoji: string; label: string; tint: string }[] = [
   { route: 'MissYou', emoji: '🤍', label: 'When I miss you', tint: colors.accentSoft },
   { route: 'Glass', emoji: '🫶', label: 'Through the glass', tint: colors.primarySoft },
+  { route: 'Compass', emoji: '🧭', label: 'The compass', tint: colors.goldSoft },
   { route: 'Moments', emoji: '📸', label: 'Moments', tint: colors.goldSoft },
   { route: 'Countdown', emoji: '💞', label: 'Countdown', tint: colors.primarySoft },
   { route: 'Letters', emoji: '💌', label: 'Love letters', tint: colors.primarySoft },

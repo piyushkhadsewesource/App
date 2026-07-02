@@ -342,6 +342,19 @@ export interface HeartbeatRecord {
   updatedAt: Millis;
 }
 
+/**
+ * A person's shared city for The Compass Rose — deliberately coarse (a city,
+ * set by hand, never live GPS), so the needle can point and the distance can
+ * count without anything resembling tracking.
+ */
+export interface Place {
+  id: string; // the owner's userId
+  name: string; // "Mumbai, India"
+  lat: number;
+  lon: number;
+  updatedAt: Millis;
+}
+
 export const COLLECTIONS = [
   'checkins',
   'pings',
@@ -368,6 +381,7 @@ export const COLLECTIONS = [
   'presence',
   'touch',
   'heartbeats',
+  'places',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
