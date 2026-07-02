@@ -177,6 +177,22 @@ export default function CanvasScreen({ navigation }: any) {
     [],
   );
 
+  // Cinematic entrance for the discovery replay: the board starts slightly
+  // zoomed-in and soft, then springs into crisp focus as the strokes land —
+  // like a camera settling on the page. Native-driver scale/opacity only, so
+  // it costs nothing against the 60fps budget (a blur here would).
+  const cinema = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (replaying) {
+      cinema.setValue(0);
+      Animated.spring(cinema, { toValue: 1, useNativeDriver: true, ...springs.gentle }).start();
+    }
+  }, [replaying, cinema]);
+  const cinemaStyle = {
+    opacity: cinema.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }),
+    transform: [{ scale: cinema.interpolate({ inputRange: [0, 1], outputRange: [1.06, 1] }) }],
+  };
+
   const flushSave = () => {
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
@@ -300,7 +316,7 @@ export default function CanvasScreen({ navigation }: any) {
       {loading ? (
         <Skeleton style={{ width: '100%', aspectRatio: 1, borderRadius: radius.lg }} />
       ) : (
-        <View style={styles.gridWrap}>
+        <Animated.View style={[styles.gridWrap, cinemaStyle]}>
           <View
             style={styles.grid}
             onLayout={(e) => setBox(e.nativeEvent.layout.width)}
@@ -319,7 +335,7 @@ export default function CanvasScreen({ navigation }: any) {
               <Text style={styles.skipText}>Skip ›</Text>
             </Pressable>
           ) : null}
-        </View>
+        </Animated.View>
       )}
 
       {/* Palette */}

@@ -63,19 +63,26 @@ export const gradients = {
   gameGreen: ['#7BC47F', '#4FA486'] as const,
   gameSunset: ['#FFB36B', '#F5894F'] as const,
   gameBerry: ['#F77FB0', '#9C6BE0'] as const,
+  // Ambient presence lighting for the Home atmosphere. `ambientAway` is a calm
+  // lavender dawn (they're not here); `ambientHere` blooms warm rose-gold the
+  // moment their live heartbeat appears. Both fade to transparent so the glow
+  // melts into the app background instead of ending at a hard edge.
+  ambientAway: ['#ECE7F6', '#F6EFF2', 'rgba(251,248,246,0)'] as const,
+  ambientHere: ['#FBE0D2', '#FBE4EC', 'rgba(251,248,246,0)'] as const,
 };
 
 const cardShadow: ViewStyle =
   Platform.select<ViewStyle>({
     ios: {
       shadowColor: '#5A2E40',
-      shadowOpacity: 0.1,
-      shadowRadius: 24,
-      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 30,
+      shadowOffset: { width: 0, height: 12 },
     },
-    android: { elevation: 3 },
-    // react-native-web honours boxShadow for a clean, soft card lift.
-    default: { boxShadow: '0 12px 30px rgba(80, 46, 64, 0.10)' } as ViewStyle,
+    android: { elevation: 2 },
+    // react-native-web honours boxShadow for a clean, soft card lift. Larger
+    // radius + lower alpha = a highly-diffused, "lit from above" softness.
+    default: { boxShadow: '0 14px 38px rgba(80, 46, 64, 0.08)' } as ViewStyle,
   }) ?? {};
 
 const softShadow: ViewStyle =

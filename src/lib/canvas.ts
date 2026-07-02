@@ -15,19 +15,24 @@ export const EMPTY_CANVAS = EMPTY_CELL.repeat(CANVAS_CELLS);
 // The empty cell renders as this soft "paper" colour (sits on the app surface).
 export const CANVAS_PAPER = '#FBF6F1';
 
-/** A curated, premium palette: warm pastels + a few rich accents. */
+/**
+ * An editorial, artist-curated palette — earthy, high-fashion tones (terracotta,
+ * sage, indigo) instead of default digital pastels. The `ch` codes are the
+ * stored data and MUST never change; recolouring is render-only, so every
+ * existing drawing simply re-emerges in the richer palette.
+ */
 export const CANVAS_SWATCHES: { ch: string; color: string; name: string }[] = [
-  { ch: '1', color: '#2E2A2A', name: 'Ink' },
-  { ch: '2', color: '#EC6E94', name: 'Rose' },
-  { ch: '3', color: '#F4A9C7', name: 'Blush' },
-  { ch: '4', color: '#E2902F', name: 'Amber' },
-  { ch: '5', color: '#F6C56B', name: 'Honey' },
-  { ch: '6', color: '#5FC9A8', name: 'Mint' },
-  { ch: '7', color: '#3E9C86', name: 'Pine' },
-  { ch: '8', color: '#8A6FE0', name: 'Violet' },
-  { ch: '9', color: '#B9A7F0', name: 'Lilac' },
-  { ch: 'a', color: '#6FA8DC', name: 'Sky' },
-  { ch: 'b', color: '#FFFFFF', name: 'Snow' },
+  { ch: '1', color: '#26222B', name: 'Ink' },
+  { ch: '2', color: '#C9536F', name: 'Velvet' },
+  { ch: '3', color: '#EFC3CE', name: 'Blush' },
+  { ch: '4', color: '#C96F4A', name: 'Terracotta' },
+  { ch: '5', color: '#E3AE4B', name: 'Ochre' },
+  { ch: '6', color: '#9DB89C', name: 'Sage' },
+  { ch: '7', color: '#4E7D6B', name: 'Fern' },
+  { ch: '8', color: '#3F3D6E', name: 'Indigo' },
+  { ch: '9', color: '#A99BD1', name: 'Wisteria' },
+  { ch: 'a', color: '#7FA3C0', name: 'Mist' },
+  { ch: 'b', color: '#FFFDF8', name: 'Ivory' },
 ];
 
 const COLOR_MAP: Record<string, string> = CANVAS_SWATCHES.reduce(
