@@ -277,6 +277,16 @@ export default function MissYouScreen() {
           </LinearGradient>
         </Pressable>
 
+        {/* Through the glass — touch + the second heartbeat */}
+        <Card onPress={() => (navigation as any).navigate('Glass')} style={styles.glassCard}>
+          <Text style={{ fontSize: 28 }}>🫶</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.glassTitle}>Through the glass</Text>
+            <Muted>Rest your thumbs together, feel each other's heartbeat.</Muted>
+          </View>
+          <Text style={styles.glassChev}>›</Text>
+        </Card>
+
         {/* Reach out */}
         <SectionTitle>Reach out right now</SectionTitle>
         <View style={styles.pingRow}>
@@ -510,6 +520,9 @@ function ReasonsCarousel({ reasons, partnerName }: { reasons: { id: string; text
 }
 
 const styles = StyleSheet.create({
+  glassCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
+  glassTitle: { fontSize: font.size.lg, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: font.tracking.heading },
+  glassChev: { fontSize: 24, color: colors.primary },
 
   reunion: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm },
   reunionTitle: { color: colors.white, fontSize: font.size.lg, fontFamily: font.family.bold },

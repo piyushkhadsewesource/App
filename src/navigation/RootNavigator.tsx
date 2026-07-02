@@ -9,6 +9,7 @@ import CountdownScreen from '../screens/CountdownScreen';
 import DeckScreen from '../screens/DeckScreen';
 import FutureScreen from '../screens/FutureScreen';
 import GamesScreen from '../screens/GamesScreen';
+import GlassScreen from '../screens/GlassScreen';
 import HomeScreen from '../screens/HomeScreen';
 import InsightsScreen from '../screens/InsightsScreen';
 import IssuesScreen from '../screens/IssuesScreen';
@@ -89,6 +90,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Snakes" component={SnakesScreen} />
       <Stack.Screen name="Ludo" component={LudoScreen} />
       <Stack.Screen name="Canvas" component={CanvasScreen} />
+      <Stack.Screen name="Glass" component={GlassScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Occasions" component={OccasionsScreen} />
       <Stack.Screen name="Issues" component={IssuesScreen} />

@@ -43,10 +43,12 @@ import {
   Memory,
   Moment,
   Mood,
+  HeartbeatRecord,
   Occasion,
   Ping,
   PingType,
   Presence,
+  TouchSignal,
   Reason,
   ScheduleItem,
   SnakesGame,
@@ -89,6 +91,12 @@ interface AppValue {
   issueSteps: IssueStep[];
   /** Partner's last live heartbeat (ms), or null. Within ~2 min = in the app right now. */
   partnerSeenAt: number | null;
+  /** Partner's last "thumb on the glass" signal (ms), 0/null when released. */
+  partnerTouchAt: number | null;
+  /** My recorded pulse rhythm, or null if I haven't recorded one. */
+  myHeartbeat: HeartbeatRecord | null;
+  /** Partner's recorded pulse rhythm, or null if they haven't recorded one. */
+  partnerHeartbeat: HeartbeatRecord | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -117,6 +125,10 @@ interface AppValue {
   // Ask for notification permission and register this device (native Expo token
   // or browser FCM token) into the shared space. Returns whether it succeeded.
   enablePush(): Promise<boolean>;
+  /** "Through the glass": signal that my thumb is (still) resting / released. */
+  setTouchHolding(holding: boolean): Promise<void>;
+  /** Save my tapped-out pulse rhythm (intervals in ms). Returns success. */
+  saveHeartbeat(intervals: number[]): Promise<boolean>;
   addLetter(data: {
     title: string;
     body: string;
@@ -218,6 +230,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [issueSteps, setIssueSteps] = useState<IssueStep[]>([]);
   const [presence, setPresence] = useState<Presence[]>([]);
+  const [touchArr, setTouchArr] = useState<TouchSignal[]>([]);
+  const [heartbeats, setHeartbeats] = useState<HeartbeatRecord[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -276,6 +290,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<Issue>('issues', setIssues),
         db.watch<IssueStep>('issueSteps', setIssueSteps),
         db.watch<Presence>('presence', setPresence),
+        db.watch<TouchSignal>('touch', setTouchArr),
+        db.watch<HeartbeatRecord>('heartbeats', setHeartbeats),
       ];
     })();
     return () => {
@@ -411,6 +427,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return theirs.reduce((max, p) => (p.at > max ? p.at : max), 0) || null;
   }, [presence, meId]);
 
+  // Partner's live "thumb on the glass" signal and both pulse recordings —
+  // same "the other doc is theirs" rule, all null-safe for brand-new spaces.
+  const partnerTouchAt = useMemo(() => {
+    const t = touchArr.find((x) => x.id !== meId && typeof x.at === 'number');
+    return t?.at || null;
+  }, [touchArr, meId]);
+  const myHeartbeat = useMemo(
+    () => heartbeats.find((h) => h.id === meId && Array.isArray(h.intervals)) ?? null,
+    [heartbeats, meId],
+  );
+  const partnerHeartbeat = useMemo(
+    () => heartbeats.find((h) => h.id !== meId && Array.isArray(h.intervals) && h.intervals.length > 0) ?? null,
+    [heartbeats, meId],
+  );
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo<AppValue>(() => ({
     ready,
@@ -441,6 +472,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     issues,
     issueSteps,
     partnerSeenAt,
+    partnerTouchAt,
+    myHeartbeat,
+    partnerHeartbeat,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -570,6 +604,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const token = await registerForPush();
       if (!token) return false;
       return storePushToken(token);
+    },
+    async setTouchHolding(holding) {
+      const db = dbRef.current;
+      if (!db || !meId) return;
+      await db.add('touch', { id: meId, at: holding ? now() : 0 });
+    },
+    async saveHeartbeat(intervals) {
+      const db = dbRef.current;
+      if (!db || !meId) return false;
+      // Keep only humanly-plausible beat gaps and cap the length; the rhythm is
+      // looped on playback, so ~40 beats is plenty.
+      const clean = (intervals ?? [])
+        .filter((n) => typeof n === 'number' && Number.isFinite(n))
+        .map((n) => Math.round(Math.max(250, Math.min(2500, n))))
+        .slice(0, 40);
+      if (clean.length < 4) return false;
+      return db.add('heartbeats', { id: meId, intervals: clean, updatedAt: now() });
     },
     async addLetter(data) {
       const db = dbRef.current;
@@ -1101,7 +1152,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

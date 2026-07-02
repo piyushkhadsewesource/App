@@ -7,6 +7,7 @@ import { colors, font, radius, shadow, spacing } from '../theme';
 // The "reach for each other" quick squares, moved here from Home.
 const TILES: { route: string; emoji: string; label: string; tint: string }[] = [
   { route: 'MissYou', emoji: '🤍', label: 'When I miss you', tint: colors.accentSoft },
+  { route: 'Glass', emoji: '🫶', label: 'Through the glass', tint: colors.primarySoft },
   { route: 'Moments', emoji: '📸', label: 'Moments', tint: colors.goldSoft },
   { route: 'Countdown', emoji: '💞', label: 'Countdown', tint: colors.primarySoft },
   { route: 'Letters', emoji: '💌', label: 'Love letters', tint: colors.primarySoft },

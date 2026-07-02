@@ -319,6 +319,29 @@ export interface Presence {
   at: Millis; // last heartbeat
 }
 
+/**
+ * "Through the glass": a live hold signal, one doc per person (id = userId).
+ * `at` is refreshed every couple of seconds while the thumb is resting on the
+ * glass and set to 0 on release — so `at` within the last few seconds means
+ * "their thumb is on the screen right now". Writes only happen while actively
+ * holding, so cost is negligible.
+ */
+export interface TouchSignal {
+  id: string; // the owner's userId
+  at: Millis; // last hold heartbeat, or 0 when released
+}
+
+/**
+ * "The second heartbeat": a person's own pulse, recorded by tapping along with
+ * it. Stored purely as the intervals between beats (ms) — no audio, no health
+ * data, just rhythm — and played back on the partner's phone as haptics.
+ */
+export interface HeartbeatRecord {
+  id: string; // the owner's userId
+  intervals: number[]; // ms between consecutive beats (clamped 250–2500)
+  updatedAt: Millis;
+}
+
 export const COLLECTIONS = [
   'checkins',
   'pings',
@@ -343,6 +366,8 @@ export const COLLECTIONS = [
   'issues',
   'issueSteps',
   'presence',
+  'touch',
+  'heartbeats',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
