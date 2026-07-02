@@ -10,13 +10,14 @@ import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
-import { ToastProvider } from './src/components/ToastHost';
+import { ToastProvider, useToast } from './src/components/ToastHost';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { refreshPlanReminders, refreshReminders, scheduleLetterDeliveries, syncOccasionReminders } from './src/services/notifications';
+import { listenForegroundMessages } from './src/services/webPush';
 import { AppProvider, useApp } from './src/state/AppContext';
 import { colors } from './src/theme';
 
@@ -137,6 +138,10 @@ function Root() {
   // Only route taps once the navigator is actually mounted (identity present).
   useNotificationRouting(appReady && !!identity);
 
+  // On web, show an in-app toast when a push arrives while the tab is focused
+  // (the service worker only shows a system notification when backgrounded).
+  useWebPushForegroundToasts(appReady && !!identity);
+
   if (!appReady) {
     // The native splash is still covering this on devices; the spinner is the
     // web fallback (and a safety net if the splash ever fails to hide).
@@ -170,6 +175,31 @@ function Root() {
       <SosOverlay />
     </>
   );
+}
+
+/** Web only: toast an incoming push while the tab is focused. No-op elsewhere. */
+function useWebPushForegroundToasts(active: boolean) {
+  const toast = useToast();
+  useEffect(() => {
+    if (!active || Platform.OS !== 'web') return;
+    let alive = true;
+    let cleanup = () => {};
+    listenForegroundMessages(({ title, body }) => {
+      const text = body
+        ? title && title !== 'Tether'
+          ? `${title}: ${body}`
+          : body
+        : title || 'New message 🤍';
+      toast.show(text, 3200);
+    }).then((unsub) => {
+      if (alive) cleanup = unsub;
+      else unsub();
+    });
+    return () => {
+      alive = false;
+      cleanup();
+    };
+  }, [active, toast]);
 }
 
 /** Route notification taps (live, and the one that cold-started the app). */

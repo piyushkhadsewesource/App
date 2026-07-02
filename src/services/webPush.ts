@@ -61,3 +61,32 @@ export async function registerWebPush(): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Listen for pushes that arrive while the tab is focused. The service worker
+ * only shows a system notification when the app is in the background; in the
+ * foreground FCM hands the message here instead, so we surface it as an in-app
+ * toast. Returns an unsubscribe (a no-op if web push isn't available).
+ */
+export async function listenForegroundMessages(
+  handler: (msg: { title?: string; body?: string; type?: string }) => void,
+): Promise<() => void> {
+  try {
+    if (!isWebPushConfigured() || !webPushSupported()) return () => {};
+    const { getMessaging, onMessage, isSupported } = await import('firebase/messaging');
+    if (!(await isSupported())) return () => {};
+
+    const { getApp, getApps, initializeApp } = await import('firebase/app');
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    // Messages are sent data-only, so the payload lives under `data`.
+    return onMessage(messaging, (payload) => {
+      const d = (payload && payload.data) || {};
+      handler({ title: d.title, body: d.body, type: d.type });
+    });
+  } catch (e) {
+    console.warn('[tether] foreground message listener failed', e);
+    return () => {};
+  }
+}
