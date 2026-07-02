@@ -308,6 +308,17 @@ export interface IssueStep {
 }
 
 /** Names of the synced collections. */
+/**
+ * A tiny "I'm here right now" heartbeat, one doc per person (id = userId),
+ * refreshed every minute while the app is open and foregrounded. Powers the
+ * live togetherness cues ("here with you right now") that make the distance
+ * feel smaller. ~1 write/minute/person while open — negligible Firestore cost.
+ */
+export interface Presence {
+  id: string; // the owner's userId
+  at: Millis; // last heartbeat
+}
+
 export const COLLECTIONS = [
   'checkins',
   'pings',
@@ -331,6 +342,7 @@ export const COLLECTIONS = [
   'occasions',
   'issues',
   'issueSteps',
+  'presence',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

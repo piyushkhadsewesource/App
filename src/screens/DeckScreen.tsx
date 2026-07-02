@@ -13,6 +13,7 @@ import {
   Title,
 } from '../components/ui';
 import { formatRelative } from '../lib/date';
+import { hSuccess } from '../lib/haptics';
 import { useToast } from '../components/ToastHost';
 import { CATEGORY_LABEL, DECK, nextPromptFor, promptById, Prompt } from '../lib/intimacy';
 import { useApp } from '../state/AppContext';
@@ -95,6 +96,7 @@ export default function DeckScreen({ navigation }: any) {
     const ok = await app.addDeckResponse(prompt.id, prompt.text, a);
     setSending(false);
     if (ok) {
+      hSuccess(); // a warm "it reached them" pulse (no-op on web)
       toast.show('Answer shared 🤍');
     } else {
       setAnswer(a); // give the words back — nothing was lost

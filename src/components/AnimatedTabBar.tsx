@@ -8,6 +8,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hLight } from '../lib/haptics';
 import { colors, font } from '../theme';
 import { spring } from '../theme/motion';
 import { Glass } from './Glass';
@@ -42,7 +43,10 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
           const label = (options.title ?? route.name) as string;
           const onPress = () => {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            if (!focused && !event.defaultPrevented) {
+              hLight(); // soft detent as you land on a new tab (no-op on web)
+              navigation.navigate(route.name);
+            }
           };
           return (
             <TabButton

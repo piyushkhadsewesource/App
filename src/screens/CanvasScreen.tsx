@@ -15,6 +15,7 @@ import {
   normalizeCanvas,
   paintAt,
 } from '../lib/canvas';
+import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { spring as springs } from '../theme/motion';
@@ -264,17 +265,36 @@ export default function CanvasScreen({ navigation }: any) {
   const lastBy = canvas?.updatedBy ? (app.isMine(canvas.updatedBy) ? 'you' : partner) : null;
   const blank = isBlank(pixels);
 
+  // Live co-drawing presence: while the partner is actively drawing, their
+  // debounced saves land every ~700ms, so a partner-authored update inside the
+  // last few seconds means they're drawing RIGHT NOW. Derived entirely from the
+  // canvas doc we already sync — no extra writes, no new data structures. The
+  // fast tick only runs while this screen is mounted.
+  const nowTick = useNow(2_500);
+  const partnerDrawingNow =
+    !!canvas &&
+    !app.isMine(canvas.updatedBy) &&
+    nowTick - canvas.updatedAt < 7_000 &&
+    !replaying;
+
   return (
     <Screen scroll>
       <AppHeader title="Our Shared Canvas" subtitle="Draw together, in real time" onBack={() => navigation.goBack()} />
 
-      <Muted style={{ marginBottom: spacing.md }}>
-        {replaying
-          ? `${partner} drew this, watch it appear…`
-          : lastBy
-            ? `Last touched by ${lastBy}. Pick a colour and draw, ${partner} sees every pixel as you go.`
-            : `A blank page for the two of you. Pick a colour and draw, ${partner} sees every pixel as you go.`}
-      </Muted>
+      {partnerDrawingNow ? (
+        <View style={styles.liveRow}>
+          <LiveDot />
+          <Text style={styles.liveText}>{partner} is drawing right now…</Text>
+        </View>
+      ) : (
+        <Muted style={{ marginBottom: spacing.md }}>
+          {replaying
+            ? `${partner} drew this, watch it appear…`
+            : lastBy
+              ? `Last touched by ${lastBy}. Pick a colour and draw, ${partner} sees every pixel as you go.`
+              : `A blank page for the two of you. Pick a colour and draw, ${partner} sees every pixel as you go.`}
+        </Muted>
+      )}
 
       {/* The grid */}
       {loading ? (
@@ -288,12 +308,7 @@ export default function CanvasScreen({ navigation }: any) {
           >
             {box > 0
               ? Array.from({ length: CANVAS_SIZE }).map((_, r) => (
-                  <View key={r} style={styles.row}>
-                    {Array.from({ length: CANVAS_SIZE }).map((__, c) => {
-                      const i = r * CANVAS_SIZE + c;
-                      return <View key={c} style={[styles.cell, { backgroundColor: colorForPixel(pixels[i]) }]} />;
-                    })}
-                  </View>
+                  <GridRow key={r} row={pixels.slice(r * CANVAS_SIZE, (r + 1) * CANVAS_SIZE)} />
                 ))
               : null}
           </View>
@@ -328,6 +343,40 @@ export default function CanvasScreen({ navigation }: any) {
     </Screen>
   );
 }
+
+/** A soft, breathing green dot — "they're here with you right now". */
+function LiveDot() {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.spring(pulse, { toValue: 1, useNativeDriver: true, ...springs.gentle }),
+        Animated.spring(pulse, { toValue: 0, useNativeDriver: true, ...springs.gentle }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] });
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
+  return <Animated.View style={[styles.liveDot, { transform: [{ scale }], opacity }]} />;
+}
+
+/**
+ * One 16-cell grid row, memoized on its slice of the board string. During a
+ * drag only the row containing the painted pixel re-renders (1/16th of the
+ * board) instead of all 256 cells — this is what keeps fast strokes and the
+ * discovery replay at full frame rate on modest phones and on web.
+ */
+const GridRow = React.memo(function GridRow({ row }: { row: string }) {
+  return (
+    <View style={styles.row}>
+      {Array.from({ length: CANVAS_SIZE }).map((_, c) => (
+        <View key={c} style={[styles.cell, { backgroundColor: colorForPixel(row[c]) }]} />
+      ))}
+    </View>
+  );
+});
 
 /** A palette swatch that springs in when selected. */
 function Swatch({
@@ -388,6 +437,10 @@ const styles = StyleSheet.create({
   },
   row: { flex: 1, flexDirection: 'row' },
   cell: { flex: 1, borderWidth: StyleSheet.hairlineWidth, borderColor: GRID_BORDER },
+
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.good },
+  liveText: { color: colors.good, fontFamily: font.family.semibold, fontSize: font.size.sm, letterSpacing: 0.2 },
 
   skip: {
     position: 'absolute',

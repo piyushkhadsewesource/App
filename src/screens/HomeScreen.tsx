@@ -92,8 +92,15 @@ export default function HomeScreen({ navigation }: any) {
   );
   const recent = useMemo(() => withinHours(activity, 36), [activity]);
   const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
-  // Presence: if your partner did anything in the last hour, their pulse face beats.
-  const partnerActive = useMemo(() => recent.some((e) => !e.mine && e.at > now - 60 * 60 * 1000), [recent, now]);
+  // Presence, two tiers. Live: their app is open right now (heartbeat within
+  // ~2 min) — the warmest signal we have, "we're in here together". Recent:
+  // they did something in the last hour. Either makes the pulse face beat;
+  // live gets its own label.
+  const partnerHereNow = app.partnerSeenAt != null && now - app.partnerSeenAt < 2 * 60 * 1000;
+  const partnerActive = useMemo(
+    () => partnerHereNow || recent.some((e) => !e.mine && e.at > now - 60 * 60 * 1000),
+    [recent, now, partnerHereNow],
+  );
 
   // A one-time hint the first time the partner's presence lights up, teaching
   // what the green heartbeat means. Seen-flag persisted like other UI prefs.
@@ -401,6 +408,7 @@ export default function HomeScreen({ navigation }: any) {
             checkedToday={partnerLatest?.date === today}
             mood={partnerLatest?.date === today ? moodMeta(partnerLatest.mood) : null}
             beating={partnerActive}
+            live={partnerHereNow}
           />
         </View>
         {partnerLatest?.date === today && partnerLatest.need ? (
@@ -574,12 +582,14 @@ function PulseFace({
   checkedToday,
   mood,
   beating,
+  live,
 }: {
   name: string;
   color: string;
   checkedToday: boolean;
   mood: { emoji: string; label: string } | null;
   beating?: boolean;
+  live?: boolean;
 }) {
   const face = mood ? (
     <Text style={{ fontSize: 34 }}>{mood.emoji}</Text>
@@ -592,7 +602,9 @@ function PulseFace({
     <View style={{ alignItems: 'center', flex: 1 }}>
       <Heartbeat active={!!beating}>{face}</Heartbeat>
       <Text style={[styles.pulseName, { color }]}>{name}</Text>
-      <Muted>{beating ? 'Active now 💚' : mood ? mood.label : checkedToday ? 'Checked in' : 'No check-in yet'}</Muted>
+      <Muted>
+        {live ? 'Here right now 💚' : beating ? 'Active now 💚' : mood ? mood.label : checkedToday ? 'Checked in' : 'No check-in yet'}
+      </Muted>
     </View>
   );
 }

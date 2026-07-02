@@ -9,8 +9,8 @@ import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Platform, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import { ToastProvider, useToast } from './src/components/ToastHost';
@@ -143,13 +143,10 @@ function Root() {
   useWebPushForegroundToasts(appReady && !!identity);
 
   if (!appReady) {
-    // The native splash is still covering this on devices; the spinner is the
-    // web fallback (and a safety net if the splash ever fails to hide).
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+    // The native splash is still covering this on devices; the breathing heart
+    // is the web fallback (and a safety net if the splash ever fails to hide) —
+    // an on-brand heartbeat instead of a generic spinner.
+    return <BootHeart />;
   }
 
   if (!identity) return <OnboardingScreen />;
@@ -174,6 +171,28 @@ function Root() {
       ) : null}
       <SosOverlay />
     </>
+  );
+}
+
+/** The boot screen: a soft, slowly-breathing heart on the app background. */
+function BootHeart() {
+  const breathe = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 1100, useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 1100, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breathe]);
+  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const opacity = breathe.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] });
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.Text style={{ fontSize: 44, transform: [{ scale }], opacity }}>🤍</Animated.Text>
+    </View>
   );
 }
 

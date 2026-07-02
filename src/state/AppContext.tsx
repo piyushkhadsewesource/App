@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { now, todayISO } from '../lib/date';
 import { createDb, Db, onSyncHealth, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
@@ -46,6 +46,7 @@ import {
   Occasion,
   Ping,
   PingType,
+  Presence,
   Reason,
   ScheduleItem,
   SnakesGame,
@@ -86,6 +87,8 @@ interface AppValue {
   occasions: Occasion[];
   issues: Issue[];
   issueSteps: IssueStep[];
+  /** Partner's last live heartbeat (ms), or null. Within ~2 min = in the app right now. */
+  partnerSeenAt: number | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -214,6 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [occasions, setOccasions] = useState<Occasion[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [issueSteps, setIssueSteps] = useState<IssueStep[]>([]);
+  const [presence, setPresence] = useState<Presence[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -271,6 +275,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<Occasion>('occasions', setOccasions),
         db.watch<Issue>('issues', setIssues),
         db.watch<IssueStep>('issueSteps', setIssueSteps),
+        db.watch<Presence>('presence', setPresence),
       ];
     })();
     return () => {
@@ -325,6 +330,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity?.userId, identity?.spaceId]);
 
+  // Live "I'm here" heartbeat: one tiny write per minute while the app is open
+  // and foregrounded (cloud mode only — local mode has no partner to tell).
+  // Backgrounding stops the pulse; returning writes one immediately, so the
+  // partner's "here right now" indicator reacts within seconds of a reopen.
+  useEffect(() => {
+    if (!identity || !cloudEnabled) return;
+    const uid = identity.userId;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const beat = () => {
+      void dbRef.current?.add('presence', { id: uid, at: now() });
+    };
+    const start = () => {
+      if (timer) return;
+      beat();
+      timer = setInterval(beat, 60_000);
+    };
+    const stop = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+    start();
+    const sub = AppState.addEventListener('change', (s) => (s === 'active' ? start() : stop()));
+    return () => {
+      stop();
+      sub.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity?.userId, identity?.spaceId]);
+
   const meId = identity?.userId ?? '';
 
   // The partner's stable id is derived from their name (so it survives
@@ -367,6 +403,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return resolved;
   }, [meId, identity, checkins, feelings, reasons, memories, letters, future, deck, pings, moments, alerts, meetings]);
 
+  // The partner's most recent heartbeat. A two-person space means "any presence
+  // doc that isn't mine" is theirs; ?? null keeps consumers on safe ground.
+  const partnerSeenAt = useMemo(() => {
+    const theirs = presence.filter((p) => p.id !== meId && typeof p.at === 'number');
+    if (theirs.length === 0) return null;
+    return theirs.reduce((max, p) => (p.at > max ? p.at : max), 0) || null;
+  }, [presence, meId]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo<AppValue>(() => ({
     ready,
@@ -396,6 +440,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     occasions,
     issues,
     issueSteps,
+    partnerSeenAt,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -1056,7 +1101,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, syncTrouble, meId, partnerId, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

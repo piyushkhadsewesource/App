@@ -1,9 +1,10 @@
 // A themed pop-up calendar + scroll-wheel time picker (no native dependency)
 // that works on web and device alike, and matches the app's premium look.
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Wheel from './Wheel';
 import { colors, font, radius, shadow, spacing } from '../theme';
+import { spring } from '../theme/motion';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -99,6 +100,23 @@ export default function DateTimeModal({
     if (!Number.isNaN(d.getTime())) onConfirm(d.getTime());
   };
 
+  // The sheet lands with a soft spring (scale + lift) each time it opens, so it
+  // pops in with physical weight instead of a flat fade. Backdrop keeps the fade.
+  const pop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (visible) {
+      pop.setValue(0);
+      Animated.spring(pop, { toValue: 1, useNativeDriver: true, ...spring.snappy }).start();
+    }
+  }, [visible, pop]);
+  const popStyle = {
+    opacity: pop,
+    transform: [
+      { scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) },
+      { translateY: pop.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+    ],
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
@@ -107,7 +125,7 @@ export default function DateTimeModal({
             sheet, its calendar cells, or the time wheels, which need a clean
             scroll gesture that a surrounding Pressable would otherwise swallow. */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} accessibilityRole="button" accessibilityLabel="Close" />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, popStyle]}>
           {title ? <Text style={styles.title}>{title}</Text> : null}
 
           {mode !== 'time' ? (
@@ -178,7 +196,7 @@ export default function DateTimeModal({
               <Text style={styles.confirmText}>Confirm</Text>
             </Pressable>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
