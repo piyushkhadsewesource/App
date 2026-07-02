@@ -355,6 +355,13 @@ export interface Place {
   updatedAt: Millis;
 }
 
+/** A person's profile photo, shown wherever a face makes it feel personal. */
+export interface Profile {
+  id: string; // the owner's userId
+  image: string; // small data:image/jpeg;base64 URI (~256px square)
+  updatedAt: Millis;
+}
+
 export const COLLECTIONS = [
   'checkins',
   'pings',
@@ -382,6 +389,7 @@ export const COLLECTIONS = [
   'touch',
   'heartbeats',
   'places',
+  'profiles',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

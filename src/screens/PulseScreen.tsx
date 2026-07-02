@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
+  Avatar,
   Body,
   Button,
   Card,
@@ -186,8 +187,9 @@ export default function PulseScreen() {
               color={colors.primary}
               checkin={myToday}
               onEdit={() => setEditing(true)}
+              photo={app.myProfile?.image}
             />
-            <PulseCard who={identity?.partnerName ?? 'Partner'} color={colors.accent} checkin={partnerToday} />
+            <PulseCard who={identity?.partnerName ?? 'Partner'} color={colors.accent} checkin={partnerToday} photo={app.partnerProfile?.image} />
           </View>
 
           {/* My recent moods */}
@@ -408,16 +410,21 @@ function PulseCard({
   color,
   checkin,
   onEdit,
+  photo,
 }: {
   who: string;
   color: string;
   checkin: ReturnType<typeof latestCheckin>;
   onEdit?: () => void;
+  photo?: string | null;
 }) {
   const m = checkin ? moodMeta(checkin.mood) : null;
   return (
     <View style={[styles.pulseCard, { borderColor: color + '44' }]}>
-      <Text style={[styles.pulseWho, { color }]}>{who}</Text>
+      <View style={styles.pulseWhoRow}>
+        {photo ? <Avatar name={who} size={22} uri={photo} /> : null}
+        <Text style={[styles.pulseWho, { color }]}>{who}</Text>
+      </View>
       <Text style={{ fontSize: 38 }}>{m ? m.emoji : '⚪️'}</Text>
       <Title style={{ marginTop: 2 }}>{m ? m.label : 'No check-in'}</Title>
       {checkin ? (
@@ -475,7 +482,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'center',
   },
-  pulseWho: { fontFamily: font.family.bold, marginBottom: spacing.sm, fontSize: font.size.md },
+  pulseWhoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
+  pulseWho: { fontFamily: font.family.bold, fontSize: font.size.md },
   levels: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   dots: { flexDirection: 'row', gap: 3 },
   dot: { width: 6, height: 6, borderRadius: 3 },

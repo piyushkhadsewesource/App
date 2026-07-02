@@ -200,7 +200,7 @@ export default function HomeScreen({ navigation }: any) {
                 else toast.show(`Empty for now — leave ${partnerName} something to find 🤍`, 2600);
               }}
             />
-            <Avatar name={identity?.name ?? '?'} />
+            <Avatar name={identity?.name ?? '?'} uri={app.myProfile?.image} />
           </View>
         }
       />

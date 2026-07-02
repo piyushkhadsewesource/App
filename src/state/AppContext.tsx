@@ -49,6 +49,7 @@ import {
   PingType,
   Place,
   Presence,
+  Profile,
   TouchSignal,
   Reason,
   ScheduleItem,
@@ -102,6 +103,10 @@ interface AppValue {
   myPlace: Place | null;
   /** Partner's shared city, or null if they haven't set one. */
   partnerPlace: Place | null;
+  /** My profile photo record, or null. */
+  myProfile: Profile | null;
+  /** Partner's profile photo record, or null. */
+  partnerProfile: Profile | null;
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -136,6 +141,8 @@ interface AppValue {
   saveHeartbeat(intervals: number[]): Promise<boolean>;
   /** Share/replace my compass city. Returns success. */
   savePlace(place: { name: string; lat: number; lon: number }): Promise<boolean>;
+  /** Save/replace my profile photo (small data:image URI). Returns success. */
+  saveProfilePhoto(image: string): Promise<boolean>;
   addLetter(data: {
     title: string;
     body: string;
@@ -240,6 +247,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [touchArr, setTouchArr] = useState<TouchSignal[]>([]);
   const [heartbeats, setHeartbeats] = useState<HeartbeatRecord[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const dbRef = useRef<Db | null>(null);
 
@@ -301,6 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<TouchSignal>('touch', setTouchArr),
         db.watch<HeartbeatRecord>('heartbeats', setHeartbeats),
         db.watch<Place>('places', setPlaces),
+        db.watch<Profile>('profiles', setProfiles),
       ];
     })();
     return () => {
@@ -453,6 +462,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const validPlace = (p: Place) => typeof p.lat === 'number' && typeof p.lon === 'number';
   const myPlace = useMemo(() => places.find((p) => p.id === meId && validPlace(p)) ?? null, [places, meId]);
   const partnerPlace = useMemo(() => places.find((p) => p.id !== meId && validPlace(p)) ?? null, [places, meId]);
+  const validProfile = (p: Profile) => typeof p.image === 'string' && p.image.startsWith('data:image/');
+  const myProfile = useMemo(() => profiles.find((p) => p.id === meId && validProfile(p)) ?? null, [profiles, meId]);
+  const partnerProfile = useMemo(() => profiles.find((p) => p.id !== meId && validProfile(p)) ?? null, [profiles, meId]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo<AppValue>(() => ({
@@ -489,6 +501,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     partnerHeartbeat,
     myPlace,
     partnerPlace,
+    myProfile,
+    partnerProfile,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -648,6 +662,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         lon,
         updatedAt: now(),
       });
+    },
+    async saveProfilePhoto(image) {
+      const db = dbRef.current;
+      if (!db || !meId) return false;
+      // Must match the Firestore rules' image constraints (data URI, <950k).
+      if (typeof image !== 'string' || !image.startsWith('data:image/') || image.length > MAX_IMAGE_CHARS) return false;
+      return db.add('profiles', { id: meId, image, updatedAt: now() });
     },
     async addLetter(data) {
       const db = dbRef.current;
@@ -1179,7 +1200,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myPlace, partnerPlace, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myPlace, partnerPlace, myProfile, partnerProfile, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

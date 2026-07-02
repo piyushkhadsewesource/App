@@ -13,6 +13,7 @@
 // partner's circle plays their true rhythm back through the haptic engine.
 // Haptics no-op on web via the guarded helpers; the visuals carry it there.
 // ─────────────────────────────────────────────────────────────────────────
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -158,6 +159,7 @@ export default function GlassScreen({ navigation }: any) {
         <HeartbeatOrb
           label={`Hold to feel ${partner}'s heartbeat`}
           intervals={app.partnerHeartbeat.intervals}
+          photo={app.partnerProfile?.image}
         />
       ) : (
         <Card>
@@ -225,7 +227,7 @@ function ThumbRing({ holding, together, partnerWaiting }: { holding: boolean; to
 }
 
 /** Hold to play the partner's true rhythm — visual pulse + haptic thumps. */
-function HeartbeatOrb({ label, intervals }: { label: string; intervals: number[] }) {
+function HeartbeatOrb({ label, intervals, photo }: { label: string; intervals: number[]; photo?: string | null }) {
   const scale = useRef(new Animated.Value(1)).current;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [feeling, setFeeling] = useState(false);
@@ -265,7 +267,11 @@ function HeartbeatOrb({ label, intervals }: { label: string; intervals: number[]
       style={({ pressed }) => [styles.orbCard, shadow.card, pressed && { opacity: 0.96 }]}
     >
       <Animated.View style={[styles.orb, { transform: [{ scale }] }]}>
-        <LinearGradient colors={gradients.primary} style={StyleSheet.absoluteFill} />
+        {photo ? (
+          <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+        ) : (
+          <LinearGradient colors={gradients.primary} style={StyleSheet.absoluteFill} />
+        )}
       </Animated.View>
       <View style={{ flex: 1 }}>
         <Body style={{ fontFamily: font.family.semibold }}>{label}</Body>

@@ -50,3 +50,27 @@ export async function capturePhoto(source: PhotoSource): Promise<string | null> 
   if (!edited.base64) return null;
   return `data:image/jpeg;base64,${edited.base64}`;
 }
+
+/**
+ * Pick a square profile photo and shrink it hard (256px, ~20–40 KB) — small
+ * enough to ride inside a synced doc and render instantly everywhere it's
+ * shown. Same return/throw contract as capturePhoto.
+ */
+export async function captureProfilePhoto(): Promise<string | null> {
+  const granted = await ensurePermission('library');
+  if (!granted) throw new Error('permission-denied');
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 1,
+  });
+  if (result.canceled || !result.assets?.length) return null;
+  const edited = await manipulateAsync(
+    result.assets[0].uri,
+    [{ resize: { width: 256 } }],
+    { compress: 0.6, base64: true, format: SaveFormat.JPEG },
+  );
+  if (!edited.base64) return null;
+  return `data:image/jpeg;base64,${edited.base64}`;
+}

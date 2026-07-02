@@ -16,10 +16,12 @@
 // ─────────────────────────────────────────────────────────────────────────
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import LensView from '../components/LensView';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../components/ui';
 import { useToast } from '../components/ToastHost';
 import { hSuccess } from '../lib/haptics';
-import { geocodeCity, haversineKm, initialBearingDeg } from '../lib/geo';
+import { geocodeCity, haversineKm, initialBearingDeg, reverseGeocode } from '../lib/geo';
+import { useHeading } from '../lib/useHeading';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { spring } from '../theme/motion';
@@ -38,9 +40,66 @@ export default function CompassScreen({ navigation }: any) {
   const partner = app.identity?.partnerName ?? 'them';
   const toast = useToast();
 
-  // ── City setup ───────────────────────────────────────────────────────────
+  // ── Location setup ───────────────────────────────────────────────────────
+  // Primary: one tap on "use my current location" (browser geolocation on web;
+  // expo-location on native, guarded for binaries that predate it). Fallback:
+  // type a city. Either way only a point + a city-level label is shared.
   const [city, setCity] = useState('');
   const [searching, setSearching] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  async function useMyLocation() {
+    if (locating) return;
+    setLocating(true);
+    // Watchdog: geolocation's own timeout only starts AFTER the permission
+    // prompt is answered — a user who ignores the prompt would otherwise leave
+    // the button stuck on "Finding you…" forever. 15s and we give up cleanly.
+    const acquire = async (): Promise<{ lat: number; lon: number } | null> => {
+      if (Platform.OS === 'web') {
+        return new Promise((resolve) => {
+          if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null);
+          navigator.geolocation.getCurrentPosition(
+            (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+            () => resolve(null),
+            { timeout: 12000, maximumAge: 60000 },
+          );
+        });
+      }
+      try {
+        // Guarded: binaries built before expo-location was added fall through
+        // to the typed-city path instead of crashing.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Loc = require('expo-location');
+        const perm = await Loc.requestForegroundPermissionsAsync();
+        if (perm?.granted) {
+          const p = await Loc.getCurrentPositionAsync({ accuracy: Loc.Accuracy.Balanced });
+          return { lat: p.coords.latitude, lon: p.coords.longitude };
+        }
+      } catch {
+        /* module unavailable in this binary */
+      }
+      return null;
+    };
+    const coords = await Promise.race([
+      acquire(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 15_000)),
+    ]);
+    if (!coords) {
+      setLocating(false);
+      toast.show("Couldn't get your location — type your city below instead", 2800);
+      return;
+    }
+    const name = (await reverseGeocode(coords.lat, coords.lon)) ?? 'Where I am';
+    const ok = await app.savePlace({ name, lat: coords.lat, lon: coords.lon });
+    setLocating(false);
+    if (ok) {
+      hSuccess();
+      toast.show(`You're on the map: ${name} 🤍`, 2600);
+    } else {
+      toast.show("Couldn't save — check your connection and try again", 2400);
+    }
+  }
+
   async function shareCity() {
     const q = city.trim();
     if (!q || searching) return;
@@ -70,46 +129,9 @@ export default function CompassScreen({ navigation }: any) {
   const bearing = ready ? initialBearingDeg(my!.lat, my!.lon, theirs!.lat, theirs!.lon) : 0;
   const together = ready && km < 25; // same city (roughly) — the day the needle rests
 
-  // ── Device heading (tiered, best-effort) ─────────────────────────────────
-  const [heading, setHeading] = useState<number | null>(null);
-  useEffect(() => {
-    let cleanup: (() => void) | null = null;
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && 'ondeviceorientation' in window) {
-        const onOrient = (e: any) => {
-          // iOS Safari exposes webkitCompassHeading; others give alpha (inverted).
-          const h =
-            typeof e.webkitCompassHeading === 'number'
-              ? e.webkitCompassHeading
-              : e.absolute && typeof e.alpha === 'number'
-                ? 360 - e.alpha
-                : null;
-          if (h != null && Number.isFinite(h)) setHeading(h);
-        };
-        window.addEventListener('deviceorientation', onOrient);
-        cleanup = () => window.removeEventListener('deviceorientation', onOrient);
-      }
-    } else {
-      try {
-        // Guarded: a binary built before expo-sensors was added simply won't
-        // have the native module — fall back to north-up instead of crashing.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { Magnetometer } = require('expo-sensors');
-        Magnetometer.setUpdateInterval(250);
-        const sub = Magnetometer.addListener((d: { x: number; y: number }) => {
-          if (typeof d?.x !== 'number' || typeof d?.y !== 'number') return;
-          // Flat-held approximation; plenty for a poetic needle.
-          let h = Math.atan2(d.y, d.x) * (180 / Math.PI);
-          h = (90 - h + 360) % 360;
-          setHeading(h);
-        });
-        cleanup = () => sub?.remove();
-      } catch {
-        /* module not in this binary yet — north-up dial */
-      }
-    }
-    return () => cleanup?.();
-  }, []);
+  // ── Device heading (tiered, best-effort; shared with the Lens) ──────────
+  const heading = useHeading();
+  const [lensOpen, setLensOpen] = useState(false);
 
   // ── The needle: springs toward (bearing − heading), unwrapped so it never
   //    whips the long way round when crossing north. ───────────────────────
@@ -136,10 +158,13 @@ export default function CompassScreen({ navigation }: any) {
         <Card tone="violet">
           <Body style={{ fontFamily: font.family.semibold }}>Put yourself on the map</Body>
           <Muted style={{ marginTop: 4, marginBottom: spacing.md }}>
-            Share your city — just the city, never your location — and the needle knows where home is.
+            One tap and the needle knows where home is. Your spot stays between the two of you.
           </Muted>
+          <Button label={locating ? 'Finding you…' : '📍 Use my current location'} disabled={locating} onPress={useMyLocation} />
+          <View style={{ height: spacing.md }} />
+          <Muted style={{ marginBottom: spacing.sm }}>Or type a city instead:</Muted>
           <Field value={city} onChangeText={setCity} placeholder="e.g. Mumbai" autoCapitalize="words" />
-          <Button label={searching ? 'Finding it…' : 'Share my city'} disabled={!city.trim() || searching} onPress={shareCity} />
+          <Button label={searching ? 'Finding it…' : 'Share this city'} variant="soft" disabled={!city.trim() || searching} onPress={shareCity} />
         </Card>
       ) : !theirs ? (
         <Card tone="rose">
@@ -186,6 +211,13 @@ export default function CompassScreen({ navigation }: any) {
             </Muted>
           </View>
 
+          {!together ? (
+            <>
+              <View style={{ height: spacing.md }} />
+              <Button label="Open the lens 📷" variant="soft" onPress={() => setLensOpen(true)} />
+            </>
+          ) : null}
+
           <Card tone="surface" style={{ marginTop: spacing.lg }}>
             <Body style={{ fontStyle: 'italic', textAlign: 'center' }}>{line}</Body>
           </Card>
@@ -193,6 +225,14 @@ export default function CompassScreen({ navigation }: any) {
           <Muted style={{ marginTop: spacing.lg, textAlign: 'center' }}>
             {my.name} → {theirs.name}
           </Muted>
+
+          <LensView
+            visible={lensOpen}
+            onClose={() => setLensOpen(false)}
+            bearing={bearing}
+            partnerName={partner}
+            km={km}
+          />
         </>
       )}
 
@@ -200,10 +240,12 @@ export default function CompassScreen({ navigation }: any) {
         <>
           <View style={{ height: spacing.lg }} />
           <Card>
-            <Muted>Moved? Share a new city any time.</Muted>
+            <Muted>Moved? Update where you are any time.</Muted>
+            <View style={{ height: spacing.sm }} />
+            <Button label={locating ? 'Finding you…' : '📍 Use my current location'} variant="soft" disabled={locating} onPress={useMyLocation} />
             <View style={{ height: spacing.sm }} />
             <Field value={city} onChangeText={setCity} placeholder={my.name} autoCapitalize="words" />
-            <Button label={searching ? 'Finding it…' : 'Update my city'} variant="soft" disabled={!city.trim() || searching} onPress={shareCity} />
+            <Button label={searching ? 'Finding it…' : 'Update my city'} variant="ghost" disabled={!city.trim() || searching} onPress={shareCity} />
           </Card>
         </>
       ) : null}

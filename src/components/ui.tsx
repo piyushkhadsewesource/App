@@ -14,6 +14,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
@@ -263,12 +264,26 @@ export function Avatar({
   name,
   color = colors.primary,
   size = 40,
+  uri,
 }: {
   name: string;
   color?: string;
   size?: number;
+  /** Optional profile photo (small data URI); falls back to the initial. */
+  uri?: string | null;
 }) {
   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+  if (uri) {
+    return (
+      <Image
+        source={{ uri }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+        contentFit="cover"
+        transition={150}
+        accessibilityLabel={name}
+      />
+    );
+  }
   return (
     <View
       style={[

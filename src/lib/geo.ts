@@ -34,6 +34,33 @@ export interface GeocodedCity {
   lon: number;
 }
 
+/** 16-wind compass label for a bearing, e.g. 319° → "NW". */
+export function cardinal16(bearing: number): string {
+  const winds = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  return winds[Math.round((((bearing % 360) + 360) % 360) / 22.5) % 16];
+}
+
+/**
+ * Coarse city name for a coordinate via BigDataCloud's free keyless
+ * reverse-geocoder (CORS-friendly, works on native and web). Null on any
+ * failure — callers fall back to a generic label rather than erroring.
+ */
+export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+    );
+    if (!res.ok) return null;
+    const json: any = await res.json();
+    const city = json?.city || json?.locality || json?.principalSubdivision;
+    if (!city) return null;
+    const label = [city, json?.countryName].filter(Boolean).join(', ');
+    return String(label).slice(0, 80);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolve a typed city name via Open-Meteo's free geocoding API (no key,
  * CORS-friendly, works on native and web). Returns null on any failure —

@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { APP_NAME } from '../config';
 import DateTimeModal from '../components/DateTimeModal';
-import { AppHeader, Body, Button, Card, Field, Muted, Screen, SectionTitle, Tag, Title } from '../components/ui';
+import { AppHeader, Avatar, Body, Button, Card, Field, Muted, Screen, SectionTitle, Tag, Title } from '../components/ui';
+import { useToast } from '../components/ToastHost';
 import { formatDate, isoToDate, toISODate } from '../lib/date';
+import { hSuccess } from '../lib/haptics';
+import { captureProfilePhoto } from '../services/photo';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, spacing } from '../theme';
 
@@ -20,6 +23,29 @@ export default function SettingsScreen({ navigation }: any) {
   const [anniversaryPickerOpen, setAnniversaryPickerOpen] = useState(false);
   const [code, setCode] = useState(id?.spaceId ?? '');
   const [saved, setSaved] = useState(false);
+  const [pickingPhoto, setPickingPhoto] = useState(false);
+  const toast = useToast();
+
+  async function changePhoto() {
+    if (pickingPhoto) return;
+    setPickingPhoto(true);
+    try {
+      const image = await captureProfilePhoto();
+      if (image) {
+        const ok = await app.saveProfilePhoto(image);
+        if (ok) {
+          hSuccess();
+          toast.show('That face, everywhere in your space 🤍', 2600);
+        } else {
+          toast.show("Couldn't save the photo — try again", 2400);
+        }
+      }
+    } catch {
+      Alert.alert('Photos permission needed', 'Allow photo access in Settings to choose a profile picture.');
+    } finally {
+      setPickingPhoto(false);
+    }
+  }
 
   const codeError = code.trim() && !CODE_RE.test(code.trim())
     ? 'Use only letters A–Z, numbers, and dashes. Minimum 4 characters.'
@@ -87,6 +113,21 @@ export default function SettingsScreen({ navigation }: any) {
 
       <SectionTitle>Your details</SectionTitle>
       <Card>
+        {/* Profile photo — shown beside your name all around the app */}
+        <View style={styles.photoRow}>
+          <Avatar name={id?.name ?? '?'} size={56} uri={app.myProfile?.image} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fieldLabel}>Your photo</Text>
+            <Muted>{app.myProfile ? 'Looking lovely. Tap to change it.' : `Add a photo — ${id?.partnerName ?? 'your partner'} sees it too.`}</Muted>
+          </View>
+          <Button
+            label={pickingPhoto ? '…' : app.myProfile ? 'Change' : 'Add'}
+            variant="soft"
+            onPress={changePhoto}
+            style={{ height: 40, paddingHorizontal: spacing.md }}
+          />
+        </View>
+
         <Field label="Your name" value={name} onChangeText={setName} />
         <Field label="Partner's name" value={partnerName} onChangeText={setPartnerName} />
 
@@ -155,6 +196,7 @@ export default function SettingsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   chevron: { fontSize: 26, color: colors.textFaint },
   fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs },
