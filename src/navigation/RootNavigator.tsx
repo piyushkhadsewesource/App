@@ -30,6 +30,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import SnakesScreen from '../screens/SnakesScreen';
 import TicTacToeScreen from '../screens/TicTacToeScreen';
 import VaultScreen from '../screens/VaultScreen';
+import WalkScreen from '../screens/WalkScreen';
 import WordleScreen from '../screens/WordleScreen';
 import { colors } from '../theme';
 
@@ -93,6 +94,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Canvas" component={CanvasScreen} />
       <Stack.Screen name="Glass" component={GlassScreen} />
       <Stack.Screen name="Compass" component={CompassScreen} />
+      <Stack.Screen name="Walk" component={WalkScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Occasions" component={OccasionsScreen} />
       <Stack.Screen name="Issues" component={IssuesScreen} />

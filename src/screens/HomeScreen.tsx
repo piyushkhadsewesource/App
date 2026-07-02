@@ -20,6 +20,8 @@ import { Reveal } from '../components/Motion';
 import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
 import { isBlank, normalizeCanvas } from '../lib/canvas';
+import { haversineKm } from '../lib/geo';
+import { kmFromSteps } from '../lib/walk';
 import { buildActivity, withinHours } from '../lib/activity';
 import { formatDayMonth, formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { averageIntensity, todaysFeelings } from '../lib/feelings';
@@ -155,6 +157,20 @@ export default function HomeScreen({ navigation }: any) {
       ),
     [app.deck, partnerId, meId],
   );
+  // Walking Each Other Home, the Home glance: only once both places are set
+  // and at least one real step has landed. All reads null-safe.
+  const walk = useMemo(() => {
+    const mine = app.myPlace;
+    const th = app.partnerPlace;
+    if (!mine || !th || app.stepDays.length === 0) return null;
+    const distanceKm = Math.max(1, Math.round(haversineKm(mine.lat, mine.lon, th.lat, th.lon)));
+    let steps = 0;
+    for (const d of app.stepDays) if (typeof d.steps === 'number' && d.steps > 0) steps += d.steps;
+    if (steps <= 0) return null;
+    const walkedKm = Math.min(distanceKm, kmFromSteps(steps));
+    return { distanceKm, walkedKm, pct: walkedKm / distanceKm, done: walkedKm >= distanceKm };
+  }, [app.myPlace, app.partnerPlace, app.stepDays]);
+
   const capsuleGift: { route: string; note: string } | null =
     unseenPings.length > 0
       ? { route: 'MissYou', note: `something warm from ${partnerName}` }
@@ -562,6 +578,27 @@ export default function HomeScreen({ navigation }: any) {
           {canvasPartnerNew ? <View style={styles.canvasDot} /> : <Text style={styles.actChevron}>›</Text>}
         </View>
       </Card>
+
+      {/* Walking each other home — only once the journey has begun */}
+      {walk ? (
+        <Card onPress={() => navigation.navigate('Walk')} style={{ marginTop: spacing.md }}>
+          <View style={styles.canvasRow}>
+            <Text style={{ fontSize: 30 }}>👣</Text>
+            <View style={{ flex: 1 }}>
+              <Title>Walking each other home</Title>
+              <Muted style={{ marginTop: 4 }}>
+                {walk.done
+                  ? 'You walked the whole way to each other 🤍'
+                  : `${Math.round(walk.walkedKm).toLocaleString()} of ${walk.distanceKm.toLocaleString()} km walked together`}
+              </Muted>
+              <View style={styles.walkTrack}>
+                <View style={[styles.walkFill, { width: `${Math.min(100, Math.max(2, walk.pct * 100))}%` }]} />
+              </View>
+            </View>
+            <Text style={styles.actChevron}>›</Text>
+          </View>
+        </Card>
+      ) : null}
     </Screen>
   );
 }
@@ -809,6 +846,8 @@ const styles = StyleSheet.create({
   feedCard: { padding: 0, overflow: 'hidden' },
   canvasRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   canvasDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  walkTrack: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: 'hidden', marginTop: spacing.sm },
+  walkFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.good },
   togetherRow: { flexDirection: 'row', alignItems: 'flex-start' },
   togetherHalf: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.xs },
   togetherDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: spacing.xs },

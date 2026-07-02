@@ -9,7 +9,7 @@ import React, {
   useState,
 } from 'react';
 import { AppState, Platform } from 'react-native';
-import { now, todayISO } from '../lib/date';
+import { addDaysISO, now, todayISO } from '../lib/date';
 import { createDb, Db, onSyncHealth, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
 import { hasNotificationPermission } from '../services/permission';
@@ -55,10 +55,12 @@ import {
   ScheduleItem,
   SnakesGame,
   SosAlert,
+  StepDay,
   TicTacToe,
   WordleResult,
 } from '../types/models';
 import { EMPTY_BOARD } from '../lib/games';
+import { autoStepsSupported, MAX_DAY_STEPS, readRecentDeviceSteps } from '../lib/walk';
 import { applyRoll } from '../lib/snakes';
 import { absCell, legalTokens, movedPos, SAFE, Side } from '../lib/ludo';
 
@@ -107,6 +109,8 @@ interface AppValue {
   myProfile: Profile | null;
   /** Partner's profile photo record, or null. */
   partnerProfile: Profile | null;
+  /** Every synced day of steps, both walkers (Walking Each Other Home). */
+  stepDays: StepDay[];
 
   isMine(authorId: string): boolean;
   authorName(authorId: string): string;
@@ -143,6 +147,11 @@ interface AppValue {
   savePlace(place: { name: string; lat: number; lon: number }): Promise<boolean>;
   /** Save/replace my profile photo (small data:image URI). Returns success. */
   saveProfilePhoto(image: string): Promise<boolean>;
+  /**
+   * Record my steps for a day. 'set' keeps the max of stored vs given (device
+   * truth re-reads never lower a count); 'add' increments (manual logging).
+   */
+  logSteps(date: string, steps: number, mode: 'set' | 'add'): Promise<boolean>;
   addLetter(data: {
     title: string;
     body: string;
@@ -248,6 +257,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [heartbeats, setHeartbeats] = useState<HeartbeatRecord[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [stepDays, setStepDays] = useState<StepDay[]>([]);
+  const stepDaysRef = useRef<StepDay[]>([]);
+  stepDaysRef.current = stepDays;
 
   const dbRef = useRef<Db | null>(null);
 
@@ -310,6 +322,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<HeartbeatRecord>('heartbeats', setHeartbeats),
         db.watch<Place>('places', setPlaces),
         db.watch<Profile>('profiles', setProfiles),
+        db.watch<StepDay>('steps', setStepDays),
       ];
     })();
     return () => {
@@ -396,6 +409,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [identity?.userId, identity?.spaceId]);
 
   const meId = identity?.userId ?? '';
+
+  // Walking Each Other Home, the passive half: on iOS (the only platform whose
+  // pedometer answers historical queries) silently sync today's + yesterday's
+  // step counts once per launch — only if motion permission is ALREADY granted
+  // (the Walk screen asks in context; this never prompts). A short delay lets
+  // the first 'steps' snapshot hydrate so "keep the max" compares fairly.
+  useEffect(() => {
+    if (!identity || !cloudEnabled || !autoStepsSupported()) return;
+    const uid = identity.userId;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const today = todayISO();
+        const days = await readRecentDeviceSteps(today, addDaysISO(today, -1));
+        if (cancelled) return;
+        for (const d of days) {
+          const id = `${uid}:${d.date}`;
+          const existing = stepDaysRef.current.find((x) => x.id === id)?.steps ?? 0;
+          const value = Math.max(existing, d.steps);
+          if (value > existing || existing === 0) {
+            await dbRef.current?.add('steps', { id, owner: uid, date: d.date, steps: value, updatedAt: now() });
+          }
+        }
+      } catch {
+        /* best-effort; the Walk screen re-syncs on visit */
+      }
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity?.userId, identity?.spaceId]);
 
   // The partner's stable id is derived from their name (so it survives
   // reinstalls). We still fall back to whatever other author appears in the
@@ -503,6 +549,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     partnerPlace,
     myProfile,
     partnerProfile,
+    stepDays,
 
     isMine: (authorId) => authorId === meId,
     authorName: (authorId) =>
@@ -669,6 +716,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Must match the Firestore rules' image constraints (data URI, <950k).
       if (typeof image !== 'string' || !image.startsWith('data:image/') || image.length > MAX_IMAGE_CHARS) return false;
       return db.add('profiles', { id: meId, image, updatedAt: now() });
+    },
+    async logSteps(date, steps, mode) {
+      const db = dbRef.current;
+      if (!db || !meId || typeof steps !== 'number' || !Number.isFinite(steps)) return false;
+      const clean = Math.max(0, Math.min(MAX_DAY_STEPS, Math.round(steps)));
+      const id = `${meId}:${date}`;
+      const existing = stepDaysRef.current.find((d) => d.id === id)?.steps ?? 0;
+      const value =
+        mode === 'add' ? Math.min(MAX_DAY_STEPS, existing + clean) : Math.max(existing, clean);
+      if (value === existing && existing !== 0) return true; // nothing new to write
+      return db.add('steps', { id, owner: meId, date, steps: value, updatedAt: now() });
     },
     async addLetter(data) {
       const db = dbRef.current;
@@ -1200,7 +1258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myPlace, partnerPlace, myProfile, partnerProfile, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myPlace, partnerPlace, myProfile, partnerProfile, stepDays, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

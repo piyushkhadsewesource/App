@@ -355,6 +355,20 @@ export interface Place {
   updatedAt: Millis;
 }
 
+/**
+ * One person's steps for one calendar day (doc id `${userId}:${date}`), for
+ * "Walking Each Other Home" — every step subtracts from the distance between
+ * the two cities. iOS days sync automatically from Core Motion; Android/web
+ * days are logged by hand. ~1 doc per person per day: negligible quota.
+ */
+export interface StepDay {
+  id: string; // `${owner}:${date}`
+  owner: string; // the walker's userId
+  date: ISODate;
+  steps: number;
+  updatedAt: Millis;
+}
+
 /** A person's profile photo, shown wherever a face makes it feel personal. */
 export interface Profile {
   id: string; // the owner's userId
@@ -390,6 +404,7 @@ export const COLLECTIONS = [
   'heartbeats',
   'places',
   'profiles',
+  'steps',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
