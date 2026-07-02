@@ -133,6 +133,37 @@ export default function CompassScreen({ navigation }: any) {
   const heading = useHeading();
   const [lensOpen, setLensOpen] = useState(false);
 
+  // Active-presence location model: refresh my pin ONCE per visit to this
+  // screen — never a background watcher, never on other screens — and only
+  // when permission is already granted and the pin is stale (>10 min). One
+  // GPS read + at most one Firestore write per visit: negligible battery and
+  // quota, but the needle stays honest if either of you has moved.
+  useEffect(() => {
+    if (Platform.OS === 'web') return; // web keeps the explicit-tap model
+    let cancelled = false;
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Loc = require('expo-location');
+        const perm = await Loc.getForegroundPermissionsAsync(); // never prompts
+        if (!perm?.granted || cancelled) return;
+        const mine = app.myPlace;
+        if (mine && Date.now() - mine.updatedAt < 10 * 60 * 1000) return; // fresh enough
+        const p = await Loc.getCurrentPositionAsync({ accuracy: Loc.Accuracy.Balanced });
+        if (cancelled) return;
+        const label = (await reverseGeocode(p.coords.latitude, p.coords.longitude)) ?? mine?.name ?? 'Where I am';
+        if (cancelled) return;
+        void app.savePlace({ name: label, lat: p.coords.latitude, lon: p.coords.longitude });
+      } catch {
+        /* module unavailable or GPS failed — the last pin stands */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── The needle: springs toward (bearing − heading), unwrapped so it never
   //    whips the long way round when crossing north. ───────────────────────
   const angle = useRef(new Animated.Value(0)).current;
@@ -214,7 +245,7 @@ export default function CompassScreen({ navigation }: any) {
           {!together ? (
             <>
               <View style={{ height: spacing.md }} />
-              <Button label="Open the lens 📷" variant="soft" onPress={() => setLensOpen(true)} />
+              <Button label="True North — open the lens 📷" variant="soft" onPress={() => setLensOpen(true)} />
             </>
           ) : null}
 
@@ -232,6 +263,7 @@ export default function CompassScreen({ navigation }: any) {
             bearing={bearing}
             partnerName={partner}
             km={km}
+            photo={app.partnerProfile?.image}
           />
         </>
       )}
