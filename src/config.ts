@@ -44,3 +44,17 @@ export function isFirebaseConfigured(): boolean {
     !projectId.startsWith('YOUR_')
   );
 }
+
+// ─── Web push (browser notifications via Firebase Cloud Messaging) ──────────
+// Browser notifications need a VAPID public key, generated once in the Firebase
+// console: Project settings → Cloud Messaging → "Web Push certificates" →
+// Generate key pair. Paste the key string below. Until it's set, web push stays
+// off (native iOS/Android push is unaffected either way). This key is public by
+// design — it only lets the browser subscribe; sending still requires the
+// server-side Cloud Function.
+export const fcmVapidKey = 'YOUR_VAPID_KEY';
+
+/** True once a real VAPID key is present, so the browser can register for push. */
+export function isWebPushConfigured(): boolean {
+  return isFirebaseConfigured() && !!fcmVapidKey && !fcmVapidKey.startsWith('YOUR_');
+}

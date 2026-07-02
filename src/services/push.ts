@@ -14,6 +14,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { EAS_PROJECT_ID } from '../config';
 import { ensureNotificationPermission } from './permission';
+import { registerWebPush } from './webPush';
 
 const SOS_CHANNEL = 'sos';
 const PING_CHANNEL = 'pings';
@@ -63,6 +64,9 @@ export async function ensureSosChannel(): Promise<void> {
  * return this phone's Expo push token, or null if unavailable.
  */
 export async function registerForPush(): Promise<string | null> {
+  // Web: mint an FCM browser token instead of an Expo token. Returns null until
+  // web push is configured (VAPID key) or if the browser/permission says no.
+  if (Platform.OS === 'web') return registerWebPush();
   if (!supported) return null;
   try {
     // Shared, single-flight permission request, so this never races with the

@@ -19,8 +19,9 @@ import { useToast } from '../components/ToastHost';
 import { shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
 import { hSuccess, hWarn } from '../lib/haptics';
+import { isWebPushConfigured } from '../config';
 import { hasNotificationPermission } from '../services/permission';
-import { registerForPush } from '../services/push';
+import { webNotificationsGranted } from '../services/webPush';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, spacing } from '../theme';
 import { PingType } from '../types/models';
@@ -117,31 +118,37 @@ export default function MissYouScreen() {
   // Contextual, SOS-framed pre-prompt for notifications: shown here (next to the
   // emergency alert it justifies) only when permission isn't already granted.
   // Asking in context, where the value is obvious, beats a cold launch prompt.
+  const isWeb = Platform.OS === 'web';
   const [notifGranted, setNotifGranted] = useState<boolean | null>(null);
   const [notifDismissed, setNotifDismissed] = useState(false);
   useEffect(() => {
     let alive = true;
-    hasNotificationPermission().then((ok) => alive && setNotifGranted(ok)).catch(() => {});
+    if (isWeb) {
+      setNotifGranted(webNotificationsGranted());
+    } else {
+      hasNotificationPermission().then((ok) => alive && setNotifGranted(ok)).catch(() => {});
+    }
     return () => {
       alive = false;
     };
-  }, []);
-  const showNotifPrompt = Platform.OS !== 'web' && notifGranted === false && !notifDismissed;
+  }, [isWeb]);
+  // Show the in-context enable card when permission isn't granted yet — on native
+  // always, and on web only once web push is actually configured (a VAPID key),
+  // so it never nags in a build where browser push can't work anyway.
+  const showNotifPrompt =
+    notifGranted === false && !notifDismissed && (!isWeb || isWebPushConfigured());
 
   async function enableAlerts() {
-    try {
-      await registerForPush();
-    } catch {
-      /* best-effort */
-    }
-    const ok = await hasNotificationPermission();
-    setNotifGranted(ok);
+    const ok = await app.enablePush(); // prompts (OS dialog / browser prompt) + stores the token
+    setNotifGranted(ok || (isWeb ? webNotificationsGranted() : await hasNotificationPermission()));
     if (ok) {
       toast.show('Alerts on, you’ll always hear them 🔔', 2400);
     } else {
       Alert.alert(
         'Allow notifications',
-        `To make sure ${partnerName}'s emergency reaches you even when Tether is closed, turn on notifications for Tether in your phone's Settings.`,
+        isWeb
+          ? `To let ${partnerName}'s messages reach this browser when Tether is closed, allow notifications for this site (check the address-bar permissions), then try again.`
+          : `To make sure ${partnerName}'s emergency reaches you even when Tether is closed, turn on notifications for Tether in your phone's Settings.`,
       );
     }
   }

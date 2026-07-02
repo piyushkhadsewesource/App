@@ -14,6 +14,7 @@ import { createDb, Db, onSyncHealth, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
 import { hasNotificationPermission } from '../services/permission';
 import { registerForPush, sendPush, sendSosPush } from '../services/push';
+import { webNotificationsGranted } from '../services/webPush';
 import {
   clearIdentity,
   genId,
@@ -110,6 +111,9 @@ interface AppValue {
   removeFeeling(id: string): Promise<void>;
   sendPing(type: PingType, message?: string): Promise<void>;
   markPingsSeen(): Promise<void>;
+  // Ask for notification permission and register this device (native Expo token
+  // or browser FCM token) into the shared space. Returns whether it succeeded.
+  enablePush(): Promise<boolean>;
   addLetter(data: {
     title: string;
     body: string;
@@ -276,28 +280,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity?.spaceId]);
 
-  // Register this phone for emergency push so an SOS reaches the partner even
-  // when the app is closed. Best-effort: no-ops if push isn't set up yet.
+  // Store a freshly-minted push token into the shared space. One doc per device
+  // so a phone (Expo) and a browser (FCM) for the same person coexist.
+  const storePushToken = async (token: string): Promise<boolean> => {
+    const db = dbRef.current;
+    const id = identity?.userId;
+    if (!db || !id) return false;
+    const isWeb = Platform.OS === 'web';
+    try {
+      await db.add('tokens', {
+        id: isWeb ? `${id}:web` : id,
+        owner: id,
+        kind: isWeb ? 'fcm' : 'expo',
+        token,
+        platform: Platform.OS,
+        updatedAt: now(),
+      });
+      return true;
+    } catch {
+      /* token storage unavailable; in-app alarm still works */
+      return false;
+    }
+  };
+
+  // Register this device for push so pings/SOS reach the partner even when the
+  // app is closed. Best-effort: no-ops if push isn't set up yet.
   useEffect(() => {
     if (!identity || !cloudEnabled) return;
     let cancelled = false;
     (async () => {
-      // Don't prompt for notifications at launch — the in-app card on Miss You
-      // asks in context. Only fetch/store the push token if permission is
-      // already granted (re-runs on a later launch once the user enables it).
-      if (!(await hasNotificationPermission())) return;
+      // Don't prompt at launch — the in-app card on Miss You asks in context.
+      // Only fetch/store the token if permission is ALREADY granted (this
+      // re-runs on a later launch once the user has enabled it). The check is
+      // prompt-free on both platforms.
+      const already = Platform.OS === 'web' ? webNotificationsGranted() : await hasNotificationPermission();
+      if (!already) return;
       const token = await registerForPush();
       if (cancelled || !token) return;
-      try {
-        await dbRef.current?.add('tokens', {
-          id: identity.userId,
-          token,
-          platform: Platform.OS,
-          updatedAt: now(),
-        });
-      } catch {
-        /* token storage unavailable; in-app alarm still works */
-      }
+      await storePushToken(token);
     })();
     return () => {
       cancelled = true;
@@ -498,6 +518,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!db) return;
       const unseen = pings.filter((p) => p.fromId !== meId && !p.seenAt);
       await Promise.all(unseen.map((p) => db.update<Ping>('pings', p.id, { seenAt: now() })));
+    },
+    async enablePush() {
+      // Prompts for permission (native OS dialog or the browser prompt) and, on
+      // success, stores this device's token so the partner can reach it.
+      const token = await registerForPush();
+      if (!token) return false;
+      return storePushToken(token);
     },
     async addLetter(data) {
       const db = dbRef.current;

@@ -1,0 +1,13 @@
+{
+  "name": "tether-functions",
+  "description": "Tether web-push sender — delivers Firebase Cloud Messaging notifications to a partner's browser when a ping / SOS / moment is written.",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

@@ -136,12 +136,18 @@ export interface Meeting {
 }
 
 /**
- * A phone's Expo push token, stored in the shared space so the partner's phone
- * can send an emergency push that wakes the device even when the app is closed.
+ * A device's push token, stored in the shared space so the partner can be
+ * reached even when the app is closed. One person can have several: a phone
+ * (Expo token) and one or more browsers (FCM web token). The doc id is unique
+ * per device (userId for the native phone, `${userId}:web` for a browser) so
+ * they never overwrite each other; `owner` always carries the userId so the
+ * sender/Cloud Function can skip the author's own devices.
  */
 export interface DeviceToken {
-  id: string; // the owner's userId
-  token: string; // ExponentPushToken[...]
+  id: string; // unique per device: userId (native) or `${userId}:web` (browser)
+  owner?: string; // the owner's userId (falls back to `id` for legacy native docs)
+  kind?: 'expo' | 'fcm'; // 'expo' → native Expo push; 'fcm' → browser web push
+  token: string; // ExponentPushToken[...] (expo) or an FCM registration token
   platform: string;
   updatedAt: Millis;
 }
