@@ -14,6 +14,7 @@ import { Animated, Platform, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import { ToastProvider, useToast } from './src/components/ToastHost';
+import { linking } from './src/navigation/linking';
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { refreshPlanReminders, refreshReminders, scheduleLetterDeliveries, syncOccasionReminders } from './src/services/notifications';
@@ -153,7 +154,7 @@ function Root() {
 
   return (
     <>
-      <NavigationContainer ref={navigationRef} theme={navTheme}>
+      <NavigationContainer ref={navigationRef} theme={navTheme} linking={linking}>
         <RootNavigator />
       </NavigationContainer>
       {/* A syncing problem is otherwise silent — the screen just quietly stops
