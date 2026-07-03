@@ -29,7 +29,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Tether uses your photos so you can share daily moments with your partner.",
-          "cameraPermission": "Tether uses your camera to capture daily moments to share with your partner."
+          "cameraPermission": "Tether uses your camera to capture daily moments and to power the Lens, so you can see exactly which way your partner is."
         }
       ],
       [
@@ -37,6 +37,30 @@
         {
           "color": "#E8638C",
           "sounds": ["./assets/alarm.wav"]
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Tether uses your camera to capture daily moments and to power the Lens, so you can see exactly which way your partner is.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Tether uses your location to point the compass toward your partner and measure the distance between you.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Tether uses motion & fitness data to count your steps, so every walk quietly brings you closer to your partner."
         }
       ]
     ],
