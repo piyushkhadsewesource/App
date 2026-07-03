@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '../lib/alert';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen, Title } from '../components/ui';
 import DateTimeModal from '../components/DateTimeModal';
 import { RollingNumber } from '../components/Ticker';

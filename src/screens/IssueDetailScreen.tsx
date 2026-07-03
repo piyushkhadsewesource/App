@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '../lib/alert';
 import { Celebrate } from '../components/Celebrate';
 import { AppHeader, Body, Button, Card, Field, LevelSelector, Muted, Screen, Title } from '../components/ui';
 import { formatRelative } from '../lib/date';

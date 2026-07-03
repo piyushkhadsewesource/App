@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '../lib/alert';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import { Skeleton, useInitialHydrate } from '../components/Skeleton';
 import { hLight, hMedium, hSuccess } from '../lib/haptics';

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '../lib/alert';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import { EMPTY_BOARD, tttWinner, tttWinningLine } from '../lib/games';
 import { Celebrate } from '../components/Celebrate';

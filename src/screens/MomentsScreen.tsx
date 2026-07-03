@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import React, { useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '../lib/alert';
 import {
   AppHeader,
   Body,

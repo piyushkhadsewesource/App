@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert } from '../lib/alert';
 import { AppHeader, Body, Button, Card, Muted, Screen, Title } from '../components/ui';
 import {
   DEFAULT_PLAN,
