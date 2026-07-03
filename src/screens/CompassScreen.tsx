@@ -14,6 +14,7 @@
 // The sensors module is loaded inside try/catch so binaries built before it
 // was added degrade to north-up instead of crashing.
 // ─────────────────────────────────────────────────────────────────────────
+import { useIsFocused } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import LensView from '../components/LensView';
@@ -130,8 +131,12 @@ export default function CompassScreen({ navigation }: any) {
   const together = ready && km < 25; // same city (roughly) — the day the needle rests
 
   // ── Device heading (tiered, best-effort; shared with the Lens) ──────────
-  const heading = useHeading();
+  // Gate the magnetometer on focus: when the lens (or any screen) is pushed on
+  // top, or you navigate away, the sensor stops rather than draining in the
+  // background. The lens runs its own heading while open.
   const [lensOpen, setLensOpen] = useState(false);
+  const focused = useIsFocused();
+  const heading = useHeading(focused && !lensOpen);
 
   // Active-presence location model: refresh my pin ONCE per visit to this
   // screen — never a background watcher, never on other screens — and only

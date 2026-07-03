@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { hLight, hSuccess } from '../lib/haptics';
 import { cardinal16 } from '../lib/geo';
 import { useHeading } from '../lib/useHeading';
@@ -99,6 +99,15 @@ function TrueNorthBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permission?.granted]);
 
+  // Pause everything hardware-adjacent when the app backgrounds while the lens
+  // is open: expo-camera releases the camera itself, useHeading stops the
+  // magnetometer, and this flag stops the haptic-radar interval below.
+  const [foreground, setForeground] = useState(() => AppState.currentState !== 'background');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => setForeground(s !== 'background'));
+    return () => sub.remove();
+  }, []);
+
   const heading = useHeading();
   // Signed offset to the target: 0 = dead ahead, negative = turn left.
   const diff = heading == null ? null : ((bearing - heading + 540) % 360) - 180;
@@ -114,7 +123,17 @@ function TrueNorthBody({
   // ── Haptic radar: silence far out, slow pulse when warm, quick pulse when
   //    hot, one clean Success the instant of lock. Bands, not raw degrees, so
   //    the interval isn't rebuilt on every sensor tick. ────────────────────
-  const band = locked ? 'locked' : absDiff == null ? 'none' : absDiff <= 20 ? 'hot' : absDiff <= 60 ? 'warm' : 'none';
+  const band = !foreground
+    ? 'none'
+    : locked
+      ? 'locked'
+      : absDiff == null
+        ? 'none'
+        : absDiff <= 20
+          ? 'hot'
+          : absDiff <= 60
+            ? 'warm'
+            : 'none';
   useEffect(() => {
     if (band === 'locked') {
       hSuccess();

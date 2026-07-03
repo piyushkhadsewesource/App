@@ -3,16 +3,32 @@
 //   • native with expo-sensors in the binary → magnetometer;
 //   • web with deviceorientation events      → browser heading;
 //   • otherwise                              → null (callers show north-up UI).
+//
+// Battery: the sensor is a real hardware drain, so the listener runs ONLY while
+// `enabled` (callers pass their screen-focus state) AND the app is foregrounded.
+// Navigating away, pushing another screen over the compass, or backgrounding
+// the app all tear the listener down immediately; returning re-attaches it.
 // The sensors require is guarded so binaries built before the dependency was
 // added degrade instead of crashing. Used by the compass dial and the lens.
 // ─────────────────────────────────────────────────────────────────────────
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
-export function useHeading(): number | null {
+export function useHeading(enabled: boolean = true): number | null {
   const [heading, setHeading] = useState<number | null>(null);
+  // Only 'background' truly pauses; iOS 'inactive' (transient, e.g. the control
+  // centre) is left running so the needle doesn't stutter on every notification.
+  const [foreground, setForeground] = useState(() => AppState.currentState !== 'background');
 
   useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => setForeground(s !== 'background'));
+    return () => sub.remove();
+  }, []);
+
+  const on = enabled && foreground;
+
+  useEffect(() => {
+    if (!on) return; // no sensor while unfocused or backgrounded — zero drain
     let cleanup: (() => void) | null = null;
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && 'ondeviceorientation' in window) {
@@ -47,7 +63,9 @@ export function useHeading(): number | null {
       }
     }
     return () => cleanup?.();
-  }, []);
+  }, [on]);
 
+  // The last reading persists across a pause (so the needle holds its angle
+  // instead of snapping to north); only the hardware listener is torn down.
   return heading;
 }
