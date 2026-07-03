@@ -85,6 +85,15 @@ if (!html.includes('tether-web-fixes')) {
        pointer-events:none ensures they never intercept clicks on active content. */
     [aria-hidden="true"], [aria-hidden="true"] * { pointer-events: none !important; }
 
+    /* iOS Safari polish: the page-level rubber-band bounce (visible as a grey/
+       white flash past the top/bottom edge) fights with nested ScrollViews and
+       looks unpolished on a premium surface; contain it to the page so it never
+       propagates past our own scroll containers. Tap highlight is Android/
+       Chrome's grey-box-on-tap default leaking into iOS WebViews via RNW — our
+       own Pressable press-states already provide feedback, so suppress it. */
+    html, body { overscroll-behavior-y: contain; }
+    * { -webkit-tap-highlight-color: transparent; }
+
     /* Premium desktop feel: every tappable (anything React Native Web tagged
        with accessibilityRole="button") shows a pointer cursor on hover.
        Disabled buttons keep the default arrow. */

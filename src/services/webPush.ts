@@ -14,13 +14,50 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { fcmVapidKey, firebaseConfig, isWebPushConfigured } from '../config';
 
+/**
+ * True on an iPhone/iPad browser. Deliberately UA-sniffed: iOS's push
+ * restriction (below) has no feature-detectable API — the only way to know
+ * is to know you're on iOS.
+ */
+export function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+}
+
+/**
+ * True once the page is running as an installed PWA (opened from the Home
+ * Screen icon), not a regular browser tab. `navigator.standalone` is Safari's
+ * own non-standard flag; `display-mode: standalone` is the cross-browser one.
+ */
+export function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    (navigator as any).standalone === true ||
+    (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
+  );
+}
+
+/**
+ * True only on iOS *outside* an installed PWA. On iOS, Safari exposes the
+ * Notification/serviceWorker/PushManager APIs in a plain browser tab and will
+ * even grant permission there — but WebKit only actually DELIVERS push to a
+ * page added to the Home Screen (shipped in iOS 16.4). Requesting permission
+ * from a regular tab burns the one-shot OS prompt for a subscription that can
+ * never receive anything, so callers must check this before offering "Enable
+ * alerts" and point the user at Add to Home Screen instead.
+ */
+export function needsHomeScreenForPush(): boolean {
+  return isIOS() && !isStandalone();
+}
+
 /** True if this browser can do web push at all (Notification + service worker). */
 export function webPushSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
     'Notification' in window &&
     'serviceWorker' in navigator &&
-    'PushManager' in window
+    'PushManager' in window &&
+    !needsHomeScreenForPush()
   );
 }
 

@@ -21,7 +21,7 @@ import { formatRelative } from '../lib/date';
 import { hSuccess, hWarn } from '../lib/haptics';
 import { isWebPushConfigured } from '../config';
 import { hasNotificationPermission } from '../services/permission';
-import { webNotificationsGranted } from '../services/webPush';
+import { needsHomeScreenForPush, webNotificationsGranted } from '../services/webPush';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, spacing } from '../theme';
 import { PingType } from '../types/models';
@@ -132,11 +132,20 @@ export default function MissYouScreen() {
       alive = false;
     };
   }, [isWeb]);
+  // iOS Safari only delivers web push to a page added to the Home Screen (a
+  // WebKit restriction, not a bug we can route around) — offering "Enable
+  // alerts" in a plain Safari tab would burn the one-shot OS permission prompt
+  // on a subscription that can never receive anything. Show install guidance
+  // instead, in that one specific case.
+  const iosNeedsHomeScreen = isWeb && needsHomeScreenForPush();
   // Show the in-context enable card when permission isn't granted yet — on native
-  // always, and on web only once web push is actually configured (a VAPID key),
-  // so it never nags in a build where browser push can't work anyway.
+  // always, and on web only once web push is actually configured (a VAPID key)
+  // and (if iOS) the page is already installed, so it never nags in a state
+  // where browser push can't work anyway.
   const showNotifPrompt =
-    notifGranted === false && !notifDismissed && (!isWeb || isWebPushConfigured());
+    notifGranted === false && !notifDismissed && (!isWeb || (isWebPushConfigured() && !iosNeedsHomeScreen));
+  const showHomeScreenPrompt =
+    isWeb && isWebPushConfigured() && iosNeedsHomeScreen && notifGranted === false && !notifDismissed;
 
   async function enableAlerts() {
     const ok = await app.enablePush(); // prompts (OS dialog / browser prompt) + stores the token
@@ -257,6 +266,27 @@ export default function MissYouScreen() {
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
               <Button label="Enable alerts" onPress={enableAlerts} style={{ flex: 1 }} />
               <Button label="Not now" variant="ghost" onPress={() => setNotifDismissed(true)} style={{ flex: 1 }} />
+            </View>
+          </Card>
+        ) : null}
+
+        {/* iOS Safari: push only works once this page is installed to the Home
+            Screen — offering the usual button here would silently do nothing. */}
+        {showHomeScreenPrompt ? (
+          <Card tone="gold" style={{ marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Text style={{ fontSize: 26 }}>📲</Text>
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontFamily: font.family.semibold }}>Add Tether to your Home Screen</Body>
+                <Muted style={{ marginTop: 2 }}>
+                  So {partnerName}’s emergency reaches you even when Tether is closed. On iPhone,
+                  tap the Share button below, then “Add to Home Screen” — alerts only work from
+                  there, not from Safari itself.
+                </Muted>
+              </View>
+            </View>
+            <View style={{ marginTop: spacing.md }}>
+              <Button label="Got it" variant="ghost" onPress={() => setNotifDismissed(true)} />
             </View>
           </Card>
         ) : null}

@@ -68,8 +68,10 @@ browser prompt, and the browser is registered.
 ## Caveats (browser platform limits, not bugs)
 
 - **iOS**: web push only works for an **installed** PWA (Add to Home Screen) on
-  iOS 16.4+. In a regular Safari tab it won't fire. Android/desktop Chrome &
-  Edge work in a normal tab.
+  iOS 16.4+. In a regular Safari tab it won't fire — and the app knows this:
+  `src/services/webPush.ts` detects iOS + not-installed and Miss You shows an
+  "Add Tether to your Home Screen" card instead of a button that would silently
+  do nothing. Android/desktop Chrome & Edge work in a normal tab.
 - A browser that has revoked notification permission won't receive pushes until
   re-granted (site permissions in the address bar).
 - For the most reliable "reach me while asleep" SOS alarm, the **native app** is
