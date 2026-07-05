@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
-import { APP_NAME } from '../config';
+import { APP_NAME, firebaseConfig } from '../config';
 import DateTimeModal from '../components/DateTimeModal';
 import { AppHeader, Avatar, Body, Button, Card, Field, Muted, Screen, SectionTitle, Tag, Title } from '../components/ui';
 import { useToast } from '../components/ToastHost';
-import { formatDate, isoToDate, toISODate } from '../lib/date';
+import { addDaysISO, formatDate, isoToDate, todayISO, toISODate } from '../lib/date';
 import { hSuccess } from '../lib/haptics';
+import { icsToBusyBlocks } from '../lib/ics';
 import { captureProfilePhoto } from '../services/photo';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, spacing } from '../theme';
+
+const ICS_URL_KEY = '@tether/icsUrl';
 
 // Firestore security rules enforce this pattern; validate client-side so the
 // user gets instant feedback instead of a silent sync failure.
@@ -26,6 +30,70 @@ export default function SettingsScreen({ navigation }: any) {
   const [saved, setSaved] = useState(false);
   const [pickingPhoto, setPickingPhoto] = useState(false);
   const toast = useToast();
+
+  // ── Calendar link (ICS import into Our Day) ──────────────────────────────
+  // The secret feed URL never syncs anywhere — it stays on this device; only
+  // the derived busy blocks are written to the shared space.
+  const [icsUrl, setIcsUrl] = useState('');
+  const [icsSavedUrl, setIcsSavedUrl] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(ICS_URL_KEY)
+      .then((v) => {
+        if (v) {
+          setIcsSavedUrl(v);
+          setIcsUrl(v);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function importCalendar() {
+    const raw = icsUrl.trim();
+    if (!raw || importing) return;
+    if (!/^https:\/\//i.test(raw)) {
+      Alert.alert('Check the link', 'Paste the full https:// calendar address (Google Calendar → Settings → "Secret address in iCal format").');
+      return;
+    }
+    setImporting(true);
+    try {
+      // Web can't read calendar hosts directly (no CORS on ICS feeds); the
+      // tiny icsFetch proxy in our Cloud Functions does it server-side.
+      // Native fetches the feed directly.
+      const target =
+        Platform.OS === 'web'
+          ? `https://us-central1-${firebaseConfig.projectId}.cloudfunctions.net/icsFetch?url=${encodeURIComponent(raw)}`
+          : raw;
+      const resp = await fetch(target);
+      if (!resp.ok) throw new Error(`fetch ${resp.status}`);
+      const text = await resp.text();
+      if (!text.includes('BEGIN:VCALENDAR')) throw new Error('not an ICS feed');
+      const from = todayISO();
+      const to = addDaysISO(from, 7);
+      const blocks = icsToBusyBlocks(text, from, to);
+      const n = await app.importBusySchedule(from, to, blocks);
+      await AsyncStorage.setItem(ICS_URL_KEY, raw);
+      setIcsSavedUrl(raw);
+      hSuccess();
+      toast.show(n > 0 ? `Imported ${n} busy block${n === 1 ? '' : 's'} into Our Day 🗓️` : 'Linked — no events in the next 7 days', 3000);
+    } catch {
+      Alert.alert(
+        'Could not import',
+        'Double-check the link is the secret iCal address, and that the app has been deployed with the calendar function (npm run deploy:all).',
+      );
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function removeCalendarLink() {
+    await AsyncStorage.removeItem(ICS_URL_KEY).catch(() => {});
+    const from = todayISO();
+    await app.importBusySchedule(from, addDaysISO(from, 7), []);
+    setIcsSavedUrl(null);
+    setIcsUrl('');
+    toast.show('Calendar link removed', 2200);
+  }
 
   async function changePhoto() {
     if (pickingPhoto) return;
@@ -110,6 +178,34 @@ export default function SettingsScreen({ navigation }: any) {
           </View>
           <Text style={styles.chevron}>›</Text>
         </View>
+      </Card>
+
+      <SectionTitle>Calendar link</SectionTitle>
+      <Card>
+        <Body style={{ fontFamily: font.family.semibold }}>Let Our Day read your calendar</Body>
+        <Muted style={{ marginTop: 4, marginBottom: spacing.md }}>
+          Paste your calendar's secret iCal address and the next 7 days of busy times flow into
+          Our Day on their own. Google Calendar: Settings → your calendar → "Secret address in
+          iCal format". Apple: iCloud calendar sharing link. The link stays on this phone.
+        </Muted>
+        <Field
+          value={icsUrl}
+          onChangeText={setIcsUrl}
+          placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <Button
+          label={importing ? 'Importing…' : icsSavedUrl ? 'Re-import next 7 days' : 'Link & import'}
+          disabled={!icsUrl.trim() || importing}
+          onPress={importCalendar}
+        />
+        {icsSavedUrl ? (
+          <>
+            <View style={{ height: spacing.sm }} />
+            <Button label="Remove link & imported blocks" variant="ghost" onPress={removeCalendarLink} />
+          </>
+        ) : null}
       </Card>
 
       <SectionTitle>Your details</SectionTitle>

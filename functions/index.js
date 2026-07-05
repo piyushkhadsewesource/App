@@ -87,3 +87,51 @@ exports.onMoment = onDocumentCreated('spaces/{spaceId}/moments/{momentId}', asyn
   if (!d) return;
   await notifyPartner(event.params.spaceId, d.authorId, 'Tether', 'Shared a new moment 📸', 'moment');
 });
+
+// ─── Calendar-link fetcher (ICS proxy) ──────────────────────────────────────
+// Google/Apple "secret address" ICS feeds don't send CORS headers, so the web
+// app can't read them directly. This tiny GET proxy fetches the feed server-
+// side and hands the text back. Locked to https calendar hosts (no arbitrary
+// URL fetching), response capped at 1 MB. v1 https function on purpose: it
+// keeps the predictable URL shape the client builds from the project id.
+const functionsV1 = require('firebase-functions/v1');
+
+const ICS_HOST_ALLOW = [
+  'calendar.google.com',
+  'www.google.com',
+  'p12-caldav.icloud.com',
+  'caldav.icloud.com',
+  'ical.icloud.com',
+  'outlook.live.com',
+  'outlook.office365.com',
+];
+
+exports.icsFetch = functionsV1.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET');
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  try {
+    const raw = String(req.query.url || '');
+    let url;
+    try {
+      url = new URL(raw);
+    } catch {
+      return res.status(400).send('bad url');
+    }
+    const hostOk =
+      url.protocol === 'https:' &&
+      ICS_HOST_ALLOW.some((h) => url.hostname === h || url.hostname.endsWith('.' + h));
+    if (!hostOk) return res.status(400).send('host not allowed');
+
+    const upstream = await fetch(url.toString(), { redirect: 'follow' });
+    if (!upstream.ok) return res.status(502).send('calendar fetch failed');
+    const text = await upstream.text();
+    if (text.length > 1_000_000) return res.status(413).send('calendar too large');
+    if (!text.includes('BEGIN:VCALENDAR')) return res.status(422).send('not an ICS feed');
+    res.set('Content-Type', 'text/calendar; charset=utf-8');
+    return res.status(200).send(text);
+  } catch (e) {
+    console.error('[icsFetch]', e);
+    return res.status(500).send('error');
+  }
+});

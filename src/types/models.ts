@@ -261,6 +261,17 @@ export interface ScheduleItem {
   title: string;
   icon?: string;
   note?: string;
+  /**
+   * What kind of entry this is. Absent = an ordinary plan.
+   * 'moment' — a proposed moment together; the partner can accept it (acceptedBy).
+   * 'busy'   — imported from an external calendar link; replaced wholesale on
+   *            each re-import rather than edited in place.
+   */
+  kind?: 'moment' | 'busy';
+  /** For kind==='moment': the partner's userId once they tap "I'll be there". */
+  acceptedBy?: string;
+  /** For kind==='busy': stable id from the source calendar (uid+start), for dedupe. */
+  extId?: string;
   createdAt: Millis;
   updatedAt: Millis;
 }

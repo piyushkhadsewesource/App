@@ -3,8 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
 import DateTimeModal from '../components/DateTimeModal';
 import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
+import { useToast } from '../components/ToastHost';
 import { addDaysISO, isoToDate, todayISO } from '../lib/date';
-import { hLight } from '../lib/haptics';
+import { hLight, hSuccess } from '../lib/haptics';
+import { freeAfterMin, goldenWindow } from '../lib/ourDay';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { ScheduleItem } from '../types/models';
@@ -61,6 +63,7 @@ function weekRangeLabel(days: { iso: string }[]): string {
 export default function ScheduleScreen({ navigation }: any) {
   const app = useApp();
   const partner = app.identity?.partnerName ?? 'them';
+  const toast = useToast();
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [viewDate, setViewDate] = useState(todayISO());
 
@@ -74,6 +77,37 @@ export default function ScheduleScreen({ navigation }: any) {
 
   const itemsFor = (iso: string) => app.schedule.filter((s) => s.date === iso).sort((a, b) => a.startMin - b.startMin);
   const dayItems = useMemo(() => itemsFor(viewDate), [app.schedule, viewDate]);
+
+  // ── The ritual header: when do you each come free, and where's the shared
+  //    window? Computed from the same items the timeline shows. ─────────────
+  const ritual = useMemo(() => {
+    const isToday = viewDate === todayISO();
+    const fromMin = isToday ? new Date().getHours() * 60 + new Date().getMinutes() : 0;
+    const mine = dayItems.filter((s) => app.isMine(s.authorId) && s.kind !== 'moment');
+    const theirs = dayItems.filter((s) => !app.isMine(s.authorId) && s.kind !== 'moment');
+    return {
+      isToday,
+      fromMin,
+      myFree: freeAfterMin(mine, fromMin),
+      theirFree: theirs.length > 0 ? freeAfterMin(theirs, fromMin) : undefined, // undefined = day not shared yet
+      window: goldenWindow(mine, theirs, fromMin),
+      theirsShared: theirs.length > 0,
+    };
+  }, [dayItems, viewDate, app]);
+
+  const proposeMoment = () => {
+    if (!ritual.window) return;
+    hSuccess();
+    toast.show(`Asked ${partner} to keep ${minLabel(ritual.window.start)} for you 💗`, 2600);
+    void app.addScheduleItem({
+      date: viewDate,
+      startMin: ritual.window.start,
+      endMin: Math.min(ritual.window.start + 60, 1439),
+      title: 'A moment together',
+      icon: '💗',
+      kind: 'moment',
+    });
+  };
   const days = useMemo(() => weekDays(viewDate), [viewDate]);
   const myPrevItems = useMemo(
     () => app.schedule.filter((s) => s.date === addDaysISO(viewDate, -1) && s.authorId === app.meId),
@@ -152,30 +186,64 @@ export default function ScheduleScreen({ navigation }: any) {
   const renderItem = (it: ScheduleItem) => {
     const mine = app.isMine(it.authorId);
     const accent = mine ? colors.primary : colors.accent;
+    const isMoment = it.kind === 'moment';
+    const isBusy = it.kind === 'busy';
+    const accepted = isMoment && !!it.acceptedBy;
     const card = (
-      <View style={[styles.itemCard, { borderLeftColor: accent }]}>
+      <View
+        style={[
+          styles.itemCard,
+          isMoment && styles.momentCard,
+          isBusy && styles.busyCard,
+        ]}
+      >
         <View style={styles.itemHead}>
-          {it.icon ? <Text style={{ fontSize: 16 }}>{it.icon}</Text> : null}
+          {isBusy ? <Text style={{ fontSize: 15 }}>🗓️</Text> : it.icon ? <Text style={{ fontSize: 16 }}>{it.icon}</Text> : null}
           <Body style={{ fontFamily: font.family.semibold, flex: 1 }}>{it.title}</Body>
           {mine ? (
-            <Pressable hitSlop={8} onPress={() => confirmDelete(it)}>
+            <Pressable hitSlop={14} onPress={() => confirmDelete(it)} accessibilityRole="button" accessibilityLabel={`Remove ${it.title}`}>
               <Text style={styles.x}>×</Text>
             </Pressable>
           ) : null}
         </View>
         {it.note ? <Muted style={{ marginTop: 2 }}>{it.note}</Muted> : null}
-        <Text style={[styles.author, { color: accent }]}>{mine ? 'You · tap to edit' : partner}</Text>
+        {isMoment ? (
+          accepted ? (
+            <Text style={styles.momentState}>You're both in 🤍</Text>
+          ) : !mine ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <Button
+                label="I'll be there 🤍"
+                onPress={() => {
+                  hSuccess();
+                  void app.updateScheduleItem(it.id, { acceptedBy: app.meId });
+                }}
+              />
+            </View>
+          ) : (
+            <Text style={styles.momentState}>waiting for {partner}…</Text>
+          )
+        ) : (
+          <Text style={[styles.author, { color: isBusy ? colors.textFaint : accent }]}>
+            {isBusy ? `${mine ? 'you' : partner} · from calendar` : mine ? 'You · tap to edit' : partner}
+          </Text>
+        )}
       </View>
     );
+    const editable = mine && !isBusy;
     return (
       <View key={it.id} style={styles.itemRow}>
         <Text style={styles.itemTime}>{minLabel(it.startMin)}</Text>
         <View style={styles.rail}>
           <View style={styles.railLine} />
-          <View style={[styles.dot, { backgroundColor: accent }]} />
+          <View style={[styles.dot, { backgroundColor: isMoment ? colors.primaryDark : isBusy ? colors.textFaint : accent }]} />
         </View>
         <View style={{ flex: 1 }}>
-          {mine ? <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{card}</Pressable> : card}
+          {editable && !isMoment ? (
+            <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{card}</Pressable>
+          ) : (
+            card
+          )}
         </View>
       </View>
     );
@@ -194,6 +262,43 @@ export default function ScheduleScreen({ navigation }: any) {
         }
       />
 
+      {/* ── The ritual: when you're each free, and the shared window ── */}
+      <View style={styles.ritualCard}>
+        <Text style={styles.ritualKicker}>{ritual.isToday ? 'Tonight' : dayLabel(viewDate)}</Text>
+        {ritual.window ? (
+          <>
+            <Text style={styles.ritualLine}>
+              {ritual.theirsShared
+                ? `You're both free ${minLabel(ritual.window.start)} – ${minLabel(ritual.window.end)}`
+                : `You're free from ${minLabel(ritual.window.start)}`}
+            </Text>
+            <Muted style={{ marginTop: 2 }}>
+              {ritual.theirsShared
+                ? ritual.theirFree != null
+                  ? `${partner} comes free around ${minLabel(ritual.theirFree)} · you around ${ritual.myFree != null ? minLabel(ritual.myFree) : 'now'}`
+                  : `${partner}'s day is clear too`
+                : `${partner} hasn't shared ${ritual.isToday ? 'today' : 'this day'} yet — theirs will appear here`}
+            </Muted>
+            {ritual.theirsShared && !dayItems.some((s) => s.kind === 'moment') ? (
+              <View style={{ marginTop: spacing.md }}>
+                <Button label={`💗  Keep ${minLabel(ritual.window.start)} for each other`} onPress={proposeMoment} />
+              </View>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text style={styles.ritualLine}>
+              {ritual.myFree != null ? `You come free around ${minLabel(ritual.myFree)}` : 'A full day, side by side'}
+            </Text>
+            <Muted style={{ marginTop: 2 }}>
+              {ritual.theirsShared
+                ? 'No shared hour left — even ten minutes counts 🤍'
+                : `Add your day below so ${partner} knows when to find you.`}
+            </Muted>
+          </>
+        )}
+      </View>
+
       {/* Day / Week toggle */}
       <View style={styles.segment}>
         {(['day', 'week'] as const).map((m) => (
@@ -206,11 +311,11 @@ export default function ScheduleScreen({ navigation }: any) {
       {/* Week strip */}
       <View style={styles.weekCard}>
         <View style={styles.weekHead}>
-          <Pressable onPress={() => setViewDate(addDaysISO(viewDate, -7))} hitSlop={8} style={styles.wkNav}>
+          <Pressable onPress={() => setViewDate(addDaysISO(viewDate, -7))} hitSlop={12} style={styles.wkNav} accessibilityRole="button" accessibilityLabel="Previous week">
             <Text style={styles.wkNavText}>‹</Text>
           </Pressable>
           <Text style={styles.weekRange}>{weekRangeLabel(days)}</Text>
-          <Pressable onPress={() => setViewDate(addDaysISO(viewDate, 7))} hitSlop={8} style={styles.wkNav}>
+          <Pressable onPress={() => setViewDate(addDaysISO(viewDate, 7))} hitSlop={12} style={styles.wkNav} accessibilityRole="button" accessibilityLabel="Next week">
             <Text style={styles.wkNavText}>›</Text>
           </Pressable>
         </View>
@@ -314,11 +419,11 @@ export default function ScheduleScreen({ navigation }: any) {
                   const mine = app.isMine(it.authorId);
                   const accent = mine ? colors.primary : colors.accent;
                   const row = (
-                    <View style={[styles.weekItem, { borderLeftColor: accent }]}>
+                    <View style={[styles.weekItem, it.kind === 'moment' && styles.momentCard, it.kind === 'busy' && styles.busyCard]}>
                       <Text style={styles.weekTime}>{minLabel(it.startMin)}</Text>
-                      {it.icon ? <Text style={{ fontSize: 15 }}>{it.icon}</Text> : <View style={[styles.weekDot, { backgroundColor: accent }]} />}
+                      {it.kind === 'busy' ? <Text style={{ fontSize: 14 }}>🗓️</Text> : it.icon ? <Text style={{ fontSize: 15 }}>{it.icon}</Text> : <View style={[styles.weekDot, { backgroundColor: accent }]} />}
                       <Body style={{ flex: 1 }} >{it.title}</Body>
-                      <Text style={[styles.weekWho, { color: accent }]}>{mine ? 'You' : partner}</Text>
+                      <Text style={[styles.weekWho, { color: it.kind === 'busy' ? colors.textFaint : accent }]}>{mine ? 'You' : partner}</Text>
                     </View>
                   );
                   return (
@@ -383,12 +488,33 @@ const styles = StyleSheet.create({
   pickText: { flex: 1, fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
   chev: { fontSize: 22, color: colors.textFaint },
 
+  ritualCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg + spacing.xs,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+    ...shadow.card,
+  },
+  ritualKicker: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: 2, letterSpacing: font.tracking.label },
+  ritualLine: {
+    fontSize: font.size.xl,
+    lineHeight: 28,
+    fontFamily: font.family.displaySemi,
+    color: colors.text,
+    letterSpacing: font.tracking.heading,
+  },
+
   itemRow: { flexDirection: 'row', alignItems: 'flex-start' },
   itemTime: { width: 66, fontSize: font.size.sm, fontFamily: font.family.bold, color: colors.textSoft, paddingTop: 14 },
   rail: { width: 22, alignSelf: 'stretch', alignItems: 'center' },
   railLine: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: colors.border },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: colors.bg, marginTop: 12 },
-  itemCard: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 4, padding: spacing.md, marginBottom: spacing.md, ...shadow.soft },
+  itemCard: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(90,46,64,0.08)', padding: spacing.md, marginBottom: spacing.md, ...shadow.soft },
+  momentCard: { backgroundColor: colors.primarySoft, borderColor: 'rgba(232,99,140,0.25)' },
+  busyCard: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+  momentState: { marginTop: spacing.sm, fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.primaryDark, fontStyle: 'italic' },
   itemHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   author: { fontSize: 11, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
   x: { fontSize: 22, color: colors.textFaint, paddingHorizontal: 4 },
@@ -398,7 +524,7 @@ const styles = StyleSheet.create({
   todayTag: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 2 },
   todayTagText: { color: colors.white, fontSize: 10, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
   agendaEmpty: { fontSize: font.size.sm, color: colors.textFaint, fontFamily: font.family.body, marginLeft: 4, marginBottom: spacing.sm },
-  weekItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 4, padding: spacing.md, marginBottom: spacing.sm, ...shadow.soft },
+  weekItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(90,46,64,0.08)', padding: spacing.md, marginBottom: spacing.sm, ...shadow.soft },
   weekTime: { width: 62, fontSize: font.size.xs, fontFamily: font.family.bold, color: colors.textSoft },
   weekDot: { width: 10, height: 10, borderRadius: 5 },
   weekWho: { fontSize: 10, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.5 },

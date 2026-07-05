@@ -194,8 +194,18 @@ interface AppValue {
   newLudo(): Promise<void>;
   rollLudo(): Promise<void>;
   moveLudo(tokenIndex: number): Promise<void>;
-  addScheduleItem(data: { date: string; startMin: number; title: string; endMin?: number; icon?: string; note?: string }): Promise<void>;
-  updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string; date?: string }): Promise<void>;
+  addScheduleItem(data: { date: string; startMin: number; title: string; endMin?: number; icon?: string; note?: string; kind?: 'moment' | 'busy'; extId?: string }): Promise<void>;
+  updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string; date?: string; acceptedBy?: string }): Promise<void>;
+  /**
+   * Replace my imported-calendar busy blocks inside [fromDate, toDate] with a
+   * fresh set (ICS import). Ordinary plans are never touched. Returns how many
+   * blocks were written.
+   */
+  importBusySchedule(
+    fromDate: string,
+    toDate: string,
+    items: { date: string; startMin: number; endMin: number; title: string; extId: string }[],
+  ): Promise<number>;
   removeScheduleItem(id: string): Promise<void>;
   copyScheduleDay(fromDate: string, toDate: string): Promise<void>;
   addOccasion(data: { title: string; date: string; recurrence: 'yearly' | 'monthly' | 'once'; remindDaysBefore: number; icon?: string }): Promise<void>;
@@ -1082,7 +1092,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updatedAt: now(),
       });
     },
-    async addScheduleItem({ date, startMin, title, endMin, icon, note }) {
+    async addScheduleItem({ date, startMin, title, endMin, icon, note, kind, extId }) {
       const db = dbRef.current;
       if (!db) return;
       const t = (title ?? '').trim();
@@ -1096,6 +1106,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         title: clampReq(t, 80),
         icon: icon ? icon.slice(0, 4) : undefined,
         note: clamp(note, 200),
+        kind: kind ?? undefined,
+        extId: extId ? extId.slice(0, 120) : undefined,
         createdAt: now(),
         updatedAt: now(),
       });
@@ -1109,7 +1121,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (patch.date) clean.date = patch.date;
       if (patch.icon !== undefined) clean.icon = patch.icon ? patch.icon.slice(0, 4) : null;
       if (patch.note !== undefined) clean.note = patch.note.trim() ? clampReq(patch.note.trim(), 200) : null;
+      if (patch.acceptedBy) clean.acceptedBy = String(patch.acceptedBy).slice(0, 40);
       await db.update<ScheduleItem>('schedule', id, clean as Partial<ScheduleItem>);
+    },
+    async importBusySchedule(fromDate, toDate, items) {
+      const db = dbRef.current;
+      if (!db) return 0;
+      // Clear my previous imports in the window, then write the fresh set. The
+      // source calendar is the truth for busy blocks; plans stay untouched.
+      const stale = schedule.filter(
+        (s) => s.authorId === meId && s.kind === 'busy' && s.date >= fromDate && s.date <= toDate,
+      );
+      await Promise.all(stale.map((s) => db.remove('schedule', s.id)));
+      const fresh = items.slice(0, 120); // safety cap: a week of meetings, not a lifetime
+      await Promise.all(
+        fresh.map((it) =>
+          db.add('schedule', {
+            id: genId('sc_'),
+            authorId: meId,
+            date: it.date,
+            startMin: Math.max(0, Math.min(1439, Math.round(it.startMin))),
+            endMin: Math.max(0, Math.min(1439, Math.round(it.endMin))),
+            title: clampReq(it.title || 'Busy', 80),
+            kind: 'busy' as const,
+            extId: it.extId.slice(0, 120),
+            createdAt: now(),
+            updatedAt: now(),
+          }),
+        ),
+      );
+      return fresh.length;
     },
     async removeScheduleItem(id) {
       await dbRef.current?.remove('schedule', id);

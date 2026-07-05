@@ -1,10 +1,17 @@
-// A themed pop-up calendar + scroll-wheel time picker (no native dependency)
-// that works on web and device alike, and matches the app's premium look.
+// A themed pop-up calendar + time picker (no native dependency) that matches
+// the app's premium look. The time control forks by platform: native gets the
+// scroll wheel (feels right in hand); web gets TimeDial, a tap-based control,
+// because react-native-web never reliably fires the wheel's momentum-commit
+// events on iOS Safari — the wheel would spin visually while the value
+// silently stayed at its default.
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import TimeDial from './TimeDial';
 import Wheel from './Wheel';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { spring } from '../theme/motion';
+
+const USE_DIAL = Platform.OS === 'web';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -176,15 +183,19 @@ export default function DateTimeModal({
                 </Text>
                 <Text style={styles.timeBig}>{h12}:{pad(minute)} {isPM ? 'PM' : 'AM'}</Text>
               </View>
-              <View style={styles.wheels}>
-                <Wheel data={HOURS} initialIndex={h12 - 1} resetKey={rk} width={64}
-                  onChange={(i) => setFromWheels(i + 1, isPM, minute)} />
-                <Text style={styles.colon}>:</Text>
-                <Wheel data={MINUTES} initialIndex={minute} resetKey={rk} width={64}
-                  onChange={(i) => setFromWheels(h12, isPM, i)} />
-                <Wheel data={AMPM} initialIndex={isPM ? 1 : 0} resetKey={rk} width={64}
-                  onChange={(i) => setFromWheels(h12, i === 1, minute)} />
-              </View>
+              {USE_DIAL ? (
+                <TimeDial h12={h12} minute={minute} isPM={isPM} onChange={setFromWheels} />
+              ) : (
+                <View style={styles.wheels}>
+                  <Wheel data={HOURS} initialIndex={h12 - 1} resetKey={rk} width={64}
+                    onChange={(i) => setFromWheels(i + 1, isPM, minute)} />
+                  <Text style={styles.colon}>:</Text>
+                  <Wheel data={MINUTES} initialIndex={minute} resetKey={rk} width={64}
+                    onChange={(i) => setFromWheels(h12, isPM, i)} />
+                  <Wheel data={AMPM} initialIndex={isPM ? 1 : 0} resetKey={rk} width={64}
+                    onChange={(i) => setFromWheels(h12, i === 1, minute)} />
+                </View>
+              )}
             </>
           ) : null}
 

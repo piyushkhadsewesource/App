@@ -14,11 +14,13 @@ import {
   Tag,
   Title,
 } from '../components/ui';
+import DayRibbon from '../components/DayRibbon';
 import { Heartbeat } from '../components/Heartbeat';
 import IntensityChart from '../components/IntensityChart';
 import { Reveal } from '../components/Motion';
 import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
+import { dismissWhisper, pickWhisper, Whisper } from '../lib/whisper';
 import { isBlank, normalizeCanvas } from '../lib/canvas';
 import { haversineKm } from '../lib/geo';
 import { kmFromSteps } from '../lib/walk';
@@ -127,11 +129,33 @@ export default function HomeScreen({ navigation }: any) {
     const ids = new Set(occToday.map((x) => x.occasion.id));
     return upcomingOccasion(app.occasions.filter((o) => !ids.has(o.id)), 31, 0);
   }, [app.occasions, occToday]);
-  const nowMin = new Date(now).getHours() * 60 + new Date(now).getMinutes();
-  const nextPlan = useMemo(() => {
-    const todays = app.schedule.filter((s) => s.date === today).sort((a, b) => a.startMin - b.startMin);
-    return todays.find((s) => s.startMin >= nowMin - 30) ?? null;
-  }, [app.schedule, today, nowMin]);
+  // The Rediscover Whisper: at most one quiet nudge toward a corner of the
+  // app that's been sitting unused. Recomputed per visit; dismiss = 1 week.
+  const [whisper, setWhisper] = useState<Whisper | null>(null);
+  const myLastLetterAt = useMemo(
+    () => Math.max(0, ...app.letters.filter((l) => l.authorId === meId).map((l) => l.createdAt)),
+    [app.letters, meId],
+  );
+  const myLastDeckAt = useMemo(
+    () => Math.max(0, ...app.deck.filter((d) => d.authorId === meId).map((d) => d.createdAt)),
+    [app.deck, meId],
+  );
+  useEffect(() => {
+    let alive = true;
+    pickWhisper({
+      partnerName: identity?.partnerName ?? 'them',
+      lastLetterAt: myLastLetterAt || undefined,
+      lastDeckAt: myLastDeckAt || undefined,
+      futureCount: app.future.length,
+      memoryCount: memories.length,
+      occasionCount: app.occasions.length,
+    })
+      .then((w) => alive && setWhisper(w))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [myLastLetterAt, myLastDeckAt, app.future.length, memories.length, app.occasions.length, identity?.partnerName]);
 
   const onThisDay = useMemo(() => {
     const md = today.slice(5);
@@ -336,17 +360,34 @@ export default function HomeScreen({ navigation }: any) {
         </Card>
       ) : null}
 
-      {/* Next on today's plan */}
-      {nextPlan ? (
-        <Card onPress={() => navigation.navigate('Schedule')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>{nextPlan.icon || '🗓️'}</Text>
+      {/* Our day, front and center: both lanes + when you're both free */}
+      <DayRibbon onOpen={() => navigation.navigate('Schedule')} />
+
+      {/* The Rediscover Whisper: one quiet nudge, dismissible for a week */}
+      {whisper ? (
+        <Pressable
+          onPress={() => navigation.navigate(whisper.route)}
+          accessibilityRole="button"
+          accessibilityLabel={whisper.title}
+          style={({ pressed }) => [styles.whisper, pressed && { opacity: 0.9 }]}
+        >
+          <Text style={{ fontSize: 20 }}>{whisper.emoji}</Text>
           <View style={{ flex: 1 }}>
-            <Title>Next up: {nextPlan.title}</Title>
-            <Muted>
-              {minLabel(nextPlan.startMin)} · {app.isMine(nextPlan.authorId) ? 'your plan' : `${identity?.partnerName ?? 'their'} plan`}
-            </Muted>
+            <Text style={styles.whisperTitle}>{whisper.title}</Text>
+            <Muted>{whisper.text}</Muted>
           </View>
-        </Card>
+          <Pressable
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Not now"
+            onPress={() => {
+              void dismissWhisper(whisper.id);
+              setWhisper(null);
+            }}
+          >
+            <Text style={styles.whisperX}>×</Text>
+          </Pressable>
+        </Pressable>
       ) : null}
 
       {/* What's new together (cross-feature activity feed) */}
@@ -789,6 +830,20 @@ function PulseFace({
 
 const styles = StyleSheet.create({
   alert: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
+  whisper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  whisperTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
+  whisperX: { fontSize: 20, color: colors.textFaint, paddingHorizontal: 4 },
   alertEmoji: { fontSize: 30 },
 
   // Ambient presence bloom: bleeds past the scroll padding so the glow runs

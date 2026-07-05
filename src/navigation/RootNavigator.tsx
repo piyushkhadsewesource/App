@@ -58,7 +58,7 @@ function Tabs() {
       <Tab.Screen name="Pulse" component={PulseScreen} options={{ tabBarIcon: tabIcon('💗'), title: 'Pulse' }} />
       <Tab.Screen name="MissYou" component={MissYouScreen} options={{ tabBarIcon: tabIcon('🤍'), title: 'Miss you' }} />
       <Tab.Screen name="Moments" component={MomentsScreen} options={{ tabBarIcon: tabIcon('📸'), title: 'Moments' }} />
-      <Tab.Screen name="More" component={MoreScreen} options={{ tabBarIcon: tabIcon('☰'), title: 'More' }} />
+      <Tab.Screen name="More" component={MoreScreen} options={{ tabBarIcon: tabIcon('💞'), title: 'Us' }} />
     </Tab.Navigator>
   );
 }
