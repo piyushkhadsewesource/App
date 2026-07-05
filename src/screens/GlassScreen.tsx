@@ -16,9 +16,10 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Button, Card, Muted, Screen, SectionTitle } from '../components/ui';
 import { useToast } from '../components/ToastHost';
+import { formatRelative } from '../lib/date';
 import { hLight, hMedium, hSuccess } from '../lib/haptics';
 import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
@@ -130,6 +131,10 @@ export default function GlassScreen({ navigation }: any) {
 
       {/* ── The glass ── */}
       <View style={styles.glassWrap}>
+        {/* Ambient atmosphere: two soft pools of colour breathing out of phase,
+            so the glass feels alive even before either thumb arrives. */}
+        <AmbientPool color={colors.primarySoft} size={230} delay={0} />
+        <AmbientPool color={colors.accentSoft} size={190} delay={2000} />
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: warm }]}>
           <LinearGradient colors={gradients.ambientHere} style={StyleSheet.absoluteFill} />
         </Animated.View>
@@ -167,6 +172,15 @@ export default function GlassScreen({ navigation }: any) {
             {partner} hasn't recorded their heartbeat yet. Yours can be waiting for them when they
             do. 🤍
           </Muted>
+          <View style={{ height: spacing.sm }} />
+          <Button
+            label="Send a nudge 💭"
+            variant="ghost"
+            onPress={() => {
+              void app.sendPing('thinking', 'Leave me your heartbeat? 🤍');
+              toast.show(`Nudge on its way to ${partner} 🤍`, 2200);
+            }}
+          />
         </Card>
       )}
 
@@ -190,17 +204,79 @@ export default function GlassScreen({ navigation }: any) {
           onPress={() => { setRecording(true); setTaps([]); }}
           tone={app.myHeartbeat ? 'surface' : 'violet'}
         >
-          <Body style={{ fontFamily: font.family.semibold }}>
-            {app.myHeartbeat ? 'Your heartbeat is kept 🤍' : `Leave your heartbeat for ${partner}`}
-          </Body>
+          {app.myHeartbeat ? (
+            <View style={styles.keptHeader}>
+              <Body style={{ fontFamily: font.family.semibold, flex: 1 }}>Your heartbeat is kept 🤍</Body>
+              <Muted>{formatRelative(app.myHeartbeat.updatedAt)}</Muted>
+            </View>
+          ) : (
+            <Body style={{ fontFamily: font.family.semibold }}>Leave your heartbeat for {partner}</Body>
+          )}
           <Muted style={{ marginTop: 4 }}>
             {app.myHeartbeat
               ? 'Tap to record it again — rhythms change with seasons.'
               : 'Tap along with your pulse for a few seconds; they can hold it whenever they miss you.'}
           </Muted>
+          {app.myHeartbeat ? <Waveform intervals={app.myHeartbeat.intervals} /> : null}
         </Card>
       )}
     </Screen>
+  );
+}
+
+/**
+ * An ambient pool of colour that breathes behind the glass — slow sine ease
+ * (a tide, not a micro-interaction), transform/opacity only, native driver.
+ */
+function AmbientPool({ color, size, delay }: { color: string; size: number; delay: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const ease = Easing.inOut(Easing.sin);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration: 3600, delay, easing: ease, useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: 3600, easing: ease, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v, delay]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 24,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+        opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] }),
+        transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) }],
+      }}
+    />
+  );
+}
+
+/**
+ * Your recorded rhythm, drawn honestly: one bar per beat, width from the real
+ * interval between beats. A keepsake you can see, not decoration.
+ */
+function Waveform({ intervals }: { intervals: number[] }) {
+  const safe = intervals.filter((n) => typeof n === 'number' && n >= 250 && n <= 2500).slice(0, 18);
+  if (safe.length === 0) return null;
+  return (
+    <View style={styles.waveRow}>
+      {safe.map((ms, i) => (
+        <View
+          key={i}
+          style={[
+            styles.waveBar,
+            { width: 6 + ((ms - 250) / 2250) * 18, opacity: 0.35 + 0.65 * (i % 3 === 1 ? 1 : i % 3 === 0 ? 0.45 : 0.7) },
+          ]}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -217,11 +293,13 @@ function ThumbRing({ holding, together, partnerWaiting }: { holding: boolean; to
     loop.start();
     return () => loop.stop();
   }, [breathe]);
-  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, holding || partnerWaiting ? 1.08 : 1.03] });
+  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, holding || partnerWaiting ? 1.06 : 1.025] });
   const ringColor = together ? colors.primary : partnerWaiting ? colors.good : colors.border;
   return (
     <Animated.View style={[styles.ring, { borderColor: ringColor, transform: [{ scale }] }]}>
-      <View style={[styles.ringInner, together && { backgroundColor: colors.primarySoft }]} />
+      <View style={[styles.ringInner, together && { backgroundColor: colors.primarySoft }]}>
+        <Text style={styles.ringHeart}>🤍</Text>
+      </View>
     </Animated.View>
   );
 }
@@ -295,18 +373,37 @@ const styles = StyleSheet.create({
   },
   ringTap: { padding: spacing.lg },
   ring: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: 168,
+    height: 168,
+    borderRadius: 84,
     borderWidth: 2,
+    backgroundColor: 'rgba(255,255,255,0.65)', // frosted glass over the ambient pools
     alignItems: 'center',
     justifyContent: 'center',
   },
   ringInner: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(232,99,140,0.18)',
+  },
+  ringHeart: { fontSize: 34 },
+  keptHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  waveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.md,
+    flexWrap: 'wrap',
+  },
+  waveBar: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
   },
   ringStatus: {
     marginTop: spacing.md,

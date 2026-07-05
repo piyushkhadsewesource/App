@@ -213,44 +213,60 @@ export default function CompassScreen({ navigation }: any) {
         <>
           {/* The instrument */}
           <View style={styles.dialWrap}>
-            <View style={styles.dial}>
-              {(['N', 'E', 'S', 'W'] as const).map((c, i) => (
-                <Text
-                  key={c}
-                  style={[
-                    styles.cardinal,
-                    i === 0 && styles.cardN,
-                    i === 1 && styles.cardE,
-                    i === 2 && styles.cardS,
-                    i === 3 && styles.cardW,
-                  ]}
-                >
-                  {c}
-                </Text>
-              ))}
-              <View style={styles.hub} />
-              {together ? (
-                <Text style={styles.togetherMark}>🤍</Text>
-              ) : (
-                <Animated.View style={[styles.needleWrap, { transform: [{ rotate }] }]}>
-                  <View style={styles.needleNorth} />
-                  <View style={styles.needleSouth} />
-                </Animated.View>
-              )}
+            {/* Halo rings: the instrument sits in still, concentric air. */}
+            <View style={styles.haloArea}>
+              <View style={styles.haloOuter} />
+              <View style={styles.haloInner} />
+              <View style={styles.dial}>
+                <View style={styles.dialInnerRing} />
+                {(['N', 'E', 'S', 'W'] as const).map((c, i) => (
+                  <Text
+                    key={c}
+                    style={[
+                      styles.cardinal,
+                      i === 0 && styles.cardN,
+                      i === 1 && styles.cardE,
+                      i === 2 && styles.cardS,
+                      i === 3 && styles.cardW,
+                    ]}
+                  >
+                    {c}
+                  </Text>
+                ))}
+                {together ? (
+                  <Text style={styles.togetherMark}>🤍</Text>
+                ) : (
+                  <Animated.View style={[styles.needleWrap, { transform: [{ rotate }] }]}>
+                    <View style={styles.needleNorth} />
+                    <View style={styles.needleSouth} />
+                  </Animated.View>
+                )}
+                {/* The hub holds the heart — every direction starts from it. */}
+                <View style={[styles.hub, shadow.soft]}>
+                  <Text style={styles.hubHeart}>🤍</Text>
+                </View>
+              </View>
             </View>
 
             <Text style={styles.reading}>
               {together ? '0 km. Look up.' : `${partner} · ${km.toLocaleString()} km · that way`}
             </Text>
-            <Muted style={{ textAlign: 'center', marginTop: spacing.xs }}>
-              {together ? `Same city: ${theirs.name}` : live ? 'live needle — turn, and it holds true' : 'relative to north (hold your phone flat, top facing north)'}
-            </Muted>
+            {together || live ? (
+              <View style={styles.liveRow}>
+                <View style={[styles.liveDot, { backgroundColor: together ? colors.primary : colors.good }]} />
+                <Muted>{together ? `Same city: ${theirs.name}` : 'live needle — turn, and it holds true'}</Muted>
+              </View>
+            ) : (
+              <Muted style={{ textAlign: 'center', marginTop: spacing.xs, paddingHorizontal: spacing.lg }}>
+                relative to north (hold your phone flat, top facing north)
+              </Muted>
+            )}
           </View>
 
           {!together ? (
             <>
               <View style={{ height: spacing.md }} />
-              <Button label="True North — open the lens 📷" variant="soft" onPress={() => setLensOpen(true)} />
+              <Button label="True North — open the lens" icon="📷" onPress={() => setLensOpen(true)} />
             </>
           ) : null}
 
@@ -291,6 +307,7 @@ export default function CompassScreen({ navigation }: any) {
 }
 
 const DIAL = 240;
+const HALO = DIAL + 48; // outermost decorative ring
 
 const styles = StyleSheet.create({
   dialWrap: {
@@ -302,6 +319,28 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.9)',
     ...shadow.card,
   },
+  haloArea: {
+    width: HALO,
+    height: HALO,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  haloOuter: {
+    position: 'absolute',
+    width: HALO,
+    height: HALO,
+    borderRadius: HALO / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(232,99,140,0.07)',
+  },
+  haloInner: {
+    position: 'absolute',
+    width: DIAL + 24,
+    height: DIAL + 24,
+    borderRadius: (DIAL + 24) / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(232,99,140,0.12)',
+  },
   dial: {
     width: DIAL,
     height: DIAL,
@@ -311,6 +350,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBF6F1',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dialInnerRing: {
+    position: 'absolute',
+    width: DIAL - 32,
+    height: DIAL - 32,
+    borderRadius: (DIAL - 32) / 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(168,159,155,0.45)',
   },
   cardinal: {
     position: 'absolute',
@@ -324,12 +371,26 @@ const styles = StyleSheet.create({
   cardW: { left: 12, top: DIAL / 2 - 10 },
   hub: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.text,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1.5,
+    borderColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 2,
   },
+  hubHeart: { fontSize: 17 },
+  liveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+  },
+  liveDot: { width: 7, height: 7, borderRadius: 4 },
   needleWrap: {
     position: 'absolute',
     width: 4,

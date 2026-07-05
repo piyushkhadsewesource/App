@@ -158,16 +158,29 @@ export default function WalkScreen({ navigation }: any) {
               myPhoto={app.myProfile?.image}
               theirPhoto={app.partnerProfile?.image}
             />
-            <Text style={styles.bigLine}>
-              {pos.done
-                ? 'You walked the whole way. 🤍'
-                : `${Math.round(pos.coveredKm).toLocaleString()} of ${distanceKm.toLocaleString()} km walked`}
-            </Text>
-            <Muted style={{ textAlign: 'center', marginTop: spacing.xs }}>
-              {pos.done
-                ? `${distanceKm.toLocaleString()} km, on your own four feet`
-                : etaLabel ?? (nextPct ? `next milestone at ${nextPct}%` : 'one step at a time')}
-            </Muted>
+            {pos.done ? (
+              <>
+                <Text style={styles.bigLine}>You walked the whole way. 🤍</Text>
+                <Muted style={{ textAlign: 'center', marginTop: spacing.xs }}>
+                  {distanceKm.toLocaleString()} km, on your own four feet
+                </Muted>
+              </>
+            ) : (
+              <>
+                <View style={styles.kmPill}>
+                  <Text style={styles.kmPillText}>
+                    📍 {Math.round(pos.coveredKm).toLocaleString()} of {distanceKm.toLocaleString()} km walked
+                  </Text>
+                </View>
+                {etaLabel ? (
+                  <Text style={styles.etaLine}>{etaLabel}</Text>
+                ) : (
+                  <Muted style={{ textAlign: 'center', marginTop: spacing.sm }}>
+                    {nextPct ? `next milestone at ${nextPct}%` : 'one step at a time'}
+                  </Muted>
+                )}
+              </>
+            )}
           </View>
 
           {passed ? (
@@ -178,13 +191,10 @@ export default function WalkScreen({ navigation }: any) {
 
           {/* Today */}
           <SectionTitle>Today together</SectionTitle>
-          <Card>
-            <View style={styles.todayRow}>
-              <TodayCol who="You" steps={totals.mineToday} color={colors.primary} />
-              <View style={styles.todayDivider} />
-              <TodayCol who={partner} steps={totals.theirToday} color={colors.accent} />
-            </View>
-          </Card>
+          <View style={styles.todayCards}>
+            <TodayCard who="You" steps={totals.mineToday} color={colors.primary} />
+            <TodayCard who={partner} steps={totals.theirToday} color={colors.accent} resting />
+          </View>
 
           {/* Getting steps in */}
           <SectionTitle>Your steps</SectionTitle>
@@ -203,9 +213,14 @@ export default function WalkScreen({ navigation }: any) {
               <Body>Your steps are counting automatically. Just live your day. 🤍</Body>
             </Card>
           ) : null}
-          <Card>
-            <Body style={{ fontFamily: font.family.semibold }}>Log a walk</Body>
-            <Muted style={{ marginTop: 4, marginBottom: spacing.sm }}>
+          <Card tone="rose">
+            <View style={styles.logHeader}>
+              <View style={styles.logBadge}>
+                <Text style={{ fontSize: 18 }}>🚶</Text>
+              </View>
+              <Body style={{ fontFamily: font.family.semibold }}>Add to the journey</Body>
+            </View>
+            <Muted style={{ marginTop: spacing.sm, marginBottom: spacing.sm }}>
               Went out walking? Minutes are enough — we'll count the steps.
             </Muted>
             <Field
@@ -251,8 +266,9 @@ function WalkTrack({
   theirPhoto?: string | null;
 }) {
   const [w, setW] = useState(0);
-  const AV = 34; // avatar size
-  const usable = Math.max(0, w - AV);
+  const AV = 44; // avatar size
+  const RING = AV + 10; // avatar + white ring
+  const usable = Math.max(0, w - RING);
 
   // Positions spring to their new spots whenever a walk lands.
   const mineX = useRef(new Animated.Value(0)).current;
@@ -265,20 +281,42 @@ function WalkTrack({
     Animated.spring(theirsX, { toValue: -meetCapTheirs, useNativeDriver: true, ...spring.gentle }).start();
   }, [minePct, theirsPct, usable, mineX, theirsX]);
 
+  // The road ahead is drawn as dashes — a path, not a progress bar.
+  const dashes = w > 0 ? Math.max(0, Math.floor((w + 6) / 12)) : 0;
+
   return (
     <View style={{ paddingVertical: spacing.md }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       <View style={styles.track}>
+        <View style={styles.dashRow}>
+          {Array.from({ length: dashes }).map((_, i) => (
+            <View key={i} style={styles.dash} />
+          ))}
+        </View>
         <View style={[styles.fillMine, { width: `${Math.min(100, minePct * 100)}%` }]} />
         <View style={[styles.fillTheirs, { width: `${Math.min(100, theirsPct * 100)}%` }]} />
       </View>
       {w > 0 ? (
         <View style={styles.walkersRow}>
-          <Animated.View style={{ transform: [{ translateX: mineX }] }}>
-            <Avatar name={myName} size={AV} uri={myPhoto} color={colors.primary} />
+          <Animated.View style={[styles.walker, { transform: [{ translateX: mineX }] }]}>
+            <View style={[styles.avatarRing, shadow.soft]}>
+              <Avatar name={myName} size={AV} uri={myPhoto} color={colors.primary} />
+            </View>
+            <View style={[styles.nameChip, { backgroundColor: colors.primarySoft }]}>
+              <Text style={[styles.nameChipText, { color: colors.primaryDark }]} numberOfLines={1}>
+                {myName}
+              </Text>
+            </View>
           </Animated.View>
           {done ? <Text style={styles.meetHeart}>🤍</Text> : null}
-          <Animated.View style={{ transform: [{ translateX: theirsX }] }}>
-            <Avatar name={theirName} size={AV} uri={theirPhoto} color={colors.accent} />
+          <Animated.View style={[styles.walker, { transform: [{ translateX: theirsX }] }]}>
+            <View style={[styles.avatarRing, shadow.soft]}>
+              <Avatar name={theirName} size={AV} uri={theirPhoto} color={colors.accent} />
+            </View>
+            <View style={[styles.nameChip, { backgroundColor: colors.accentSoft }]}>
+              <Text style={[styles.nameChipText, { color: colors.accent }]} numberOfLines={1}>
+                {theirName}
+              </Text>
+            </View>
           </Animated.View>
         </View>
       ) : null}
@@ -286,12 +324,16 @@ function WalkTrack({
   );
 }
 
-function TodayCol({ who, steps, color }: { who: string; steps: number; color: string }) {
+/** One walker's day: a quiet bento card. Resting partners dim, never judged. */
+function TodayCard({ who, steps, color, resting }: { who: string; steps: number; color: string; resting?: boolean }) {
+  const asleep = !!resting && steps === 0;
   return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={[styles.todayWho, { color }]}>{who}</Text>
-      <Text style={styles.todaySteps}>{steps.toLocaleString()}</Text>
-      <Muted>{steps > 0 ? `${kmFromSteps(steps).toFixed(1)} km` : 'no steps yet'}</Muted>
+    <View style={[styles.todayCard, shadow.soft, asleep && { opacity: 0.6 }]}>
+      <Text style={styles.todayWho}>{who}</Text>
+      <Text style={[styles.todaySteps, { color }]}>{steps.toLocaleString()}</Text>
+      <Muted>{steps === 1 ? 'step' : 'steps'}</Muted>
+      <View style={styles.todayRule} />
+      <Muted>{steps > 0 ? `${kmFromSteps(steps).toFixed(1)} km` : asleep ? '💤 resting' : 'no steps yet'}</Muted>
     </View>
   );
 }
@@ -307,21 +349,51 @@ const styles = StyleSheet.create({
   },
   track: {
     height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceAlt,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
-  fillMine: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.pill },
-  fillTheirs: { height: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
-  walkersRow: {
-    marginTop: -21, // avatars ride ON the track line
+  dashRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 6,
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  meetHeart: { fontSize: 22 },
+  dash: { width: 6, height: 2, borderRadius: 1, backgroundColor: colors.border },
+  fillMine: {
+    position: 'absolute',
+    left: 0,
+    height: 6,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+  },
+  fillTheirs: {
+    position: 'absolute',
+    right: 0,
+    height: 6,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+  },
+  walkersRow: {
+    marginTop: -31, // avatar rings ride ON the road; name chips hang below it
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  walker: { alignItems: 'center', gap: 6, maxWidth: 96 },
+  avatarRing: {
+    padding: 5,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+  },
+  nameChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+  },
+  nameChipText: { fontFamily: font.family.semibold, fontSize: font.size.xs },
+  meetHeart: { fontSize: 22, marginTop: 12 },
   bigLine: {
     marginTop: spacing.lg,
     textAlign: 'center',
@@ -330,9 +402,58 @@ const styles = StyleSheet.create({
     color: colors.text,
     letterSpacing: font.tracking.heading,
   },
+  kmPill: {
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  kmPillText: { fontFamily: font.family.semibold, fontSize: font.size.sm, color: colors.text },
+  etaLine: {
+    marginTop: spacing.md,
+    textAlign: 'center',
+    fontFamily: font.family.displaySemi,
+    fontStyle: 'italic',
+    fontSize: font.size.xl,
+    color: colors.primaryDark,
+    letterSpacing: font.tracking.heading,
+    paddingHorizontal: spacing.lg,
+  },
 
-  todayRow: { flexDirection: 'row', alignItems: 'center' },
-  todayDivider: { width: 1, height: 48, backgroundColor: colors.border },
-  todayWho: { fontFamily: font.family.bold, fontSize: font.size.sm, marginBottom: 2 },
-  todaySteps: { fontFamily: font.family.display, fontSize: font.size.xxl, color: colors.text },
+  todayCards: { flexDirection: 'row', gap: spacing.md },
+  todayCard: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg + spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(90,46,64,0.06)',
+  },
+  todayWho: {
+    fontFamily: font.family.bold,
+    fontSize: 11,
+    letterSpacing: font.tracking.caps,
+    textTransform: 'uppercase',
+    color: colors.textSoft,
+    marginBottom: spacing.xs,
+  },
+  todaySteps: { fontFamily: font.family.display, fontSize: font.size.xxl },
+  todayRule: { alignSelf: 'stretch', height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: spacing.sm, marginHorizontal: spacing.sm },
+
+  logHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  logBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.soft,
+  },
 });
