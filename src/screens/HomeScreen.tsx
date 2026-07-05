@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppHeader,
-  Avatar,
   Body,
   Card,
   Muted,
@@ -15,6 +14,7 @@ import {
   Title,
 } from '../components/ui';
 import DayRibbon from '../components/DayRibbon';
+import JointAvatar from '../components/JointAvatar';
 import { Heartbeat } from '../components/Heartbeat';
 import IntensityChart from '../components/IntensityChart';
 import { Reveal } from '../components/Motion';
@@ -240,7 +240,13 @@ export default function HomeScreen({ navigation }: any) {
                 else toast.show(`Empty for now — leave ${partnerName} something to find 🤍`, 2600);
               }}
             />
-            <Avatar name={identity?.name ?? '?'} uri={app.myProfile?.image} />
+            <JointAvatar
+              myName={identity?.name ?? '?'}
+              partnerName={partnerName}
+              myUri={app.myProfile?.image}
+              partnerUri={app.partnerProfile?.image}
+              onPress={() => navigation.navigate('Settings')}
+            />
           </View>
         }
       />
