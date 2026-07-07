@@ -160,3 +160,19 @@ Everyday JS and content changes just use `eas update`.
 
 Stuck on a step? Tell me exactly what the screen says and I will walk you
 through it.
+
+## The Portal widget (home screen)
+
+The build now ships a home-screen widget: one warm line about your partner
+(sealed answer waiting, fog on the canvas, when they come free, their mood)
+plus the reunion countdown, straight on your launcher. To use it after
+installing a build that includes it:
+
+1. Long-press your home screen → Widgets → Tether → place "Tether".
+2. Open the app once so it can light the portal (the widget draws from the
+   app's last-known data and refreshes whenever you use the app, plus every
+   ~30 minutes on its own).
+
+Requires a NEW APK (native module): `eas build --profile preview --platform android`.
+An `eas update` alone will not add the widget — but it is safe to send to old
+builds (the widget code no-ops on binaries that predate it).

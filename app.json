@@ -36,7 +36,9 @@
         "expo-notifications",
         {
           "color": "#E8638C",
-          "sounds": ["./assets/alarm.wav"]
+          "sounds": [
+            "./assets/alarm.wav"
+          ]
         }
       ],
       [
@@ -61,6 +63,23 @@
         "expo-sensors",
         {
           "motionPermission": "Tether uses motion & fitness data to count your steps, so every walk quietly brings you closer to your partner."
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "TetherPortal",
+              "label": "Tether",
+              "description": "Your love at a glance: mood, free time, and what's waiting.",
+              "minWidth": "250dp",
+              "minHeight": "80dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 1,
+              "updatePeriodMillis": 1800000
+            }
+          ]
         }
       ]
     ],

@@ -10,6 +10,8 @@ import React, {
 } from 'react';
 import { AppState, Platform } from 'react-native';
 import { addDaysISO, now, todayISO } from '../lib/date';
+import { composeSnapshot } from '../lib/portalSnapshot';
+import { publishPortalSnapshot } from '../widget/portal';
 import { createDb, Db, onSyncHealth, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
 import { hasNotificationPermission } from '../services/permission';
@@ -521,6 +523,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const validProfile = (p: Profile) => typeof p.image === 'string' && p.image.startsWith('data:image/');
   const myProfile = useMemo(() => profiles.find((p) => p.id === meId && validProfile(p)) ?? null, [profiles, meId]);
   const partnerProfile = useMemo(() => profiles.find((p) => p.id !== meId && validProfile(p)) ?? null, [profiles, meId]);
+
+  // ── Android home-screen widget: park a fresh Portal snapshot whenever the
+  // data it shows changes, and nudge any placed widget to redraw. Debounced so
+  // a burst of sync updates writes once; a no-op everywhere but Android, and
+  // wrapped so widget publishing can never hurt the app itself.
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !identity) return;
+    const t = setTimeout(async () => {
+      try {
+        const today = todayISO();
+        const d = new Date();
+        let fogWaiting = false;
+        const cur = canvasArr.find((c) => c.id === 'current');
+        if (cur && cur.updatedBy !== meId && typeof cur.pixels === 'string' && /[^0]/.test(cur.pixels)) {
+          const seen = await AsyncStorage.getItem(`@tether/canvasSeen/${identity.spaceId}`);
+          fogWaiting = (seen ?? '') !== cur.pixels;
+        }
+        const snap = composeSnapshot({
+          partnerName: identity.partnerName || 'Your love',
+          meId,
+          partnerId,
+          todayISO: today,
+          nowMin: d.getHours() * 60 + d.getMinutes(),
+          checkins,
+          schedule,
+          deck,
+          fogWaiting,
+          unseenPings: pings.filter((p) => p.fromId !== meId && !p.seenAt).length,
+          meetingAt: meetings.find((m) => m.id === 'next')?.at ?? null,
+        });
+        await publishPortalSnapshot(snap);
+      } catch {
+        /* never let the widget path disturb the app */
+      }
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity, meId, partnerId, checkins, schedule, deck, pings, canvasArr, meetings]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo<AppValue>(() => ({

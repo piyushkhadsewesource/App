@@ -20,11 +20,17 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import { refreshPlanReminders, refreshReminders, scheduleLetterDeliveries, syncOccasionReminders } from './src/services/notifications';
 import { listenForegroundMessages } from './src/services/webPush';
 import { AppProvider, useApp } from './src/state/AppContext';
+import { registerPortalWidget } from './src/widget/portal';
 import { colors } from './src/theme';
 
 // Hold the native splash on screen until the first real frame is ready, so cold
 // start goes splash -> app with no flash of a loading spinner. Best-effort.
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Android home-screen widget: the headless task handler must be registered at
+// module load (the widget can wake the JS runtime with no UI mounted). A no-op
+// on web/iOS and on binaries that predate the widget module.
+registerPortalWidget();
 
 const navTheme: Theme = {
   ...DefaultTheme,
