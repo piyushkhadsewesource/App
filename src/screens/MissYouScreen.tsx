@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
 import { Image } from 'expo-image';
 import {
@@ -19,12 +19,13 @@ import {
 import { useToast } from '../components/ToastHost';
 import { shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
-import { hSuccess, hWarn } from '../lib/haptics';
+import { hLight, hSuccess, hWarn } from '../lib/haptics';
 import { isWebPushConfigured } from '../config';
 import { hasNotificationPermission } from '../services/permission';
 import { needsHomeScreenForPush, webNotificationsGranted } from '../services/webPush';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, spacing } from '../theme';
+import { spring } from '../theme/motion';
 import { PingType } from '../types/models';
 
 const PINGS: { type: PingType; emoji: string; label: string; sent: string; grad: readonly [string, string] }[] = [
@@ -322,43 +323,28 @@ export default function MissYouScreen() {
         <SectionTitle>Reach out right now</SectionTitle>
         <View style={styles.pingRow}>
           {QUICK_PINGS.map((p) => (
-            <Pressable
+            <ChargedPing
               key={p.type}
-              onPress={() => send(p.type, p.sent, p.emoji)}
-              accessibilityRole="button"
-              accessibilityLabel={`Send a ${p.label}`}
-              style={({ pressed }) => [styles.pingWrap, pressed ? { transform: [{ scale: 0.96 }] } : null]}
-            >
-              <LinearGradient colors={p.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ping}>
-                <Text style={{ fontSize: 34 }}>{p.emoji}</Text>
-                <Text style={styles.pingLabel}>{p.label}</Text>
-              </LinearGradient>
-            </Pressable>
+              emoji={p.emoji}
+              label={p.label}
+              grad={p.grad}
+              onSend={(held) =>
+                send(
+                  p.type,
+                  held ? `${p.sent}, held a little longer` : p.sent,
+                  p.emoji,
+                  held ? 'held this one a little longer 🤍' : undefined,
+                )
+              }
+            />
           ))}
         </View>
 
         {/* Miss-o-meter */}
         <Card tone="rose" style={{ marginTop: spacing.md }}>
           <Body style={{ fontFamily: font.family.semibold }}>How much do you miss them right now?</Body>
-          <View style={styles.meterRow}>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Pressable
-                key={n}
-                onPressIn={() => setPeek(n)}
-                onPressOut={() => setPeek(0)}
-                onPress={() => sendMiss(n)}
-                hitSlop={6}
-                style={styles.meterHeart}
-                accessibilityRole="button"
-                accessibilityLabel={`Miss you ${n} out of 5`}
-              >
-                {/* Hearts grow left→right so the row reads as a 1–5 scale at
-                    rest, and while pressing heart N the ones beyond it dim. */}
-                <Text style={{ fontSize: 22 + n * 3, opacity: peek === 0 || n <= peek ? 1 : 0.25 }}>💗</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Muted>Tap a heart to send the feeling, more hearts, more longing.</Muted>
+          <CrownMeter peek={peek} setPeek={setPeek} onCommit={sendMiss} />
+          <Muted>Tap a heart, or drag across them like a dial. More hearts, more longing.</Muted>
         </Card>
 
         {/* Send a thought */}
@@ -486,6 +472,145 @@ export default function MissYouScreen() {
 
       </Screen>
       {burst.node}
+    </View>
+  );
+}
+
+
+/**
+ * A ping button you can charge: press and hold, and it swells under your
+ * thumb while haptic pulses quicken like a heartbeat; release launches it.
+ * Slow to charge, snappy to send (deliberate press, instant response). A tap
+ * still sends a normal one — holding makes it physically different.
+ */
+function ChargedPing({
+  emoji,
+  label,
+  grad,
+  onSend,
+}: {
+  emoji: string;
+  label: string;
+  grad: readonly [string, string];
+  onSend: (held: boolean) => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const downAt = useRef(0);
+  const hapticTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gapRef = useRef(260);
+
+  const stopPulse = () => {
+    if (hapticTimer.current) {
+      clearTimeout(hapticTimer.current);
+      hapticTimer.current = null;
+    }
+  };
+  const pulse = () => {
+    hLight();
+    gapRef.current = Math.max(90, gapRef.current * 0.85); // quickening heartbeat
+    hapticTimer.current = setTimeout(pulse, gapRef.current);
+  };
+  useEffect(() => stopPulse, []);
+
+  const pressIn = () => {
+    downAt.current = Date.now();
+    gapRef.current = 260;
+    pulse();
+    // The swell: slow, resisting — the charge you can feel building.
+    Animated.timing(scale, { toValue: 1.12, duration: 900, useNativeDriver: true }).start();
+  };
+  const pressOut = () => {
+    stopPulse();
+    const held = Date.now() - downAt.current >= 600;
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, ...spring.snappy }).start();
+    onSend(held);
+  };
+
+  return (
+    <Pressable
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      accessibilityRole="button"
+      accessibilityLabel={`Send a ${label}. Hold to send a longer one.`}
+      style={styles.pingWrap}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ping}>
+          <Text style={{ fontSize: 34 }}>{emoji}</Text>
+          <Text style={styles.pingLabel}>{label}</Text>
+        </LinearGradient>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+/**
+ * The miss-o-meter as a crown dial: drag across the hearts and each one
+ * clicks under your finger like a watch crown detent; release commits the
+ * level. Tapping a heart still works exactly as before.
+ */
+function CrownMeter({
+  peek,
+  setPeek,
+  onCommit,
+}: {
+  peek: number;
+  setPeek: (n: number) => void;
+  onCommit: (n: number) => void;
+}) {
+  const widthRef = useRef(0);
+  const peekRef = useRef(0);
+  peekRef.current = peek;
+
+  const levelAt = (x: number) => {
+    const w = widthRef.current;
+    if (w <= 0) return 0;
+    return Math.max(1, Math.min(5, Math.floor((x / w) * 5) + 1));
+  };
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderGrant: (e) => {
+        const n = levelAt(e.nativeEvent.locationX);
+        if (n !== peekRef.current) {
+          hLight(); // the first detent click
+          setPeek(n);
+        }
+      },
+      onPanResponderMove: (e) => {
+        const n = levelAt(e.nativeEvent.locationX);
+        if (n !== 0 && n !== peekRef.current) {
+          hLight(); // one crisp click per heart crossed, like a watch crown
+          setPeek(n);
+        }
+      },
+      onPanResponderRelease: () => {
+        const n = peekRef.current;
+        setPeek(0);
+        if (n >= 1) onCommit(n);
+      },
+      onPanResponderTerminate: () => setPeek(0),
+      onPanResponderTerminationRequest: () => false,
+    }),
+  ).current;
+
+  return (
+    <View
+      style={styles.meterRow}
+      onLayout={(e) => {
+        widthRef.current = e.nativeEvent.layout.width;
+      }}
+      {...responder.panHandlers}
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel="Miss you meter, one to five hearts"
+    >
+      {[1, 2, 3, 4, 5].map((n) => (
+        <View key={n} pointerEvents="none" style={styles.meterHeart}>
+          <Text style={{ fontSize: 22 + n * 3, opacity: peek === 0 || n <= peek ? 1 : 0.25 }}>💗</Text>
+        </View>
+      ))}
     </View>
   );
 }

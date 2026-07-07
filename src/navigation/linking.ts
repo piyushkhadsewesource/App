@@ -43,6 +43,7 @@ const config = {
     Compass: 'compass',
     Walk: 'walk',
     Schedule: 'schedule',
+    Reveal: 'tonight',
     Occasions: 'occasions',
     Issues: 'issues',
     IssueDetail: 'issue/:id',

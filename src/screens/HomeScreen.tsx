@@ -20,6 +20,7 @@ import IntensityChart from '../components/IntensityChart';
 import { Reveal } from '../components/Motion';
 import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
+import { questionForDate, revealAnswers, revealPromptId } from '../lib/reveal';
 import { dismissWhisper, pickWhisper, Whisper } from '../lib/whisper';
 import { isBlank, normalizeCanvas } from '../lib/canvas';
 import { haversineKm } from '../lib/geo';
@@ -129,6 +130,21 @@ export default function HomeScreen({ navigation }: any) {
     const ids = new Set(occToday.map((x) => x.occasion.id));
     return upcomingOccasion(app.occasions.filter((o) => !ids.has(o.id)), 31, 0);
   }, [app.occasions, occToday]);
+  // Tonight's Reveal: the daily blind-answer anchor. The tease is asymmetric
+  // on purpose — you learn THAT they answered, never WHAT, until yours is in.
+  const reveal = useMemo(() => revealAnswers(app.deck, today, meId), [app.deck, today, meId]);
+  const [revealOpened, setRevealOpened] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AsyncStorage.getItem(`@tether/revealOpened/${revealPromptId(today)}`)
+      .then((v) => alive && setRevealOpened(v === '1'))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // Re-check when answers change (opening happens on the Reveal screen).
+  }, [today, reveal.mine, reveal.theirs]);
+
   // The Rediscover Whisper: at most one quiet nudge toward a corner of the
   // app that's been sitting unused. Recomputed per visit; dismiss = 1 week.
   const [whisper, setWhisper] = useState<Whisper | null>(null);
@@ -365,6 +381,43 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </Card>
       ) : null}
+
+      {/* Tonight's Reveal: the daily anchor. The card's whole job is pull. */}
+      <Card
+        tone={!reveal.mine && reveal.theirs ? 'rose' : reveal.mine && reveal.theirs && !revealOpened ? 'gold' : 'surface'}
+        onPress={() => navigation.navigate('Reveal')}
+        style={styles.alert}
+      >
+        <Text style={styles.alertEmoji}>✉️</Text>
+        <View style={{ flex: 1 }}>
+          {!reveal.mine && reveal.theirs ? (
+            <>
+              <Title>{partnerName} answered tonight's question</Title>
+              <Muted>Their answer is sealed until you write yours.</Muted>
+            </>
+          ) : !reveal.mine ? (
+            <>
+              <Title>Tonight's Reveal</Title>
+              <Muted>"{questionForDate(today)}"</Muted>
+            </>
+          ) : !reveal.theirs ? (
+            <>
+              <Title>Yours is sealed 🤍</Title>
+              <Muted>It opens for you both when {partnerName} answers.</Muted>
+            </>
+          ) : !revealOpened ? (
+            <>
+              <Title>The envelope is ready</Title>
+              <Muted>Both answers are in. Hold to break the seal.</Muted>
+            </>
+          ) : (
+            <>
+              <Title>Tonight's answers 🤍</Title>
+              <Muted>Read them again — a new question arrives at midnight.</Muted>
+            </>
+          )}
+        </View>
+      </Card>
 
       {/* Our day, front and center: both lanes + when you're both free */}
       <DayRibbon onOpen={() => navigation.navigate('Schedule')} />
