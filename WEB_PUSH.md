@@ -65,6 +65,16 @@ browser prompt, and the browser is registered.
   `onBackgroundMessage` renders exactly one notification and focuses the app on
   click.
 
+## The Portal (morning digest)
+
+Once functions are deployed, `morningPortal` runs every day at 08:00 IST and
+sends each of you one warm line about the other — how they were feeling, when
+they come free today, whether the canvas fog or a sealed Reveal answer is
+waiting. It is quiet by default: when there's nothing real to say, no push is
+sent. Browsers receive it through the same service worker as other pushes;
+Android phones receive it via Expo push. No client setup beyond the existing
+"Enable alerts" step.
+
 ## Caveats (browser platform limits, not bugs)
 
 - **iOS**: web push only works for an **installed** PWA (Add to Home Screen) on

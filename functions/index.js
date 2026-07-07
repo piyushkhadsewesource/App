@@ -135,3 +135,114 @@ exports.icsFetch = functionsV1.https.onRequest(async (req, res) => {
     return res.status(500).send('error');
   }
 });
+
+// ─── The Portal: morning "state of us" digest (zero-tap engagement) ─────────
+// Every morning (08:00 IST), each partner's lock screen gets one warm line
+// about the other: how they were feeling, when they come free today, whether
+// something waits under the fog or a sealed answer waits for theirs. Composed
+// by digest.js (pure, tested); quiet by default — nothing to say, no push.
+// Browsers get FCM (via the existing service worker); Android gets Expo push.
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { composeDigest } = require('./digest');
+
+function istISO(offsetDays = 0) {
+  // Date maths pinned to Asia/Kolkata regardless of function region.
+  const ist = new Date(Date.now() + (5.5 * 60 + offsetDays * 24 * 60) * 60 * 1000);
+  return ist.toISOString().slice(0, 10);
+}
+
+async function sendExpoPush(messages) {
+  if (messages.length === 0) return;
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(messages),
+    });
+  } catch (e) {
+    console.warn('[portal] expo push failed', e);
+  }
+}
+
+exports.morningPortal = onSchedule(
+  { schedule: '0 8 * * *', timeZone: 'Asia/Kolkata', maxInstances: 1 },
+  async () => {
+    const db = getFirestore();
+    const today = istISO(0);
+    const yesterday = istISO(-1);
+    const nowMs = Date.now();
+
+    // Find every space that can actually receive a push, via its token docs.
+    const tokenSnap = await db.collectionGroup('tokens').get();
+    const spaces = new Map(); // spaceId → [{ owner, kind, token }]
+    tokenSnap.forEach((doc) => {
+      const spaceId = doc.ref.parent.parent && doc.ref.parent.parent.id;
+      if (!spaceId) return;
+      const t = doc.data() || {};
+      const owner = t.owner || doc.id;
+      if (typeof t.token !== 'string' || !t.token) return;
+      if (!spaces.has(spaceId)) spaces.set(spaceId, []);
+      spaces.get(spaceId).push({ owner, kind: t.kind || 'expo', token: t.token });
+    });
+
+    for (const [spaceId, tokens] of spaces) {
+      try {
+        const ref = db.collection('spaces').doc(spaceId);
+        const [checkinsSnap, scheduleSnap, canvasSnap, deckSnap, profilesSnap] = await Promise.all([
+          ref.collection('checkins').where('date', '>=', yesterday).get(),
+          ref.collection('schedule').where('date', '==', today).get(),
+          ref.collection('canvas').doc('current').get(),
+          ref.collection('deck').where('promptId', '==', `daily-${today}`).get(),
+          ref.collection('profiles').get(),
+        ]);
+        const checkins = checkinsSnap.docs.map((d) => d.data());
+        const scheduleToday = scheduleSnap.docs.map((d) => d.data());
+        const canvasDoc = canvasSnap.exists ? canvasSnap.data() : null;
+        const deckToday = deckSnap.docs.map((d) => d.data());
+
+        // Members: everyone who owns a token, plus authors seen in data.
+        const members = new Set(tokens.map((t) => t.owner));
+        for (const c of checkins) if (c.authorId) members.add(c.authorId);
+        for (const s of scheduleToday) if (s.authorId) members.add(s.authorId);
+
+        const expoBatch = [];
+        for (const recipient of new Set(tokens.map((t) => t.owner))) {
+          const partnerId = [...members].find((m) => m !== recipient);
+          if (!partnerId) continue; // a space of one: nothing to say yet
+          const msg = composeDigest({
+            recipientId: recipient,
+            partnerId,
+            // We deliberately don't know display names server-side (identity is
+            // on-device); "Your love" keeps the voice without leaking anything.
+            partnerName: 'Your love',
+            todayISO: today,
+            yesterdayISO: yesterday,
+            nowMs,
+            checkins,
+            scheduleToday,
+            canvasDoc,
+            deckToday,
+          });
+          if (!msg) continue;
+          for (const t of tokens.filter((t) => t.owner === recipient)) {
+            if (t.kind === 'fcm') {
+              try {
+                await getMessaging().send({
+                  token: t.token,
+                  data: { title: msg.title, body: msg.body, type: 'digest' },
+                });
+              } catch (e) {
+                console.warn('[portal] fcm send failed', e && e.code);
+              }
+            } else if (t.token.startsWith('ExponentPushToken')) {
+              expoBatch.push({ to: t.token, title: msg.title, body: msg.body, data: { type: 'digest' }, sound: 'default' });
+            }
+          }
+        }
+        await sendExpoPush(expoBatch);
+      } catch (e) {
+        console.warn(`[portal] space ${spaceId} failed`, e);
+      }
+    }
+  },
+);
