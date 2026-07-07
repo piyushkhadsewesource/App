@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
+import FogReveal from '../components/FogReveal';
 import { Skeleton, useInitialHydrate } from '../components/Skeleton';
 import { hLight, hMedium, hSuccess } from '../lib/haptics';
 import {
-  CANVAS_CELLS,
   CANVAS_SIZE,
   CANVAS_SWATCHES,
   EMPTY_CANVAS,
@@ -32,31 +32,28 @@ export default function CanvasScreen({ navigation }: any) {
   const [pixels, setPixels] = useState<string>(EMPTY_CANVAS);
   const [color, setColor] = useState<string>(CANVAS_SWATCHES[1].ch); // default: Rose
   const [box, setBox] = useState(0); // measured grid side length (px)
-  const [replaying, setReplaying] = useState(false);
+  const [fogged, setFogged] = useState(false); // partner drew → the Fogged Window is up
   const [seenLoaded, setSeenLoaded] = useState(false);
 
-  // The whole grid + first "seen" record must be ready before we paint anything,
-  // so the discovery replay starts from what the user last saw (not a flash of
-  // the final image).
-  const loading = (!seenLoaded || (app.cloud && hydrating && !canvas)) && !replaying;
+  // The board + the "seen" record must both be ready before we paint anything,
+  // so the fog decision compares against what the user actually last saw.
+  const loading = (!seenLoaded || (app.cloud && hydrating && !canvas)) && !fogged;
 
   // Refs keep the once-created PanResponder reading the latest values.
   const pixelsRef = useRef(pixels);
   const colorRef = useRef(color);
   const cellRef = useRef(0);
   const drawingRef = useRef(false);
-  const replayingRef = useRef(false);
+  const foggedRef = useRef(false);
   const lastSyncedRef = useRef<string>(EMPTY_CANVAS); // what we believe is on the server
   const lastSeenRef = useRef<string | null>(null); // what the user has actually watched
-  const replayTargetRef = useRef<string>(EMPTY_CANVAS);
+  const fogTargetRef = useRef<string>(EMPTY_CANVAS); // board to mark seen once revealed
   const didInitialRef = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const replayTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastHapticRef = useRef(0);
   pixelsRef.current = pixels;
   colorRef.current = color;
   cellRef.current = box > 0 ? box / CANVAS_SIZE : 0;
-  replayingRef.current = replaying;
+  foggedRef.current = fogged;
 
   // Load the last-seen board for this space (UI memory, like other prefs).
   useEffect(() => {
@@ -91,63 +88,19 @@ export default function CanvasScreen({ navigation }: any) {
     }
   };
 
-  function finishReplay(target: string) {
-    if (replayTimer.current) {
-      clearInterval(replayTimer.current);
-      replayTimer.current = null;
-    }
-    pixelsRef.current = target;
-    setPixels(target);
-    lastSyncedRef.current = target;
-    markSeen(target);
-    setReplaying(false);
-    hSuccess(); // the partner's piece has fully "arrived"
-  }
-
-  // Reveal the changed cells from `base` to `target`, staggered over ~1–1.5s,
-  // so the partner's drawing appears to be drawn in front of you.
-  function startReplay(base: string, target: string) {
-    const changed: number[] = [];
-    for (let i = 0; i < CANVAS_CELLS; i += 1) if (base[i] !== target[i]) changed.push(i);
-    if (changed.length === 0) {
-      pixelsRef.current = target;
-      setPixels(target);
-      lastSyncedRef.current = target;
-      markSeen(target);
-      return;
-    }
-    replayTargetRef.current = target;
-    setReplaying(true);
-    let work = base;
-    pixelsRef.current = base;
-    setPixels(base);
-    const duration = Math.min(1500, Math.max(700, changed.length * 14));
-    const tickMs = 40;
-    const perTick = Math.max(1, Math.ceil(changed.length / Math.ceil(duration / tickMs)));
-    let idx = 0;
-    if (replayTimer.current) clearInterval(replayTimer.current);
-    replayTimer.current = setInterval(() => {
-      for (let k = 0; k < perTick && idx < changed.length; k += 1, idx += 1) {
-        const ci = changed[idx];
-        work = work.slice(0, ci) + target[ci] + work.slice(ci + 1);
-      }
-      pixelsRef.current = work;
-      setPixels(work);
-      tickHaptic(90);
-      if (idx >= changed.length) finishReplay(target);
-    }, tickMs);
-  }
-
-  function skipReplay() {
-    finishReplay(replayTargetRef.current);
+  // When the fog has been fully wiped away: the drawing is truly "seen".
+  function onFogRevealed() {
+    setFogged(false);
+    markSeen(fogTargetRef.current);
   }
 
   // Decide what to do when the synced canvas changes. The first time we see the
-  // board on this open, if the partner drew it, play the discovery replay; after
-  // that, live updates adopt instantly so co-drawing stays snappy.
+  // board on this open, if the partner drew something you haven't seen, raise
+  // the Fogged Window (the board renders fully UNDERNEATH it); after that, live
+  // updates adopt instantly so co-drawing stays snappy.
   useEffect(() => {
     if (!seenLoaded || !canvas) return;
-    if (drawingRef.current || replayingRef.current) return;
+    if (drawingRef.current) return;
     const incoming = normalizeCanvas(canvas.pixels);
     if (incoming === lastSyncedRef.current) return;
     const partnerDrew = !app.isMine(canvas.updatedBy);
@@ -157,7 +110,10 @@ export default function CanvasScreen({ navigation }: any) {
       didInitialRef.current = true;
       if (partnerDrew && incoming !== base && !isBlank(incoming)) {
         lastSyncedRef.current = incoming;
-        startReplay(base, incoming);
+        pixelsRef.current = incoming;
+        setPixels(incoming);
+        fogTargetRef.current = incoming;
+        setFogged(true); // markSeen waits until the fog is wiped
         return;
       }
     }
@@ -165,50 +121,25 @@ export default function CanvasScreen({ navigation }: any) {
     lastSyncedRef.current = incoming;
     pixelsRef.current = incoming;
     setPixels(incoming);
-    markSeen(incoming);
+    if (!foggedRef.current) markSeen(incoming);
+    else fogTargetRef.current = incoming; // fog is up: fold live updates into the reveal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.updatedAt, canvas?.updatedBy, seenLoaded]);
 
-  // Cleanup timers on unmount.
-  useEffect(
-    () => () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      if (replayTimer.current) clearInterval(replayTimer.current);
-    },
-    [],
-  );
-
-  // Cinematic entrance for the discovery replay: the board starts slightly
-  // zoomed-in and soft, then springs into crisp focus as the strokes land —
-  // like a camera settling on the page. Native-driver scale/opacity only, so
-  // it costs nothing against the 60fps budget (a blur here would).
-  const cinema = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (replaying) {
-      cinema.setValue(0);
-      Animated.spring(cinema, { toValue: 1, useNativeDriver: true, ...springs.gentle }).start();
-    }
-  }, [replaying, cinema]);
-  const cinemaStyle = {
-    opacity: cinema.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }),
-    transform: [{ scale: cinema.interpolate({ inputRange: [0, 1], outputRange: [1.06, 1] }) }],
-  };
-
+  // Strict stroke batching: local paints render instantly, but the ONLY sync
+  // is on finger-lift (release/terminate) — never mid-stroke. One write per
+  // stroke, one tiny doc. The unmount flush means backing out mid-stroke can't
+  // lose the drawing.
   const flushSave = () => {
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-    }
     const p = pixelsRef.current;
     if (p === lastSyncedRef.current) return;
     lastSyncedRef.current = p;
-    markSeen(p);
+    if (!foggedRef.current) markSeen(p);
     void app.saveCanvas(p); // wrapped write, never rejects
   };
-  const scheduleSave = () => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(flushSave, 700);
-  };
+  const flushRef = useRef(flushSave);
+  flushRef.current = flushSave;
+  useEffect(() => () => flushRef.current(), []);
 
   const paintIndex = (index: number) => {
     const next = paintAt(pixelsRef.current, index, colorRef.current);
@@ -216,10 +147,9 @@ export default function CanvasScreen({ navigation }: any) {
     pixelsRef.current = next;
     setPixels(next);
     tickHaptic(45); // light tick per freshly-filled pixel
-    scheduleSave();
   };
   const paintFromEvent = (evt: { nativeEvent: { locationX: number; locationY: number } }) => {
-    if (replayingRef.current) return; // drawing is locked during the replay
+    if (foggedRef.current) return; // wipe first, then draw (fog owns the touches anyway)
     const cs = cellRef.current;
     if (!cs) return;
     const { locationX, locationY } = evt.nativeEvent;
@@ -231,7 +161,7 @@ export default function CanvasScreen({ navigation }: any) {
 
   const handlers = useRef({ grant: (_e: any) => {}, move: (_e: any) => {}, release: () => {} });
   handlers.current.grant = (e) => {
-    if (replayingRef.current) return;
+    if (foggedRef.current) return;
     drawingRef.current = true;
     paintFromEvent(e);
   };
@@ -292,7 +222,7 @@ export default function CanvasScreen({ navigation }: any) {
     !!canvas &&
     !app.isMine(canvas.updatedBy) &&
     nowTick - canvas.updatedAt < 7_000 &&
-    !replaying;
+    !fogged;
 
   return (
     <Screen scroll>
@@ -305,11 +235,11 @@ export default function CanvasScreen({ navigation }: any) {
         </View>
       ) : (
         <Muted style={{ marginBottom: spacing.md }}>
-          {replaying
-            ? `${partner} drew this, watch it appear…`
+          {fogged
+            ? `Something new is waiting under the glass…`
             : lastBy
-              ? `Last touched by ${lastBy}. Pick a colour and draw, ${partner} sees every pixel as you go.`
-              : `A blank page for the two of you. Pick a colour and draw, ${partner} sees every pixel as you go.`}
+              ? `Last touched by ${lastBy}. Draw, and it lands on ${partner}'s phone the moment you lift your finger.`
+              : `A blank page for the two of you. Draw, and it lands on ${partner}'s phone the moment you lift your finger.`}
         </Muted>
       )}
 
@@ -317,26 +247,26 @@ export default function CanvasScreen({ navigation }: any) {
       {loading ? (
         <Skeleton style={{ width: '100%', aspectRatio: 1, borderRadius: radius.lg }} />
       ) : (
-        <Animated.View style={[styles.gridWrap, cinemaStyle]}>
+        <View style={styles.gridWrap}>
           <View
             style={styles.grid}
             onLayout={(e) => setBox(e.nativeEvent.layout.width)}
-            {...responder.panHandlers}
+            // While the fog is up, the grid must not compete for touches at all —
+            // a PanResponder parent would steal the wipe gesture on first move
+            // (termination requests default to "yes"). The fog owns the glass.
+            {...(fogged ? {} : responder.panHandlers)}
           >
             {box > 0
               ? Array.from({ length: CANVAS_SIZE }).map((_, r) => (
                   <GridRow key={r} row={pixels.slice(r * CANVAS_SIZE, (r + 1) * CANVAS_SIZE)} />
                 ))
               : null}
+            {/* The Fogged Window: their drawing waits under the mist */}
+            {fogged && box > 0 ? (
+              <FogReveal box={box} partnerName={partner} onRevealed={onFogRevealed} />
+            ) : null}
           </View>
-
-          {/* Skip the discovery replay */}
-          {replaying ? (
-            <Pressable onPress={skipReplay} style={styles.skip} accessibilityRole="button" accessibilityLabel="Skip replay">
-              <Text style={styles.skipText}>Skip ›</Text>
-            </Pressable>
-          ) : null}
-        </Animated.View>
+        </View>
       )}
 
       {/* Palette */}
@@ -349,12 +279,12 @@ export default function CanvasScreen({ navigation }: any) {
       </View>
 
       <View style={{ height: spacing.lg }} />
-      <Button label="Clear canvas" variant="outline" color={colors.danger} disabled={blank || replaying} onPress={confirmClear} />
+      <Button label="Clear canvas" variant="outline" color={colors.danger} disabled={blank || fogged} onPress={confirmClear} />
 
       <Card tone="surface" style={{ marginTop: spacing.lg }}>
         <Body>
-          Tap or drag to paint. Strokes sync to {partner} automatically, and the board is saved the
-          moment you lift your finger. 🎨
+          Tap or drag to paint. Each stroke syncs to {partner} the moment you lift your finger,
+          one tidy write per stroke. 🎨
         </Body>
       </Card>
     </Screen>
@@ -458,17 +388,6 @@ const styles = StyleSheet.create({
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.good },
   liveText: { color: colors.good, fontFamily: font.family.semibold, fontSize: font.size.sm, letterSpacing: 0.2 },
-
-  skip: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    backgroundColor: 'rgba(46,42,42,0.62)',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-  },
-  skipText: { color: colors.white, fontFamily: font.family.bold, fontSize: font.size.sm, letterSpacing: 0.3 },
 
   paletteLabel: {
     fontSize: font.size.sm,
