@@ -204,16 +204,15 @@ const styles = StyleSheet.create({
   build: { textAlign: 'center', marginTop: spacing.lg, fontSize: 11, color: colors.textFaint, fontFamily: font.family.body },
 
   fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs },
+  // Filled like every other field: writable surfaces are tinted, not outlined.
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
   },
   dateText: { fontSize: font.size.md, color: colors.text, fontFamily: font.family.body },
   datePlaceholder: { color: colors.textFaint },

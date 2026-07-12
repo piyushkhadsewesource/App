@@ -379,7 +379,7 @@ function IntensityPicker({ value, color, onChange }: { value: number; color: str
         const on = b <= level;
         return (
           <Pressable key={b} onPress={() => { hLight(); onChange(b * 2); }} hitSlop={6} style={styles.barTap}>
-            <View style={[styles.bar, { height: 16 + b * 6, backgroundColor: on ? color : colors.surfaceAlt, borderColor: on ? color : colors.border }]} />
+            <View style={[styles.bar, { height: 16 + b * 6, backgroundColor: on ? color : colors.surfaceAlt, borderColor: on ? color : 'transparent' }]} />
           </Pressable>
         );
       })}

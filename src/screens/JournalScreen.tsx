@@ -4,7 +4,7 @@ import { AppHeader, Body, Card, Muted, Screen, Title } from '../components/ui';
 import { todayISO } from '../lib/date';
 import { generateReport } from '../lib/journal';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, radius, shadow, spacing } from '../theme';
 
 function shiftMonth(iso: string, delta: number): string {
   const [y, m] = iso.split('-').map((x) => parseInt(x, 10));
@@ -96,8 +96,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    ...shadow.soft,
   },
   statValue: { fontSize: font.size.xl, fontFamily: font.family.displaySemi, color: colors.text },
   statLabel: { fontSize: 11, color: colors.textSoft, marginTop: 2, textAlign: 'center' },

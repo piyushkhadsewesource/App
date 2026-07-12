@@ -400,7 +400,7 @@ export default function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate(whisper.route)}
           accessibilityRole="button"
           accessibilityLabel={whisper.title}
-          style={({ pressed }) => [styles.whisper, pressed && { opacity: 0.9 }]}
+          style={({ pressed }) => [styles.whisper, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
         >
           <Text style={{ fontSize: 20 }}>{whisper.emoji}</Text>
           <View style={{ flex: 1 }}>

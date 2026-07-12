@@ -24,7 +24,7 @@ import { isWebPushConfigured } from '../config';
 import { hasNotificationPermission } from '../services/permission';
 import { needsHomeScreenForPush, webNotificationsGranted } from '../services/webPush';
 import { useApp } from '../state/AppContext';
-import { colors, font, gradients, radius, spacing } from '../theme';
+import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 import { spring } from '../theme/motion';
 import { PingType } from '../types/models';
 
@@ -245,7 +245,7 @@ export default function MissYouScreen() {
         <AppHeader title="When I miss you" subtitle={`You & ${partnerName}, closer`} />
 
         {/* Emergency */}
-        <Pressable onPress={confirmSos} style={({ pressed }) => [styles.sos, pressed ? { opacity: 0.92 } : null]}>
+        <Pressable onPress={confirmSos} style={({ pressed }) => [styles.sos, pressed ? { opacity: 0.92, transform: [{ scale: 0.98 }] } : null]}>
           <Text style={{ fontSize: 30 }}>🆘</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.sosTitle}>Emergency alert</Text>
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   meterHeart: { padding: 4 },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  stat: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  stat: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, alignItems: 'center', ...shadow.soft },
   statValue: { fontSize: font.size.xxl, fontFamily: font.family.display, color: colors.primary },
   statLabel: { fontSize: 11, color: colors.textSoft, fontFamily: font.family.body, textAlign: 'center', marginTop: 2 },
 

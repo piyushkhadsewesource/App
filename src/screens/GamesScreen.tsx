@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Screen } from '../components/ui';
+import { Press } from '../components/Motion';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
 
@@ -13,7 +14,7 @@ export default function GamesScreen({ navigation }: any) {
       grad: gradients.gameBerry,
       emoji: '🎨',
       title: 'Our Shared Canvas',
-      sub: 'Draw together on a co-op pixel grid',
+      sub: 'Freehand ink, drawn together',
       meta: 'Live & async',
       go: () => navigation.navigate('Canvas'),
     },
@@ -80,14 +81,7 @@ export default function GamesScreen({ navigation }: any) {
       <AppHeader title="Play together" subtitle="Little games for the two of you" onBack={() => navigation.goBack()} />
       <View style={{ gap: spacing.md }}>
         {games.map((g) => (
-          <Pressable
-            key={g.title}
-            onPress={g.go}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={g.title}
-            style={({ pressed }) => (pressed ? { opacity: 0.94, transform: [{ scale: 0.99 }] } : null)}
-          >
+          <Press key={g.title} onPress={g.go} scaleTo={0.98} haptic accessibilityRole="button" accessibilityLabel={g.title}>
             <LinearGradient colors={g.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, shadow.card]}>
               <View style={styles.badge}>
                 <Text style={{ fontSize: 30 }}>{g.emoji}</Text>
@@ -101,7 +95,7 @@ export default function GamesScreen({ navigation }: any) {
               </View>
               <Text style={styles.arrow}>›</Text>
             </LinearGradient>
-          </Pressable>
+          </Press>
         ))}
       </View>
     </Screen>

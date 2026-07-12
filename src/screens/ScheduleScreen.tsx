@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   iconRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   iconChip: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt, borderWidth: 1.5, borderColor: 'transparent' },
   iconChipOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  pickRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, height: 50, marginBottom: spacing.md },
+  pickRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surfaceAlt, borderRadius: radius.md, paddingHorizontal: spacing.lg, height: 50, marginBottom: spacing.md },
   pickIcon: { fontSize: 18 },
   pickText: { flex: 1, fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
   chev: { fontSize: 22, color: colors.textFaint },
