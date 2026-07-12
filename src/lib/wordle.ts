@@ -1,5 +1,6 @@
 // Daily Wordle: a shared 5-letter word per calendar day, plus guess scoring.
 import { ISODate } from '../types/models';
+import { inDictionary } from './wordleDict';
 
 // A large pool of friendly 5-letter words. Any accidental non-5-letter entry is
 // filtered out (and duplicates removed) at runtime, so the daily pick is always
@@ -228,6 +229,17 @@ export const WORDS = Array.from(new Set(RAW.filter((w) => w.length === 5)));
 
 export const WORD_LEN = 5;
 export const MAX_GUESSES = 6;
+
+// The answer pool as a Set, so every possible daily word is always accepted as
+// a guess even in the unlikely case it's missing from the big dictionary.
+const ANSWER_SET = new Set(WORDS);
+
+/** Whether a guess is a real five-letter English word (case-insensitive). */
+export function isValidWord(guess: string): boolean {
+  const w = guess.toUpperCase();
+  if (w.length !== WORD_LEN || !/^[A-Z]+$/.test(w)) return false;
+  return ANSWER_SET.has(w) || inDictionary(w);
+}
 
 /** Days since the Unix epoch for a calendar date (timezone-stable). */
 function epochDay(dateISO: ISODate): number {

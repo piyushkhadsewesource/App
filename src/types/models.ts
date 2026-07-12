@@ -197,13 +197,15 @@ export interface TicTacToe {
   updatedAt: Millis;
 }
 
-// Our Shared Canvas: one co-op pixel grid per space. `pixels` is a flat string
-// of size*size chars, each a single palette index ('0' = empty). Kept as a
-// compact string so the whole grid is a tiny (~256 byte) Firestore doc.
+// Our Shared Canvas: one co-op drawing per space. `strokes` is the freehand
+// vector drawing (JSON-encoded CanvasStroke[], coordinates normalized 0..1);
+// `pixels` is the legacy 16×16 palette-char board, kept so drawings made
+// before the vector canvas still render underneath the new ink.
 export interface Canvas {
   id: 'current';
   pixels: string;
-  size: number; // grid dimension (16)
+  strokes?: string;
+  size: number; // legacy grid dimension (16)
   updatedAt: Millis;
   updatedBy: string; // authorId of the last person to paint
 }

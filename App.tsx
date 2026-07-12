@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import { ToastProvider, useToast } from './src/components/ToastHost';
@@ -277,14 +278,18 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 export default function App() {
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <AppProvider>
-          <ToastProvider>
-            <StatusBar style="dark" />
-            <Root />
-          </ToastProvider>
-        </AppProvider>
-      </SafeAreaProvider>
+      {/* Gesture Handler needs one root view above every GestureDetector
+          (the Shared Canvas draws with it). Costs nothing anywhere else. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <AppProvider>
+            <ToastProvider>
+              <StatusBar style="dark" />
+              <Root />
+            </ToastProvider>
+          </AppProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }

@@ -22,7 +22,7 @@ import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
 import { questionForDate, revealAnswers, revealPromptId } from '../lib/reveal';
 import { dismissWhisper, pickWhisper, Whisper } from '../lib/whisper';
-import { isBlank, normalizeCanvas } from '../lib/canvas';
+import { canvasHasInk, normalizeCanvas } from '../lib/canvas';
 import { haversineKm } from '../lib/geo';
 import { kmFromSteps } from '../lib/walk';
 import { buildActivity, withinHours } from '../lib/activity';
@@ -180,23 +180,12 @@ export default function HomeScreen({ navigation }: any) {
 
   const prompt = promptForDay();
 
-  // Shared-canvas preview for the Home entry (null/short-data safe).
+  // Shared-canvas preview for the Home entry (null/short-data safe). The
+  // thumbnail shows both layers: vector ink plus any legacy pixel drawing.
   const canvasPixels = normalizeCanvas(app.canvas?.pixels);
-  const canvasEmpty = isBlank(canvasPixels);
+  const canvasEmpty = !canvasHasInk(app.canvas);
   const canvasPartnerNew = !!app.canvas && !app.isMine(app.canvas.updatedBy) && !canvasEmpty;
 
-  // The Time Capsule: is something from the partner waiting to be discovered?
-  // Purely derived from data we already sync — an unseen hug, a deck answer you
-  // haven't unlocked, or fresh canvas strokes. Priority: most personal first.
-  const deckGift = useMemo(
-    () =>
-      app.deck.some(
-        (r) =>
-          r.authorId === partnerId &&
-          !app.deck.some((m) => m.authorId === meId && m.promptId === r.promptId),
-      ),
-    [app.deck, partnerId, meId],
-  );
   // Walking Each Other Home, the Home glance: only once both places are set
   // and at least one real step has landed. All reads null-safe.
   const walk = useMemo(() => {
@@ -211,14 +200,6 @@ export default function HomeScreen({ navigation }: any) {
     return { distanceKm, walkedKm, pct: walkedKm / distanceKm, done: walkedKm >= distanceKm };
   }, [app.myPlace, app.partnerPlace, app.stepDays]);
 
-  const capsuleGift: { route: string; note: string } | null =
-    unseenPings.length > 0
-      ? { route: 'MissYou', note: `something warm from ${partnerName}` }
-      : deckGift
-        ? { route: 'Deck', note: `${partnerName} answered a question for you` }
-        : canvasPartnerNew
-          ? { route: 'Canvas', note: `${partnerName} added to your drawing` }
-          : null;
   const canvasSub = canvasEmpty
     ? 'A blank page, start a drawing together'
     : canvasPartnerNew
@@ -248,22 +229,13 @@ export default function HomeScreen({ navigation }: any) {
         title={`${greeting()}, ${identity?.name ?? ''}`}
         subtitle={`You & ${identity?.partnerName ?? 'your love'}`}
         right={
-          <View style={styles.headerRight}>
-            <TimeCapsule
-              filled={!!capsuleGift}
-              onPress={() => {
-                if (capsuleGift) navigation.navigate(capsuleGift.route);
-                else toast.show(`Empty for now — leave ${partnerName} something to find 🤍`, 2600);
-              }}
-            />
-            <JointAvatar
-              myName={identity?.name ?? '?'}
-              partnerName={partnerName}
-              myUri={app.myProfile?.image}
-              partnerUri={app.partnerProfile?.image}
-              onPress={() => navigation.navigate('Settings')}
-            />
-          </View>
+          <JointAvatar
+            myName={identity?.name ?? '?'}
+            partnerName={partnerName}
+            myUri={app.myProfile?.image}
+            partnerUri={app.partnerProfile?.image}
+            onPress={() => navigation.navigate('Settings')}
+          />
         }
       />
 
@@ -670,7 +642,7 @@ export default function HomeScreen({ navigation }: any) {
       {/* Our shared canvas — a live thumbnail of the couple's drawing */}
       <Card onPress={() => navigation.navigate('Canvas')} style={{ marginTop: spacing.md }}>
         <View style={styles.canvasRow}>
-          <CanvasMini pixels={canvasPixels} size={62} />
+          <CanvasMini pixels={canvasPixels} strokes={app.canvas?.strokes} size={62} />
           <View style={{ flex: 1 }}>
             <Title>Our shared canvas</Title>
             <Muted style={{ marginTop: 4 }}>{canvasSub}</Muted>
@@ -744,76 +716,6 @@ function AmbientBloom({ here }: { here: boolean }) {
         <LinearGradient colors={gradients.ambientHere} style={StyleSheet.absoluteFill} />
       </Animated.View>
     </Animated.View>
-  );
-}
-
-/**
- * The Time Capsule — a small glass orb beside the avatar. Clear when nothing
- * is waiting; when the partner has left something (a hug, a deck answer, fresh
- * canvas strokes) it glows warm and tiny particles drift inside. Pressing it
- * swells with a slow, luxurious spring before opening the gift.
- */
-function TimeCapsule({ filled, onPress }: { filled: boolean; onPress: () => void }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const to = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.gentle }).start();
-  return (
-    <Pressable
-      onPressIn={() => to(1.15)}
-      onPressOut={() => to(1)}
-      onPress={onPress}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel={filled ? 'Open your time capsule — something is waiting' : 'Time capsule, empty'}
-    >
-      <Animated.View style={[styles.capsule, { transform: [{ scale }] }]}>
-        {filled ? (
-          <>
-            <LinearGradient colors={gradients.roseSoft} style={StyleSheet.absoluteFill} />
-            <CapsuleParticle delay={0} left={9} size={5} color={colors.primary} />
-            <CapsuleParticle delay={700} left={19} size={4} color={colors.accent} />
-            <CapsuleParticle delay={1400} left={26} size={3} color={colors.gold} />
-          </>
-        ) : null}
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-/** One tiny mote of light drifting slowly upward inside the capsule. */
-function CapsuleParticle({ delay, left, size, color }: { delay: number; left: number; size: number; color: string }) {
-  const drift = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    let loop: Animated.CompositeAnimation | null = null;
-    const id = setTimeout(() => {
-      loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(drift, { toValue: 1, duration: 2200, useNativeDriver: true }),
-          Animated.timing(drift, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ]),
-      );
-      loop.start();
-    }, delay);
-    return () => {
-      clearTimeout(id);
-      loop?.stop();
-    };
-  }, [drift, delay]);
-  const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [26, 4] });
-  const opacity = drift.interpolate({ inputRange: [0, 0.25, 0.8, 1], outputRange: [0, 0.9, 0.7, 0] });
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        transform: [{ translateY }],
-        opacity,
-      }}
-    />
   );
 }
 
@@ -908,18 +810,6 @@ const styles = StyleSheet.create({
   // Ambient presence bloom: bleeds past the scroll padding so the glow runs
   // edge-to-edge, and scrolls away naturally with the page.
   bloom: { position: 'absolute', top: -160, left: -20, right: -20, height: 420 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  capsule: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)', // the light-catching rim
-    ...shadow.soft,
-  },
-
   hero: { borderRadius: radius.lg, padding: 22, marginTop: spacing.md, overflow: 'hidden' },
   heroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: font.size.md, fontFamily: font.family.medium },
   heroScore: { color: colors.white, fontSize: 52, fontFamily: font.family.display, lineHeight: 56, marginTop: 2 },

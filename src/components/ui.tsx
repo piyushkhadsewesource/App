@@ -237,12 +237,7 @@ export function Pill({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: !!active }}
-      style={[
-        styles.pill,
-        active
-          ? { backgroundColor: color, borderColor: color }
-          : { backgroundColor: colors.surface, borderColor: colors.border },
-      ]}
+      style={[styles.pill, { backgroundColor: active ? color : colors.surfaceAlt }]}
     >
       <Text style={[styles.pillText, { color: active ? colors.white : colors.textSoft }]}>
         {label}
@@ -308,7 +303,7 @@ export function Field({
     <View style={{ marginBottom: spacing.md }}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       <TextInput
-        placeholderTextColor={colors.textFaint}
+        placeholderTextColor={colors.textSoft}
         style={[styles.input, props.multiline ? styles.inputMultiline : null, style]}
         {...props}
       />
@@ -343,15 +338,9 @@ export function LevelSelector({
             accessibilityRole="button"
             accessibilityLabel={`Level ${n}`}
             accessibilityState={{ selected: n <= value }}
-            style={[
-              styles.levelDot,
-              {
-                backgroundColor: n <= value ? color : colors.surfaceAlt,
-                borderColor: n <= value ? color : colors.border,
-              },
-            ]}
+            style={[styles.levelDot, { backgroundColor: n <= value ? color : colors.surfaceAlt }]}
           >
-            <Text style={{ color: n <= value ? colors.white : colors.textFaint, fontFamily: font.family.bold }}>
+            <Text style={{ color: n <= value ? colors.white : colors.textSoft, fontFamily: font.family.bold }}>
               {n}
             </Text>
           </Pressable>
@@ -398,8 +387,9 @@ export function Divider() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { padding: 20, paddingBottom: spacing.xxl * 2.5 },
-  header: { marginBottom: spacing.lg },
+  // A touch more air than the old 20px — screens breathe, content still wins.
+  scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxl * 2.5 },
+  header: { marginBottom: spacing.xl },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   back: { marginBottom: spacing.sm },
   backText: { color: colors.textSoft, fontSize: font.size.md, fontFamily: font.family.semibold },
@@ -420,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     marginBottom: spacing.md,
   },
   sectionTitle: { fontSize: font.size.xl + 1, lineHeight: 27, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: font.tracking.heading },
@@ -435,11 +425,11 @@ const styles = StyleSheet.create({
   buttonFill: { borderRadius: radius.pill },
   buttonText: { fontSize: font.size.md, fontFamily: font.family.bold, letterSpacing: 0.3 },
 
+  // Filled chips, no outline: state reads from the surface itself.
   pill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm + 1,
     borderRadius: radius.pill,
-    borderWidth: 1,
   },
   pillText: { fontSize: font.size.sm, fontFamily: font.family.semibold },
 
@@ -449,13 +439,13 @@ const styles = StyleSheet.create({
   avatar: { alignItems: 'center', justifyContent: 'center' },
 
   fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs, letterSpacing: font.tracking.label },
+  // Filled, borderless field: the soft tinted surface reads as "writable" on
+  // both the cream page and white cards without a generic grey outline.
   input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
     fontSize: font.size.md,
     color: colors.text,
     fontFamily: font.family.body,
@@ -467,7 +457,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 46,
     borderRadius: radius.md,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

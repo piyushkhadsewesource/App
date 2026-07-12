@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import Reanimated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { AppHeader, Card, Muted, Screen, Title } from '../components/ui';
 import { todayISO } from '../lib/date';
 import { hLight, hSuccess, hWarn } from '../lib/haptics';
-import { dailyWord, keyboardStates, LetterState, MAX_GUESSES, scoreGuess, WORD_LEN } from '../lib/wordle';
+import { dailyWord, isValidWord, keyboardStates, LetterState, MAX_GUESSES, scoreGuess, WORD_LEN } from '../lib/wordle';
 import { Celebrate } from '../components/Celebrate';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -33,7 +34,10 @@ export default function WordleScreen({ navigation }: any) {
 
   const [cur, setCur] = useState('');
   const [msg, setMsg] = useState('');
-  const shake = useRef(new Animated.Value(0)).current;
+  // The error shake: a stiff spring impulse that overshoots and settles, so a
+  // rejected guess physically recoils instead of wobbling on a timer.
+  const shakeX = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
   const rowAnims = useRef([...Array(MAX_GUESSES)].map(() => new Animated.Value(1))).current;
   const prevCount = useRef(guesses.length);
 
@@ -54,13 +58,12 @@ export default function WordleScreen({ navigation }: any) {
   function toast(text: string) {
     hWarn();
     setMsg(text);
-    shake.setValue(0);
-    Animated.sequence([
-      Animated.timing(shake, { toValue: 1, duration: 55, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -1, duration: 55, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 1, duration: 55, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 55, useNativeDriver: true }),
-    ]).start();
+    shakeX.value = withSequence(
+      withSpring(-9, { stiffness: 1400, damping: 26, mass: 0.6 }),
+      withSpring(7, { stiffness: 1100, damping: 22, mass: 0.6 }),
+      withSpring(-4, { stiffness: 1000, damping: 20, mass: 0.6 }),
+      withSpring(0, { stiffness: 700, damping: 16, mass: 0.6 }),
+    );
     setTimeout(() => setMsg((m) => (m === text ? '' : m)), 1400);
   }
 
@@ -78,6 +81,10 @@ export default function WordleScreen({ navigation }: any) {
       return;
     }
     const guess = cur.toUpperCase();
+    if (!isValidWord(guess)) {
+      toast('Not a word we know');
+      return;
+    }
     const next = [...guesses, guess];
     setCur('');
     await app.recordWordle({ date, guesses: next, solved: next.includes(answer) });
@@ -107,7 +114,7 @@ export default function WordleScreen({ navigation }: any) {
       </View>
 
       {/* Grid */}
-      <Animated.View style={[styles.grid, { transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-9, 9] }) }] }]}>
+      <Reanimated.View style={[styles.grid, shakeStyle]}>
         {rows.map((row, ri) => (
           <Animated.View
             key={ri}
@@ -139,7 +146,7 @@ export default function WordleScreen({ navigation }: any) {
             })}
           </Animated.View>
         ))}
-      </Animated.View>
+      </Reanimated.View>
 
       {/* Result */}
       {done ? (
@@ -204,7 +211,7 @@ function KeyCap({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      style={({ pressed }) => [styles.key, { backgroundColor: bg, flex: wide ? 1.6 : 1 }, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.key, { backgroundColor: bg, flex: wide ? 1.6 : 1 }, pressed && styles.keyPressed]}
     >
       <Text style={[styles.keyText, { color: fg, fontSize: wide ? 16 : font.size.md }]}>{label}</Text>
     </Pressable>
@@ -227,5 +234,8 @@ const styles = StyleSheet.create({
   kb: { marginTop: spacing.xl, gap: spacing.sm },
   kbRow: { flexDirection: 'row', justifyContent: 'center', gap: 5 },
   key: { height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center', ...shadow.soft },
+  // Instant (unanimated) press state: these keys are hit dozens of times per
+  // game, so the feedback must be immediate, never a queued animation.
+  keyPressed: { transform: [{ scale: 0.94 }], opacity: 0.85 },
   keyText: { fontFamily: font.family.bold },
 });

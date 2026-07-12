@@ -18,10 +18,15 @@ not drift it toward generic AI defaults, and do not swap the serif.
 
 ## Motion (`src/theme/motion.ts`)
 
-- `Animated` + `useNativeDriver`, transform/opacity only. No reanimated.
+- `Animated` + `useNativeDriver`, transform/opacity only, for everyday UI.
+- Reanimated + Gesture Handler are reserved for surfaces that need the UI
+  thread: the Shared Canvas ink (SVG path built per frame in a worklet) and the
+  Wordle error shake (spring impulse). Don't reach for them for ordinary
+  presses/reveals — `Animated` springs stay the house instrument.
 - Springs: gentle / snappy (tension 300, friction 22) / bouncy. Micro-interactions
   land <300ms; buttons press to scale 0.96; ambient loops (breathing, pools)
-  use sine ease and may be slow.
+  use sine ease and may be slow. High-frequency inputs (keyboards, wipes) get
+  instant pressed states, never queued animations.
 - Web = iOS Safari PWA: never rely on ScrollView momentum events for state
   (they don't fire) — taps commit state, wheels are native-only (see TimeDial).
 
@@ -35,3 +40,10 @@ not drift it toward generic AI defaults, and do not swap the serif.
   things that genuinely need the person now.
 - Copy: first person, warm, specific; 🤍 is the house mark. No em-dashes in UI copy.
 - Partner data renders in violet, mine in rose — consistently, everywhere.
+- Borders are earned, not default: inputs/chips/level dots are filled tinted
+  surfaces (`surfaceAlt`), not outlined boxes. Card hairline + warm shadow is
+  the only ambient edge.
+- Shared Canvas: vector strokes (normalized coords, JSON on the synced doc),
+  one Firestore write per stroke on finger lift, never mid-stroke; the legacy
+  pixel board renders underneath. New native deps (svg / gesture-handler /
+  reanimated) mean the next APK must be a fresh EAS build before OTA updates.

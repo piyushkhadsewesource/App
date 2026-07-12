@@ -61,6 +61,7 @@ import {
   TicTacToe,
   WordleResult,
 } from '../types/models';
+import { CANVAS_STROKES_BUDGET, canvasHasInk, canvasSignature } from '../lib/canvas';
 import { EMPTY_BOARD } from '../lib/games';
 import { autoStepsSupported, MAX_DAY_STEPS, readRecentDeviceSteps } from '../lib/walk';
 import { applyRoll } from '../lib/snakes';
@@ -188,7 +189,8 @@ interface AppValue {
   answerGame(game: GameKind, promptId: string, choice: number): Promise<void>;
   newTicTacToe(): Promise<void>;
   playTicTacToe(index: number): Promise<void>;
-  saveCanvas(pixels: string): Promise<void>;
+  /** Persist the whole vector drawing (serialized strokes) in one write. */
+  saveCanvasStrokes(strokes: string): Promise<void>;
   clearCanvas(): Promise<void>;
   recordWordle(data: { date: string; guesses: string[]; solved: boolean }): Promise<void>;
   newSnakes(): Promise<void>;
@@ -536,9 +538,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const d = new Date();
         let fogWaiting = false;
         const cur = canvasArr.find((c) => c.id === 'current');
-        if (cur && cur.updatedBy !== meId && typeof cur.pixels === 'string' && /[^0]/.test(cur.pixels)) {
+        if (cur && cur.updatedBy !== meId && canvasHasInk(cur)) {
           const seen = await AsyncStorage.getItem(`@tether/canvasSeen/${identity.spaceId}`);
-          fogWaiting = (seen ?? '') !== cur.pixels;
+          fogWaiting = (seen ?? '') !== canvasSignature(cur);
         }
         const snap = composeSnapshot({
           partnerName: identity.partnerName || 'Your love',
@@ -986,14 +988,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const nextTurn = game.turn === game.xId ? game.oId : game.xId;
       await db.update<TicTacToe>('tictactoe', 'current', { board, turn: nextTurn, updatedAt: now() });
     },
-    async saveCanvas(pixels) {
+    async saveCanvasStrokes(strokes) {
       const db = dbRef.current;
       if (!db) return;
-      // The whole grid is one tiny doc; the screen debounces these so a stroke
-      // is a single write. clampReq caps length defensively (256 chars normally).
+      // One tidy write per finished stroke — the screen only calls this on
+      // finger lift, never mid-stroke. The write replaces the whole doc, so the
+      // legacy pixel board is carried through: old drawings keep rendering
+      // underneath the vector ink.
+      const cur = canvasArr.find((c) => c.id === 'current');
       await db.add('canvas', {
         id: 'current',
-        pixels: clampReq(pixels, 1024),
+        pixels: clampReq(typeof cur?.pixels === 'string' ? cur.pixels : '0'.repeat(256), 1024),
+        strokes: clampReq(strokes, CANVAS_STROKES_BUDGET),
         size: 16,
         updatedAt: now(),
         updatedBy: meId,
@@ -1005,6 +1011,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await db.add('canvas', {
         id: 'current',
         pixels: '0'.repeat(256),
+        strokes: '[]',
         size: 16,
         updatedAt: now(),
         updatedBy: meId,
