@@ -7,54 +7,53 @@ import {
   Body,
   Card,
   Muted,
-  ProgressBar,
   Screen,
   SectionTitle,
-  Tag,
   Title,
 } from '../components/ui';
 import DayRibbon from '../components/DayRibbon';
 import JointAvatar from '../components/JointAvatar';
 import { Heartbeat } from '../components/Heartbeat';
-import IntensityChart from '../components/IntensityChart';
-import { Reveal } from '../components/Motion';
+import { Press, Reveal, SwipeAway } from '../components/Motion';
 import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
 import { questionForDate, revealAnswers, revealPromptId } from '../lib/reveal';
 import { dismissWhisper, pickWhisper, Whisper } from '../lib/whisper';
 import { isBlank, normalizeCanvas } from '../lib/canvas';
-import { haversineKm } from '../lib/geo';
-import { kmFromSteps } from '../lib/walk';
 import { buildActivity, withinHours } from '../lib/activity';
-import { formatDayMonth, formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
-import { averageIntensity, todaysFeelings } from '../lib/feelings';
-import { computeHealth } from '../lib/health';
-import { promptForDay } from '../lib/intimacy';
+import { formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { moodMeta } from '../lib/mood';
-import { captureStreak, hasMomentToday } from '../lib/moments';
+import { hasMomentToday } from '../lib/moments';
 import { countdownTo, shortCountdown } from '../lib/countdown';
 import { issueNeedingYou } from '../lib/issues';
-import { occasionsOnThisDay, ordinal, untilLabel, upcomingOccasion } from '../lib/occasions';
+import { occasionsOnThisDay, ordinal } from '../lib/occasions';
 import { latestCheckin, strugglingStreak } from '../lib/pulse';
 import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
-import { spring } from '../theme/motion';
+import { prefersReducedMotion, spring } from '../theme/motion';
+
+/** The one alert Home is allowed to show (whisper principle, enforced). */
+type HomeAlert = {
+  key: string;
+  tone: 'rose' | 'violet' | 'gold';
+  emoji: string;
+  title: string;
+  sub: string;
+  route: string;
+  params?: object;
+};
 
 export default function HomeScreen({ navigation }: any) {
   const app = useApp();
   const { identity, meId, partnerId, checkins, pings, memories } = app;
   const today = todayISO();
-  // A slow tick so presence ("Active now") and the next-plan window stay honest
-  // without waiting for the next data change.
+  // A slow tick so presence ("Active now") stays honest without waiting for
+  // the next data change.
   const now = useNow(60_000);
   const toast = useToast();
   const partnerName = identity?.partnerName ?? 'them';
 
-  const health = useMemo(
-    () => computeHealth({ checkins, memories, letters: app.letters, pings, deck: app.deck, moments: app.moments, meId, partnerId }),
-    [checkins, memories, app.letters, pings, app.deck, app.moments, meId, partnerId],
-  );
   const myToday = latestCheckin(checkins, meId);
   const myCheckedToday = myToday?.date === today;
   const partnerLatest = latestCheckin(checkins, partnerId);
@@ -67,8 +66,6 @@ export default function HomeScreen({ navigation }: any) {
     () => app.letters.find((l) => l.authorId !== meId && l.deliverAt <= now && !l.openedAt) ?? null,
     [app.letters, meId, now],
   );
-  const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
-  const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
   const momentDoneToday = hasMomentToday(app.moments, meId);
 
   // Everything that happened recently, across every feature, newest first, so the
@@ -121,15 +118,10 @@ export default function HomeScreen({ navigation }: any) {
     setActiveHintSeen(true);
     AsyncStorage.setItem('@tether/seen/activeNowHint', '1').catch(() => {});
   }
-  const momentStreak = captureStreak(app.moments, meId);
   const meeting = app.meeting;
 
   const occToday = useMemo(() => occasionsOnThisDay(app.occasions), [app.occasions]);
   const anniToday = occToday[0] ?? null;
-  const upcoming = useMemo(() => {
-    const ids = new Set(occToday.map((x) => x.occasion.id));
-    return upcomingOccasion(app.occasions.filter((o) => !ids.has(o.id)), 31, 0);
-  }, [app.occasions, occToday]);
   // Tonight's Reveal: the daily blind-answer anchor. The tease is asymmetric
   // on purpose — you learn THAT they answered, never WHAT, until yours is in.
   const reveal = useMemo(() => revealAnswers(app.deck, today, meId), [app.deck, today, meId]);
@@ -165,20 +157,20 @@ export default function HomeScreen({ navigation }: any) {
       futureCount: app.future.length,
       memoryCount: memories.length,
       occasionCount: app.occasions.length,
+      meetingSet: !!meeting,
+      momentDoneToday,
     })
       .then((w) => alive && setWhisper(w))
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [myLastLetterAt, myLastDeckAt, app.future.length, memories.length, app.occasions.length, identity?.partnerName]);
+  }, [myLastLetterAt, myLastDeckAt, app.future.length, memories.length, app.occasions.length, identity?.partnerName, meeting, momentDoneToday]);
 
   const onThisDay = useMemo(() => {
     const md = today.slice(5);
     return memories.find((m) => m.date.slice(5) === md && m.date.slice(0, 4) !== today.slice(0, 4));
   }, [memories, today]);
-
-  const prompt = promptForDay();
 
   // Shared-canvas preview for the Home entry (null/short-data safe).
   const canvasPixels = normalizeCanvas(app.canvas?.pixels);
@@ -197,19 +189,6 @@ export default function HomeScreen({ navigation }: any) {
       ),
     [app.deck, partnerId, meId],
   );
-  // Walking Each Other Home, the Home glance: only once both places are set
-  // and at least one real step has landed. All reads null-safe.
-  const walk = useMemo(() => {
-    const mine = app.myPlace;
-    const th = app.partnerPlace;
-    if (!mine || !th || app.stepDays.length === 0) return null;
-    const distanceKm = Math.max(1, Math.round(haversineKm(mine.lat, mine.lon, th.lat, th.lon)));
-    let steps = 0;
-    for (const d of app.stepDays) if (typeof d.steps === 'number' && d.steps > 0) steps += d.steps;
-    if (steps <= 0) return null;
-    const walkedKm = Math.min(distanceKm, kmFromSteps(steps));
-    return { distanceKm, walkedKm, pct: walkedKm / distanceKm, done: walkedKm >= distanceKm };
-  }, [app.myPlace, app.partnerPlace, app.stepDays]);
 
   const capsuleGift: { route: string; note: string } | null =
     unseenPings.length > 0
@@ -225,9 +204,8 @@ export default function HomeScreen({ navigation }: any) {
       ? `${partnerName} added to it, tap to watch`
       : 'Your shared drawing, tap to add';
 
-  // Day-one: until there's anything to score, an inviting "begin" hero reads far
-  // warmer than "10/100 · Getting started" as the first message about the
-  // relationship. Any of these signals means the score is meaningful.
+  // Day-one: until there's anything to score, Home leads with an inviting
+  // "begin" state rather than empty modules.
   const hasSignal =
     checkins.length > 0 ||
     app.feelings.length > 0 ||
@@ -235,6 +213,71 @@ export default function HomeScreen({ navigation }: any) {
     memories.length > 0 ||
     pings.length > 0 ||
     app.deck.length > 0;
+
+  // ── The one alert. Alert cards are for things that genuinely need the
+  //    person now; everything gentler lives in the capsule or the whisper.
+  //    Priority: repair > their hard days > a letter > hugs > today's date.
+  const alert: HomeAlert | null = tendIssue
+    ? {
+        key: 'issue',
+        tone: 'rose',
+        emoji: '🕊️',
+        title: `${identity?.partnerName} wants to clear the air`,
+        sub: `"${tendIssue.title}". Tap to hear them out and make it right.`,
+        route: 'IssueDetail',
+        params: { id: tendIssue.id },
+      }
+    : partnerStreak
+      ? {
+          key: 'streak',
+          tone: 'violet',
+          emoji: '💜',
+          title: `${identity?.partnerName} has had ${partnerStreak.days} hard days`,
+          sub: 'They could use some extra gentleness. Tap for ways to reach out.',
+          route: 'Insights',
+        }
+      : readyLetter
+        ? {
+            key: 'letter',
+            tone: 'gold',
+            emoji: '💌',
+            title: `A letter from ${partnerName} is ready`,
+            sub: `“${readyLetter.title}”. Tap to open it.`,
+            route: 'Letters',
+          }
+        : unseenPings.length > 0
+          ? {
+              key: 'pings',
+              tone: 'rose',
+              emoji: '🤗',
+              title: `${unseenPings.length} new ${unseenPings.length === 1 ? 'hug' : 'hugs'} from ${identity?.partnerName}`,
+              sub: 'They’re thinking about you right now. Tap to feel it.',
+              route: 'MissYou',
+            }
+          : anniToday
+            ? {
+                key: 'occasion',
+                tone: 'gold',
+                emoji: anniToday.occasion.icon || '🎉',
+                title:
+                  anniToday.yearsAgo >= 1
+                    ? `${ordinal(anniToday.yearsAgo)} ${anniToday.occasion.title} today 🎉`
+                    : `${anniToday.occasion.title} is today 🎉`,
+                sub: 'Make it count 💞',
+                route: 'Occasions',
+              }
+            : null;
+
+  // ── The Hearth's one warm line: countdown > their weather > a quiet day.
+  const hearthLine = !hasSignal
+    ? 'Your story starts now 🤍'
+    : meeting
+      ? countdownTo(meeting.at).past
+        ? 'You’re together 💞'
+        : `Together again in ${shortCountdown(meeting.at)} 💞`
+      : partnerLatest?.date === today
+        ? `${partnerName} feels ${moodMeta(partnerLatest.mood).label.toLowerCase()} today`
+        : 'A quiet day, side by side 🤍';
 
   function sendFirstHug() {
     app.sendPing('hug');
@@ -253,7 +296,7 @@ export default function HomeScreen({ navigation }: any) {
               filled={!!capsuleGift}
               onPress={() => {
                 if (capsuleGift) navigation.navigate(capsuleGift.route);
-                else toast.show(`Empty for now — leave ${partnerName} something to find 🤍`, 2600);
+                else toast.show(`Empty for now. Leave ${partnerName} something to find 🤍`, 2600);
               }}
             />
             <JointAvatar
@@ -267,120 +310,64 @@ export default function HomeScreen({ navigation }: any) {
         }
       />
 
-      {/* Struggling alert */}
-      {partnerStreak ? (
-        <Card tone="violet" onPress={() => navigation.navigate('Insights')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>💜</Text>
-          <View style={{ flex: 1 }}>
-            <Title>{identity?.partnerName} has had {partnerStreak.days} hard days</Title>
-            <Muted>They could use some extra gentleness. Tap for ways to reach out.</Muted>
-          </View>
-        </Card>
+      {/* The one alert (whisper principle: never a stack) */}
+      {alert ? (
+        <Reveal key={alert.key}>
+          <Card tone={alert.tone} onPress={() => navigation.navigate(alert.route, alert.params)} style={styles.alert}>
+            <Text style={styles.alertEmoji}>{alert.emoji}</Text>
+            <View style={{ flex: 1 }}>
+              <Title>{alert.title}</Title>
+              <Muted>{alert.sub}</Muted>
+            </View>
+          </Card>
+        </Reveal>
       ) : null}
 
-      {/* Partner raised something to clear the air */}
-      {tendIssue ? (
-        <Card tone="rose" onPress={() => navigation.navigate('IssueDetail', { id: tendIssue.id })} style={styles.alert}>
-          <Text style={styles.alertEmoji}>🕊️</Text>
-          <View style={{ flex: 1 }}>
-            <Title>{identity?.partnerName} wants to clear the air</Title>
-            <Muted>"{tendIssue.title}". Tap to hear them out and make it right.</Muted>
+      {/* The Hearth: both of you, present tense */}
+      <Card onPress={() => navigation.navigate('Pulse')}>
+        <View style={styles.pulseRow}>
+          <PulseFace
+            name="You"
+            color={colors.primary}
+            checkedToday={myCheckedToday}
+            mood={myCheckedToday && myToday ? moodMeta(myToday.mood) : null}
+          />
+          <View style={styles.pulseDivider} />
+          <PulseFace
+            name={identity?.partnerName ?? 'Partner'}
+            color={colors.accent}
+            checkedToday={partnerLatest?.date === today}
+            mood={partnerLatest?.date === today ? moodMeta(partnerLatest.mood) : null}
+            beating={partnerActive}
+            live={partnerHereNow}
+          />
+        </View>
+        <Text style={styles.hearthLine}>{hearthLine}</Text>
+        {partnerLatest?.date === today && partnerLatest.need ? (
+          <View style={styles.needBox}>
+            <Muted>{identity?.partnerName} needs today</Muted>
+            <Body style={{ marginTop: 2 }}>"{partnerLatest.need}"</Body>
           </View>
-        </Card>
+        ) : !myCheckedToday ? (
+          <View style={styles.needBox}>
+            <Body>How are you feeling today? Tap to check in. 🤍</Body>
+          </View>
+        ) : null}
+      </Card>
+
+      {showActiveHint ? (
+        <Pressable onPress={dismissActiveHint} style={styles.coach} accessibilityRole="button" accessibilityLabel="Got it">
+          <Text style={{ fontSize: 18 }}>💚</Text>
+          <Text style={styles.coachText}>
+            The green heartbeat means {partnerName} is active right now. Tap to dismiss.
+          </Text>
+        </Pressable>
       ) : null}
 
-      {/* A sealed letter just unlocked */}
-      {readyLetter ? (
-        <Card tone="gold" onPress={() => navigation.navigate('Letters')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>💌</Text>
-          <View style={{ flex: 1 }}>
-            <Title>A letter from {partnerName} is ready</Title>
-            <Muted>“{readyLetter.title}”. Tap to open it.</Muted>
-          </View>
-        </Card>
-      ) : null}
-
-      {/* Unseen hugs */}
-      {unseenPings.length > 0 ? (
-        <Card tone="rose" onPress={() => navigation.navigate('MissYou')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>🤗</Text>
-          <View style={{ flex: 1 }}>
-            <Title>
-              {unseenPings.length} new {unseenPings.length === 1 ? 'hug' : 'hugs'} from {identity?.partnerName}
-            </Title>
-            <Muted>They’re thinking about you right now. Tap to feel it.</Muted>
-          </View>
-        </Card>
-      ) : null}
-
-      {/* Today's moment nudge */}
-      {!momentDoneToday ? (
-        <Card tone="gold" onPress={() => navigation.navigate('Moments')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>📸</Text>
-          <View style={{ flex: 1 }}>
-            <Title>Capture today’s moment</Title>
-            <Muted>
-              {momentStreak > 0 ? `Keep your ${momentStreak}-day streak going.` : 'One photo a day builds your shared gallery.'}
-            </Muted>
-          </View>
-        </Card>
-      ) : null}
-
-      {/* Reunion countdown — only shown once a date is set */}
-      {meeting ? (
-        <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>💞</Text>
-          <View style={{ flex: 1 }}>
-            <Title>
-              {countdownTo(meeting.at).past ? "You're together 💞" : `Together in ${shortCountdown(meeting.at)}`}
-            </Title>
-            <Muted>{meeting.label || 'Tap for the live countdown.'}</Muted>
-          </View>
-        </Card>
-      ) : (
-        // Zero-state: nudge the most emotional feature so a live countdown is one
-        // tap away on the very first Home view. Disappears once a date is set.
-        <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>💞</Text>
-          <View style={{ flex: 1 }}>
-            <Title>Set your reunion date</Title>
-            <Muted>Start a live countdown to the next time you’re together.</Muted>
-          </View>
-          <Text style={styles.actChevron}>›</Text>
-        </Card>
-      )}
-
-      {/* Today's occasion */}
-      {anniToday ? (
-        <Card tone="gold" onPress={() => navigation.navigate('Occasions')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>{anniToday.occasion.icon || '🎉'}</Text>
-          <View style={{ flex: 1 }}>
-            <Title>
-              {anniToday.yearsAgo >= 1
-                ? `${ordinal(anniToday.yearsAgo)} ${anniToday.occasion.title} today 🎉`
-                : `${anniToday.occasion.title} is today 🎉`}
-            </Title>
-            <Muted>
-              {anniToday.yearsAgo >= 1
-                ? `${anniToday.yearsAgo} year${anniToday.yearsAgo === 1 ? '' : 's'} ago today. Make it count 💞`
-                : 'Make it count 💞'}
-            </Muted>
-          </View>
-        </Card>
-      ) : null}
-
-      {/* Upcoming anniversary / special date */}
-      {upcoming ? (
-        <Card tone="rose" onPress={() => navigation.navigate('Occasions')} style={styles.alert}>
-          <Text style={styles.alertEmoji}>{upcoming.occasion.icon || '🎉'}</Text>
-          <View style={{ flex: 1 }}>
-            <Title>
-              {upcoming.occasion.title} · {untilLabel(upcoming.days).toLowerCase()}
-            </Title>
-            <Muted>{upcoming.days === 0 ? 'It’s today, make it count 💞' : 'Tap to see all your special dates.'}</Muted>
-          </View>
-        </Card>
-      ) : null}
+      {/* Our day, front and center: both lanes + when you're both free */}
+      <View style={{ marginTop: spacing.md }}>
+        <DayRibbon onOpen={() => navigation.navigate('Schedule')} />
+      </View>
 
       {/* Tonight's Reveal: the daily anchor. The card's whole job is pull. */}
       <Card
@@ -413,41 +400,11 @@ export default function HomeScreen({ navigation }: any) {
           ) : (
             <>
               <Title>Tonight's answers 🤍</Title>
-              <Muted>Read them again — a new question arrives at midnight.</Muted>
+              <Muted>Read them again. A new question arrives at midnight.</Muted>
             </>
           )}
         </View>
       </Card>
-
-      {/* Our day, front and center: both lanes + when you're both free */}
-      <DayRibbon onOpen={() => navigation.navigate('Schedule')} />
-
-      {/* The Rediscover Whisper: one quiet nudge, dismissible for a week */}
-      {whisper ? (
-        <Pressable
-          onPress={() => navigation.navigate(whisper.route)}
-          accessibilityRole="button"
-          accessibilityLabel={whisper.title}
-          style={({ pressed }) => [styles.whisper, pressed && { opacity: 0.9 }]}
-        >
-          <Text style={{ fontSize: 20 }}>{whisper.emoji}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.whisperTitle}>{whisper.title}</Text>
-            <Muted>{whisper.text}</Muted>
-          </View>
-          <Pressable
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Not now"
-            onPress={() => {
-              void dismissWhisper(whisper.id);
-              setWhisper(null);
-            }}
-          >
-            <Text style={styles.whisperX}>×</Text>
-          </Pressable>
-        </Pressable>
-      ) : null}
 
       {/* What's new together (cross-feature activity feed) */}
       {recent.length > 0 ? (
@@ -464,14 +421,15 @@ export default function HomeScreen({ navigation }: any) {
             What’s new together
           </SectionTitle>
           <Card style={styles.feedCard}>
-            {recent.slice(0, 7).map((e, i) => (
+            {recent.slice(0, 6).map((e, i) => (
               // Each row cascades in with a staggered reveal for a buttery feed.
               <Reveal key={e.id} delay={i * 55}>
-                <Pressable
+                <Press
                   onPress={() => navigation.navigate(e.route, e.params)}
+                  scaleTo={0.985}
                   accessibilityRole="button"
                   accessibilityLabel={e.text}
-                  style={({ pressed }) => [styles.actRow, i > 0 ? styles.actDivider : null, !e.mine ? styles.actPartner : null, pressed ? { opacity: 0.7 } : null]}
+                  style={[styles.actRow, i > 0 ? styles.actDivider : null, !e.mine ? styles.actPartner : null]}
                 >
                   <Text style={{ fontSize: 22 }}>{e.icon}</Text>
                   <View style={{ flex: 1 }}>
@@ -482,144 +440,60 @@ export default function HomeScreen({ navigation }: any) {
                     </Muted>
                   </View>
                   {!e.mine ? <Text style={styles.actChevron}>›</Text> : null}
-                </Pressable>
+                </Press>
               </Reveal>
             ))}
           </Card>
         </>
       ) : null}
 
-      {/* Relationship health hero */}
-      {hasSignal ? (
-        <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
-          <View style={styles.healthTop}>
-            <View>
-              <Text style={styles.heroLabel}>Closeness today</Text>
-              <Text style={styles.heroScore}>
-                {health.closeness}
-                <Text style={styles.heroScoreMax}>/100</Text>
-              </Text>
+      {/* The Rediscover Whisper: one quiet nudge; swipe it away for a week */}
+      {whisper ? (
+        <SwipeAway
+          onDismiss={() => {
+            void dismissWhisper(whisper.id);
+            setWhisper(null);
+          }}
+          style={{ marginTop: spacing.md }}
+        >
+          <Press
+            onPress={() => navigation.navigate(whisper.route)}
+            scaleTo={0.985}
+            accessibilityRole="button"
+            accessibilityLabel={whisper.title}
+            style={styles.whisper}
+          >
+            <Text style={{ fontSize: 20 }}>{whisper.emoji}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.whisperTitle}>{whisper.title}</Text>
+              <Muted>{whisper.text}</Muted>
             </View>
-            <View style={styles.heroTag}>
-              <Text style={styles.heroTagText}>{health.label}</Text>
-            </View>
-          </View>
-          <View style={styles.heroTrack}>
-            <View style={[styles.heroFill, { width: `${Math.max(4, Math.min(100, health.closeness))}%` }]} />
-          </View>
-          <View style={styles.metricsRow}>
-            <HeroMetric label="Mood sync" value={`${health.moodAlignment}%`} />
-            <HeroMetric label="This week" value={`${health.sharedThisWeek}`} />
-            <HeroMetric
-              label="Together"
-              value={health.daysSinceTogether == null ? 'not yet' : health.daysSinceTogether === 0 ? 'today' : `${health.daysSinceTogether}d ago`}
-            />
-          </View>
-        </LinearGradient>
-      ) : (
-        <LinearGradient colors={gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, shadow.hero]}>
-          <Text style={styles.heroLabel}>Closeness today</Text>
-          <Text style={styles.heroBegin}>Your story starts now 🤍</Text>
-          <Text style={styles.heroBeginSub}>
-            Check in, share a moment, send {identity?.partnerName ?? 'them'} a hug, and watch your
-            closeness grow right here.
-          </Text>
-        </LinearGradient>
-      )}
-
-      {/* First steps — only on day one; disappears once the space has any life */}
-      {!hasSignal ? (
-        <Card style={{ marginTop: spacing.lg }}>
-          <Title>First steps together</Title>
-          <Muted style={{ marginTop: 2, marginBottom: spacing.sm }}>A few taps and your space comes alive.</Muted>
-          <FirstStep emoji="🤗" label={`Send ${partnerName} a hug`} hint="They feel it on their phone right away" onPress={sendFirstHug} />
-          <FirstStep emoji="💛" label="Share how you feel" hint="Your first daily check-in" onPress={() => navigation.navigate('Pulse')} />
-          <FirstStep emoji="📸" label="Capture a moment" hint="One photo, shared just with them" onPress={() => navigation.navigate('Moments')} />
-        </Card>
+            <Pressable
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Not now"
+              onPress={() => {
+                void dismissWhisper(whisper.id);
+                setWhisper(null);
+              }}
+            >
+              <Text style={styles.whisperX}>×</Text>
+            </Pressable>
+          </Press>
+        </SwipeAway>
       ) : null}
 
-      {/* Today's pulse */}
-      <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Open</Text></Pressable>}>
-        Today’s pulse
-      </SectionTitle>
-
-      <Card onPress={() => navigation.navigate('Pulse')}>
-        <View style={styles.pulseRow}>
-          <PulseFace
-            name="You"
-            color={colors.primary}
-            checkedToday={myCheckedToday}
-            mood={myCheckedToday && myToday ? moodMeta(myToday.mood) : null}
-          />
-          <View style={styles.pulseDivider} />
-          <PulseFace
-            name={identity?.partnerName ?? 'Partner'}
-            color={colors.accent}
-            checkedToday={partnerLatest?.date === today}
-            mood={partnerLatest?.date === today ? moodMeta(partnerLatest.mood) : null}
-            beating={partnerActive}
-            live={partnerHereNow}
-          />
+      {/* Our shared canvas — a live thumbnail of the couple's drawing */}
+      <Card onPress={() => navigation.navigate('Canvas')} style={{ marginTop: spacing.md }}>
+        <View style={styles.canvasRow}>
+          <CanvasMini pixels={canvasPixels} size={62} />
+          <View style={{ flex: 1 }}>
+            <Title>Our shared canvas</Title>
+            <Muted style={{ marginTop: 4 }}>{canvasSub}</Muted>
+          </View>
+          {canvasPartnerNew ? <View style={styles.canvasDot} /> : <Text style={styles.actChevron}>›</Text>}
         </View>
-        {partnerLatest?.date === today && partnerLatest.need ? (
-          <View style={styles.needBox}>
-            <Muted>{identity?.partnerName} needs today</Muted>
-            <Body style={{ marginTop: 2 }}>"{partnerLatest.need}"</Body>
-          </View>
-        ) : !myCheckedToday ? (
-          <View style={styles.needBox}>
-            <Body>How are you feeling today? Tap to check in. 🤍</Body>
-          </View>
-        ) : null}
       </Card>
-
-      {showActiveHint ? (
-        <Pressable onPress={dismissActiveHint} style={styles.coach} accessibilityRole="button" accessibilityLabel="Got it">
-          <Text style={{ fontSize: 18 }}>💚</Text>
-          <Text style={styles.coachText}>
-            The green heartbeat means {partnerName} is active right now. Tap to dismiss.
-          </Text>
-        </Pressable>
-      ) : null}
-
-      {/* Feelings through the day (intensity timeline) */}
-      <SectionTitle right={<Pressable onPress={() => navigation.navigate('Pulse')}><Text style={styles.link}>Log</Text></Pressable>}>
-        Feelings through the day
-      </SectionTitle>
-      {myFeelings.length > 0 ? (
-        <Card onPress={() => navigation.navigate('Pulse')}>
-          <View style={styles.feelHead}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Text style={{ fontSize: 22 }}>{moodMeta(myFeelings[myFeelings.length - 1].mood).emoji}</Text>
-              <View>
-                <Body style={{ fontFamily: font.family.semibold }}>
-                  Now: {moodMeta(myFeelings[myFeelings.length - 1].mood).label} · {myFeelings[myFeelings.length - 1].intensity}/10
-                </Body>
-                <Muted>
-                  {myFeelings.length} logged today · avg {Math.round((averageIntensity(myFeelings) ?? 0) * 10) / 10}/10
-                </Muted>
-              </View>
-            </View>
-          </View>
-          <View style={{ height: spacing.sm }} />
-          <IntensityChart items={myFeelings} />
-        </Card>
-      ) : (
-        <Card tone="violet" onPress={() => navigation.navigate('Pulse')}>
-          <Body style={{ fontFamily: font.family.semibold }}>How are you feeling right now?</Body>
-          <Muted style={{ marginTop: 4 }}>
-            Log your feelings through the day and your emotional timeline builds here. Tap to add one →
-          </Muted>
-        </Card>
-      )}
-      {partnerFeelings.length > 0 ? (
-        <Card tone="violet" onPress={() => navigation.navigate('Pulse')} style={{ marginTop: spacing.md }}>
-          <Muted style={{ marginBottom: spacing.xs }}>
-            {identity?.partnerName ?? 'Partner'}’s day · {partnerFeelings.length} logged
-          </Muted>
-          <IntensityChart items={partnerFeelings} />
-        </Card>
-      ) : null}
 
       {/* On this day */}
       {onThisDay ? (
@@ -639,75 +513,18 @@ export default function HomeScreen({ navigation }: any) {
         </>
       ) : null}
 
-      {/* Together today: games + daily prompt in one compact card */}
-      <SectionTitle>Together today</SectionTitle>
-      <Card>
-        <View style={styles.togetherRow}>
-          <Pressable
-            style={styles.togetherHalf}
-            onPress={() => navigation.navigate('Games')}
-            accessibilityRole="button"
-            accessibilityLabel="Play together"
-          >
-            <Text style={{ fontSize: 28 }}>🎮</Text>
-            <Text style={styles.togetherTitle}>Play together</Text>
-            <Muted>Wordle, Ludo & more</Muted>
-          </Pressable>
-          <View style={styles.togetherDivider} />
-          <Pressable
-            style={styles.togetherHalf}
-            onPress={() => navigation.navigate('Deck')}
-            accessibilityRole="button"
-            accessibilityLabel="Answer today’s closeness question"
-          >
-            <Text style={{ fontSize: 28 }}>🃏</Text>
-            <Text style={styles.togetherTitle}>Ask each other</Text>
-            <Muted>{prompt.text.length > 50 ? `${prompt.text.slice(0, 48)}…` : prompt.text}</Muted>
-          </Pressable>
-        </View>
-      </Card>
-
-      {/* Our shared canvas — a live thumbnail of the couple's drawing */}
-      <Card onPress={() => navigation.navigate('Canvas')} style={{ marginTop: spacing.md }}>
-        <View style={styles.canvasRow}>
-          <CanvasMini pixels={canvasPixels} size={62} />
-          <View style={{ flex: 1 }}>
-            <Title>Our shared canvas</Title>
-            <Muted style={{ marginTop: 4 }}>{canvasSub}</Muted>
-          </View>
-          {canvasPartnerNew ? <View style={styles.canvasDot} /> : <Text style={styles.actChevron}>›</Text>}
-        </View>
-      </Card>
-
-      {/* Walking each other home — only once the journey has begun */}
-      {walk ? (
-        <Card onPress={() => navigation.navigate('Walk')} style={{ marginTop: spacing.md }}>
-          <View style={styles.canvasRow}>
-            <Text style={{ fontSize: 30 }}>👣</Text>
-            <View style={{ flex: 1 }}>
-              <Title>Walking each other home</Title>
-              <Muted style={{ marginTop: 4 }}>
-                {walk.done
-                  ? 'You walked the whole way to each other 🤍'
-                  : `${Math.round(walk.walkedKm).toLocaleString()} of ${walk.distanceKm.toLocaleString()} km walked together`}
-              </Muted>
-              <View style={styles.walkTrack}>
-                <View style={[styles.walkFill, { width: `${Math.min(100, Math.max(2, walk.pct * 100))}%` }]} />
-              </View>
-            </View>
-            <Text style={styles.actChevron}>›</Text>
-          </View>
+      {/* First steps — only on day one; disappears once the space has any life */}
+      {!hasSignal ? (
+        <Card style={{ marginTop: spacing.lg }}>
+          <Title>First steps together</Title>
+          <Muted style={{ marginTop: 2, marginBottom: spacing.sm }}>A few taps and your space comes alive.</Muted>
+          <FirstStep emoji="🤗" label={`Send ${partnerName} a hug`} hint="They feel it on their phone right away" onPress={sendFirstHug} />
+          <FirstStep emoji="💛" label="Share how you feel" hint="Your first daily check-in" onPress={() => navigation.navigate('Pulse')} />
+          <FirstStep emoji="📸" label="Capture a moment" hint="One photo, shared just with them" onPress={() => navigation.navigate('Moments')} />
         </Card>
       ) : null}
     </Screen>
   );
-}
-
-function minLabel(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 }
 
 /**
@@ -716,6 +533,8 @@ function minLabel(min: number): string {
  * fluid crossfade into warm rose-gold sunrise the moment their live heartbeat
  * appears. Two stacked gradients crossfaded by native-driver opacity (plus a
  * very slow breathing loop) — zero layout work per frame, 60fps everywhere.
+ * Under reduced motion the breathing stops; the away/here crossfade stays,
+ * because it carries meaning.
  */
 function AmbientBloom({ here }: { here: boolean }) {
   const warm = useRef(new Animated.Value(here ? 1 : 0)).current;
@@ -724,6 +543,7 @@ function AmbientBloom({ here }: { here: boolean }) {
     Animated.spring(warm, { toValue: here ? 1 : 0, useNativeDriver: true, ...spring.gentle }).start();
   }, [here, warm]);
   useEffect(() => {
+    if (prefersReducedMotion()) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breathe, { toValue: 1, duration: 3600, useNativeDriver: true }),
@@ -733,7 +553,9 @@ function AmbientBloom({ here }: { here: boolean }) {
     loop.start();
     return () => loop.stop();
   }, [breathe]);
-  const breatheOpacity = breathe.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
+  const breatheOpacity = prefersReducedMotion()
+    ? 0.85
+    : breathe.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
   const away = warm.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
   return (
     <Animated.View pointerEvents="none" style={[styles.bloom, { opacity: breatheOpacity }]}>
@@ -750,20 +572,21 @@ function AmbientBloom({ here }: { here: boolean }) {
 /**
  * The Time Capsule — a small glass orb beside the avatar. Clear when nothing
  * is waiting; when the partner has left something (a hug, a deck answer, fresh
- * canvas strokes) it glows warm and tiny particles drift inside. Pressing it
- * swells with a slow, luxurious spring before opening the gift.
+ * canvas strokes) it glows warm and tiny particles drift inside. The press-in
+ * is snappy (feedback is instant); the settle back is gentle (the luxury).
  */
 function TimeCapsule({ filled, onPress }: { filled: boolean; onPress: () => void }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const to = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.gentle }).start();
+  const to = (v: number, cfg: { tension: number; friction: number }) =>
+    Animated.spring(scale, { toValue: v, useNativeDriver: true, ...cfg }).start();
   return (
     <Pressable
-      onPressIn={() => to(1.15)}
-      onPressOut={() => to(1)}
+      onPressIn={() => to(1.15, spring.snappy)}
+      onPressOut={() => to(1, spring.gentle)}
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={filled ? 'Open your time capsule — something is waiting' : 'Time capsule, empty'}
+      accessibilityLabel={filled ? 'Open your time capsule, something is waiting' : 'Time capsule, empty'}
     >
       <Animated.View style={[styles.capsule, { transform: [{ scale }] }]}>
         {filled ? (
@@ -783,6 +606,12 @@ function TimeCapsule({ filled, onPress }: { filled: boolean; onPress: () => void
 function CapsuleParticle({ delay, left, size, color }: { delay: number; left: number; size: number; color: string }) {
   const drift = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) {
+      // Hold each mote mid-drift: the "something waiting" signal stays,
+      // the perpetual motion goes.
+      drift.setValue(0.5);
+      return;
+    }
     let loop: Animated.CompositeAnimation | null = null;
     const id = setTimeout(() => {
       loop = Animated.loop(
@@ -829,9 +658,10 @@ function FirstStep({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Press
       onPress={onPress}
-      style={({ pressed }) => [styles.firstStep, pressed ? { opacity: 0.7 } : null]}
+      scaleTo={0.985}
+      style={styles.firstStep}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
@@ -841,16 +671,7 @@ function FirstStep({
         <Text style={styles.firstStepHint}>{hint}</Text>
       </View>
       <Text style={styles.actChevron}>›</Text>
-    </Pressable>
-  );
-}
-
-function HeroMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ alignItems: 'center', flex: 1 }}>
-      <Text style={styles.heroMetricValue}>{value}</Text>
-      <Text style={styles.heroMetricLabel}>{label}</Text>
-    </View>
+    </Press>
   );
 }
 
@@ -899,7 +720,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
   },
   whisperTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
   whisperX: { fontSize: 20, color: colors.textFaint, paddingHorizontal: 4 },
@@ -920,27 +740,12 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
 
-  hero: { borderRadius: radius.lg, padding: 22, marginTop: spacing.md, overflow: 'hidden' },
-  heroLabel: { color: 'rgba(255,255,255,0.85)', fontSize: font.size.md, fontFamily: font.family.medium },
-  heroScore: { color: colors.white, fontSize: 52, fontFamily: font.family.display, lineHeight: 56, marginTop: 2 },
-  heroScoreMax: { color: 'rgba(255,255,255,0.7)', fontSize: 20, fontFamily: font.family.medium },
-  heroTag: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
-  heroTagText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6 },
-  heroTrack: { height: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginTop: spacing.md },
-  heroFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.white },
-  heroMetricValue: { color: colors.white, fontSize: font.size.lg, fontFamily: font.family.bold },
-  heroMetricLabel: { color: 'rgba(255,255,255,0.8)', fontSize: font.size.xs, marginTop: 2, fontFamily: font.family.body },
-  heroBegin: { color: colors.white, fontSize: 26, fontFamily: font.family.display, lineHeight: 32, marginTop: spacing.sm },
-  heroBeginSub: { color: 'rgba(255,255,255,0.9)', fontSize: font.size.md, fontFamily: font.family.body, lineHeight: 22, marginTop: spacing.sm },
   coach: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.goodSoft, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm },
   coachText: { flex: 1, fontSize: font.size.sm, color: colors.text, fontFamily: font.family.medium, lineHeight: 19 },
   firstStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   firstStepLabel: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
   firstStepHint: { fontSize: font.size.xs, color: colors.textSoft, fontFamily: font.family.body, marginTop: 1 },
 
-  healthTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
-  metricsRow: { flexDirection: 'row', marginTop: spacing.lg },
-  link: { color: colors.primary, fontFamily: font.family.semibold, fontSize: font.size.md },
   pulseRow: { flexDirection: 'row', alignItems: 'center' },
   pulseDivider: { width: 1, height: 56, backgroundColor: colors.border },
   pulseName: { fontFamily: font.family.bold, marginTop: 4, fontSize: font.size.md },
@@ -952,23 +757,27 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     backgroundColor: colors.surfaceAlt,
   },
+  // The Hearth's one warm line: this is a voice moment, so it speaks Fraunces.
+  hearthLine: {
+    marginTop: spacing.md,
+    fontSize: font.size.lg,
+    lineHeight: 24,
+    fontFamily: font.family.displaySemi,
+    color: colors.text,
+    letterSpacing: font.tracking.heading,
+    textAlign: 'center',
+  },
   needBox: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
-  feelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-  newBadge: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  // Partner activity renders violet, mine rose — the app-wide color law.
+  newBadge: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
   newBadgeText: { color: colors.white, fontFamily: font.family.bold, fontSize: 11 },
   feedCard: { padding: 0, overflow: 'hidden' },
   canvasRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   canvasDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
-  walkTrack: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: 'hidden', marginTop: spacing.sm },
-  walkFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.good },
-  togetherRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  togetherHalf: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.xs },
-  togetherDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: spacing.xs },
-  togetherTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text, textAlign: 'center' },
   actText: { fontSize: font.size.md, color: colors.text, fontFamily: font.family.body, lineHeight: 21 },
   actRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg + spacing.xs },
   actDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  actPartner: { backgroundColor: colors.primarySoft },
+  actPartner: { backgroundColor: colors.accentSoft },
   actChevron: { fontSize: 24, color: colors.primary },
 });

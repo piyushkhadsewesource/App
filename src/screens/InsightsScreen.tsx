@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppHeader, Body, Card, EmptyState, Muted, Screen, Tag, Title } from '../components/ui';
 import { analyze, severityLabel, Severity } from '../lib/attachment';
+import { computeHealth } from '../lib/health';
 import { useApp } from '../state/AppContext';
 import { colors, font, spacing } from '../theme';
 
@@ -25,9 +26,42 @@ export default function InsightsScreen({ navigation }: any) {
     [app.checkins, app.meId, app.partnerId, app.identity],
   );
 
+  // The closeness reflection lives here now — weekly weather, spoken softly,
+  // instead of a daily 0-100 grade on the home screen.
+  const health = useMemo(
+    () =>
+      computeHealth({
+        checkins: app.checkins,
+        memories: app.memories,
+        letters: app.letters,
+        pings: app.pings,
+        deck: app.deck,
+        moments: app.moments,
+        meId: app.meId,
+        partnerId: app.partnerId,
+      }),
+    [app.checkins, app.memories, app.letters, app.pings, app.deck, app.moments, app.meId, app.partnerId],
+  );
+  const hasHealthData = app.checkins.length > 0;
+
   return (
     <Screen scroll>
       <AppHeader title="Companion" subtitle="Gentle, private, on your side" onBack={() => navigation.goBack()} />
+
+      {hasHealthData ? (
+        <Card tone="rose" style={{ marginBottom: spacing.md }}>
+          <Muted>This week, together</Muted>
+          <Text style={styles.weekLine}>{health.label}</Text>
+          <Body style={{ marginTop: spacing.xs }}>
+            You shared {health.sharedThisWeek} {health.sharedThisWeek === 1 ? 'thing' : 'things'} this week
+            {health.moodAlignment >= 70
+              ? ', and your moods have moved in step.'
+              : health.moodAlignment >= 40
+                ? ', with your moods drifting in and out of step.'
+                : ', while your moods have been in different weather.'}
+          </Body>
+        </Card>
+      ) : null}
 
       <Card tone="violet" style={{ marginBottom: spacing.lg }}>
         <Body>
@@ -73,6 +107,15 @@ export default function InsightsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row' },
+  // A voice moment: the week's weather speaks Fraunces.
+  weekLine: {
+    fontSize: font.size.xxl,
+    lineHeight: 34,
+    fontFamily: font.family.display,
+    color: colors.text,
+    letterSpacing: font.tracking.heading,
+    marginTop: 2,
+  },
   coachBox: { borderRadius: 14, padding: spacing.md, marginTop: spacing.md },
   coachLabel: { fontFamily: font.family.bold, fontSize: font.size.sm, color: colors.textSoft, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

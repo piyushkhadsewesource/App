@@ -1,26 +1,24 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
 import DateTimeModal from '../components/DateTimeModal';
+import GoldenBand from '../components/GoldenBand';
+import Sheet from '../components/Sheet';
 import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
+import { Reveal } from '../components/Motion';
 import { useToast } from '../components/ToastHost';
 import { addDaysISO, isoToDate, todayISO } from '../lib/date';
 import { hLight, hSuccess } from '../lib/haptics';
-import { freeAfterMin, goldenWindow } from '../lib/ourDay';
+import { freeAfterMin, goldenWindow, minLabel } from '../lib/ourDay';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
+import { easeOut, prefersReducedMotion } from '../theme/motion';
 import { ScheduleItem } from '../types/models';
 
 const ICONS = ['📌', '💼', '🍽️', '🏋️', '📞', '🎓', '🛌', '✈️', '🛒', '☕', '💗', '🎉'];
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function minLabel(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-}
 function dayLabel(dateISO: string): string {
   const t = todayISO();
   if (dateISO === t) return 'Today';
@@ -64,7 +62,6 @@ export default function ScheduleScreen({ navigation }: any) {
   const app = useApp();
   const partner = app.identity?.partnerName ?? 'them';
   const toast = useToast();
-  const [mode, setMode] = useState<'day' | 'week'>('day');
   const [viewDate, setViewDate] = useState(todayISO());
 
   const [adding, setAdding] = useState(false);
@@ -76,6 +73,7 @@ export default function ScheduleScreen({ navigation }: any) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const itemsFor = (iso: string) => app.schedule.filter((s) => s.date === iso).sort((a, b) => a.startMin - b.startMin);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const dayItems = useMemo(() => itemsFor(viewDate), [app.schedule, viewDate]);
 
   // ── The ritual header: when do you each come free, and where's the shared
@@ -88,6 +86,8 @@ export default function ScheduleScreen({ navigation }: any) {
     return {
       isToday,
       fromMin,
+      mine,
+      theirs,
       myFree: freeAfterMin(mine, fromMin),
       theirFree: theirs.length > 0 ? freeAfterMin(theirs, fromMin) : undefined, // undefined = day not shared yet
       window: goldenWindow(mine, theirs, fromMin),
@@ -151,7 +151,7 @@ export default function ScheduleScreen({ navigation }: any) {
     const startMin = d.getHours() * 60 + d.getMinutes();
     const id = editingId;
     closeForm();
-    if (mode === 'day' && date !== viewDate) setViewDate(date);
+    if (date !== viewDate) setViewDate(date);
     if (id) await app.updateScheduleItem(id, { title: title.trim(), startMin, icon: icon ?? '', note, date });
     else await app.addScheduleItem({ date, startMin, title: title.trim(), icon, note: note.trim() || undefined });
   };
@@ -183,7 +183,7 @@ export default function ScheduleScreen({ navigation }: any) {
     app.addScheduleItem({ date: it.date, startMin: it.startMin, title: it.title, icon: it.icon, note: it.note });
   };
 
-  const renderItem = (it: ScheduleItem) => {
+  const renderItem = (it: ScheduleItem, index: number) => {
     const mine = app.isMine(it.authorId);
     const accent = mine ? colors.primary : colors.accent;
     const isMoment = it.kind === 'moment';
@@ -200,7 +200,7 @@ export default function ScheduleScreen({ navigation }: any) {
         <View style={styles.itemHead}>
           {isBusy ? <Text style={{ fontSize: 15 }}>🗓️</Text> : it.icon ? <Text style={{ fontSize: 16 }}>{it.icon}</Text> : null}
           <Body style={{ fontFamily: font.family.semibold, flex: 1 }}>{it.title}</Body>
-          {mine ? (
+          {mine && !isBusy ? (
             <Pressable hitSlop={14} onPress={() => confirmDelete(it)} accessibilityRole="button" accessibilityLabel={`Remove ${it.title}`}>
               <Text style={styles.x}>×</Text>
             </Pressable>
@@ -223,29 +223,33 @@ export default function ScheduleScreen({ navigation }: any) {
           ) : (
             <Text style={styles.momentState}>waiting for {partner}…</Text>
           )
-        ) : (
-          <Text style={[styles.author, { color: isBusy ? colors.textFaint : accent }]}>
-            {isBusy ? `${mine ? 'you' : partner} · from calendar` : mine ? 'You · tap to edit' : partner}
-          </Text>
-        )}
+        ) : isBusy ? (
+          <Text style={[styles.author, { color: colors.textFaint }]}>{mine ? 'you' : partner} · from calendar</Text>
+        ) : !mine ? (
+          // Partner plans carry their name in violet; my own cards need no
+          // label (the rose rail dot says whose they are, the tap edits).
+          <Text style={[styles.author, { color: accent }]}>{partner}</Text>
+        ) : null}
       </View>
     );
     const editable = mine && !isBusy;
     return (
-      <View key={it.id} style={styles.itemRow}>
-        <Text style={styles.itemTime}>{minLabel(it.startMin)}</Text>
-        <View style={styles.rail}>
-          <View style={styles.railLine} />
-          <View style={[styles.dot, { backgroundColor: isMoment ? colors.primaryDark : isBusy ? colors.textFaint : accent }]} />
+      <Reveal key={it.id} delay={Math.min(index, 8) * 40}>
+        <View style={styles.itemRow}>
+          <Text style={styles.itemTime}>{minLabel(it.startMin)}</Text>
+          <View style={styles.rail}>
+            <View style={styles.railLine} />
+            <View style={[styles.dot, { backgroundColor: isMoment ? colors.primaryDark : isBusy ? colors.textFaint : accent }]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            {editable && !isMoment ? (
+              <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{card}</Pressable>
+            ) : (
+              card
+            )}
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          {editable && !isMoment ? (
-            <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{card}</Pressable>
-          ) : (
-            card
-          )}
-        </View>
-      </View>
+      </Reveal>
     );
   };
 
@@ -262,50 +266,51 @@ export default function ScheduleScreen({ navigation }: any) {
         }
       />
 
-      {/* ── The ritual: when you're each free, and the shared window ── */}
+      {/* ── The ritual: the shape of the day, then the words for it ── */}
       <View style={styles.ritualCard}>
         <Text style={styles.ritualKicker}>{ritual.isToday ? 'Tonight' : dayLabel(viewDate)}</Text>
         {ritual.window ? (
-          <>
-            <Text style={styles.ritualLine}>
-              {ritual.theirsShared
-                ? `You're both free ${minLabel(ritual.window.start)} – ${minLabel(ritual.window.end)}`
-                : `You're free from ${minLabel(ritual.window.start)}`}
-            </Text>
-            <Muted style={{ marginTop: 2 }}>
-              {ritual.theirsShared
-                ? ritual.theirFree != null
-                  ? `${partner} comes free around ${minLabel(ritual.theirFree)} · you around ${ritual.myFree != null ? minLabel(ritual.myFree) : 'now'}`
-                  : `${partner}'s day is clear too`
-                : `${partner} hasn't shared ${ritual.isToday ? 'today' : 'this day'} yet — theirs will appear here`}
-            </Muted>
-            {ritual.theirsShared && !dayItems.some((s) => s.kind === 'moment') ? (
-              <View style={{ marginTop: spacing.md }}>
-                <Button label={`💗  Keep ${minLabel(ritual.window.start)} for each other`} onPress={proposeMoment} />
-              </View>
-            ) : null}
-          </>
+          <Text style={styles.ritualLine}>
+            {ritual.theirsShared
+              ? `You're both free ${minLabel(ritual.window.start)} – ${minLabel(ritual.window.end)}`
+              : `You're free from ${minLabel(ritual.window.start)}`}
+          </Text>
         ) : (
-          <>
-            <Text style={styles.ritualLine}>
-              {ritual.myFree != null ? `You come free around ${minLabel(ritual.myFree)}` : 'A full day, side by side'}
-            </Text>
-            <Muted style={{ marginTop: 2 }}>
-              {ritual.theirsShared
-                ? 'No shared hour left — even ten minutes counts 🤍'
-                : `Add your day below so ${partner} knows when to find you.`}
-            </Muted>
-          </>
+          <Text style={styles.ritualLine}>
+            {ritual.myFree != null ? `You come free around ${minLabel(ritual.myFree)}` : 'A full day, side by side'}
+          </Text>
         )}
-      </View>
 
-      {/* Day / Week toggle */}
-      <View style={styles.segment}>
-        {(['day', 'week'] as const).map((m) => (
-          <Pressable key={m} onPress={() => setMode(m)} style={[styles.seg, mode === m && styles.segOn]}>
-            <Text style={[styles.segText, mode === m && styles.segTextOn]}>{m === 'day' ? 'Day' : 'Week'}</Text>
-          </Pressable>
-        ))}
+        {/* The Golden Band: both lanes on one track, the shared hour glowing */}
+        {dayItems.length > 0 ? (
+          <GoldenBand
+            mine={ritual.mine}
+            theirs={ritual.theirs}
+            window={ritual.window}
+            nowMin={ritual.isToday ? ritual.fromMin : undefined}
+            style={{ marginTop: spacing.md }}
+          />
+        ) : null}
+
+        <Muted style={{ marginTop: spacing.sm }}>
+          {ritual.window
+            ? ritual.theirsShared
+              ? ritual.theirFree != null
+                ? `${partner} comes free around ${minLabel(ritual.theirFree)} · you around ${ritual.myFree != null ? minLabel(ritual.myFree) : 'now'}`
+                : `${partner}'s day is clear too`
+              : `${partner} hasn't shared ${ritual.isToday ? 'today' : 'this day'} yet, theirs will appear here`
+            : ritual.theirsShared
+              ? 'No shared hour left. Even ten minutes counts 🤍'
+              : `Add your day below so ${partner} knows when to find you.`}
+        </Muted>
+
+        {ritual.window && ritual.theirsShared && !dayItems.some((s) => s.kind === 'moment') ? (
+          <HoldToPromise
+            label={`Hold to keep ${minLabel(ritual.window.start)} for each other 💗`}
+            onCommit={proposeMoment}
+            style={{ marginTop: spacing.md }}
+          />
+        ) : null}
       </View>
 
       {/* Week strip */}
@@ -327,7 +332,9 @@ export default function ScheduleScreen({ navigation }: any) {
             return (
               <Pressable
                 key={d.iso}
-                onPress={() => { setViewDate(d.iso); if (mode === 'week') setMode('day'); }}
+                onPress={() => setViewDate(d.iso)}
+                accessibilityRole="button"
+                accessibilityLabel={`${dayLabel(d.iso)} ${d.num}`}
                 style={[styles.dayPill, selected && styles.dayPillOn]}
               >
                 <Text style={[styles.pillLetter, selected && styles.pillOnText]}>{d.letter}</Text>
@@ -344,123 +351,149 @@ export default function ScheduleScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* Add / edit form */}
-      {adding ? (
-        <Card style={{ marginBottom: spacing.lg }}>
-          <Text style={styles.formTitle}>{editingId ? 'Edit plan' : 'Add to the plan'}</Text>
-          <Field label="What's planned?" value={title} onChangeText={setTitle} placeholder="e.g. Team standup, gym, call with mom" />
-          <Text style={styles.fieldLabel}>Pick an icon (optional)</Text>
-          <View style={styles.iconRow}>
-            {ICONS.map((ic) => (
-              <Pressable key={ic} onPress={() => setIcon(icon === ic ? undefined : ic)} style={[styles.iconChip, icon === ic && styles.iconChipOn]}>
-                <Text style={{ fontSize: 18 }}>{ic}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Text style={styles.fieldLabel}>When</Text>
-          <Pressable onPress={() => setPickerOpen(true)} style={styles.pickRow}>
-            <Text style={styles.pickIcon}>📅</Text>
-            <Text style={styles.pickText}>{whenLabel(whenTs)}</Text>
-            <Text style={styles.chev}>›</Text>
-          </Pressable>
-          <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="Anything to add" />
-          <Button label={editingId ? 'Save changes' : 'Add to plan'} onPress={save} />
-          {editingItem ? (
-            <>
-              <View style={{ height: spacing.sm }} />
-              <Button label="Duplicate this plan" variant="soft" onPress={duplicate} />
-              <View style={{ height: spacing.sm }} />
-              <Button label="Remove from plan" variant="outline" color={colors.danger} onPress={() => confirmDelete(editingItem)} />
-            </>
-          ) : null}
-          <View style={{ height: spacing.sm }} />
-          <Button label="Cancel" variant="ghost" onPress={closeForm} />
+      <View style={{ marginBottom: spacing.lg }}>
+        <Button label="＋  Add to the plan" onPress={openAdd} />
+        {myPrevItems.length > 0 ? (
+          <>
+            <View style={{ height: spacing.sm }} />
+            <Button label={`📋  Copy ${dayLabel(addDaysISO(viewDate, -1)).toLowerCase()}'s plan`} variant="soft" onPress={copyPrev} />
+          </>
+        ) : null}
+      </View>
+
+      {/* The timeline */}
+      {dayItems.length === 0 ? (
+        <Card tone="surface">
+          <EmptyState
+            emoji="🗓️"
+            title={`Nothing planned ${dayLabel(viewDate).toLowerCase()}`}
+            text={`Add what your day looks like so ${partner} knows when you’re free.`}
+          />
         </Card>
       ) : (
-        <View style={{ marginBottom: spacing.lg }}>
-          <Button label="＋  Add to the plan" onPress={openAdd} />
-          {mode === 'day' && myPrevItems.length > 0 ? (
-            <>
-              <View style={{ height: spacing.sm }} />
-              <Button label={`📋  Copy ${dayLabel(addDaysISO(viewDate, -1)).toLowerCase()}'s plan`} variant="soft" onPress={copyPrev} />
-            </>
-          ) : null}
+        dayItems.map(renderItem)
+      )}
+
+      {/* Add / edit, in a sheet so the day behind never jumps */}
+      <Sheet visible={adding} onClose={closeForm}>
+        <Text style={styles.formTitle}>{editingId ? 'Edit plan' : 'Add to the plan'}</Text>
+        <Field label="What's planned?" value={title} onChangeText={setTitle} placeholder="e.g. Team standup, gym, call with mom" />
+        <Text style={styles.fieldLabel}>Pick an icon (optional)</Text>
+        <View style={styles.iconRow}>
+          {ICONS.map((ic) => (
+            <Pressable
+              key={ic}
+              onPress={() => setIcon(icon === ic ? undefined : ic)}
+              accessibilityRole="button"
+              accessibilityLabel={`Icon ${ic}`}
+              accessibilityState={{ selected: icon === ic }}
+              style={[styles.iconChip, icon === ic && styles.iconChipOn]}
+            >
+              <Text style={{ fontSize: 18 }}>{ic}</Text>
+            </Pressable>
+          ))}
         </View>
-      )}
+        <Text style={styles.fieldLabel}>When</Text>
+        <Pressable onPress={() => setPickerOpen(true)} style={styles.pickRow}>
+          <Text style={styles.pickIcon}>📅</Text>
+          <Text style={styles.pickText}>{whenLabel(whenTs)}</Text>
+          <Text style={styles.chev}>›</Text>
+        </Pressable>
+        <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="Anything to add" />
+        <Button label={editingId ? 'Save changes' : 'Add to plan'} onPress={save} />
+        {editingItem ? (
+          <>
+            <View style={{ height: spacing.sm }} />
+            <Button label="Duplicate this plan" variant="soft" onPress={duplicate} />
+            <View style={{ height: spacing.sm }} />
+            <Button label="Remove from plan" variant="outline" color={colors.danger} onPress={() => confirmDelete(editingItem)} />
+          </>
+        ) : null}
+        <View style={{ height: spacing.sm }} />
+        <Button label="Cancel" variant="ghost" onPress={closeForm} />
 
-      {/* Content */}
-      {mode === 'day' ? (
-        dayItems.length === 0 ? (
-          <Card tone="surface">
-            <EmptyState
-              emoji="🗓️"
-              title={`Nothing planned ${dayLabel(viewDate).toLowerCase()}`}
-              text={`Add what your day looks like so ${partner} knows when you’re free.`}
-            />
-          </Card>
-        ) : (
-          dayItems.map(renderItem)
-        )
-      ) : (
-        days.map((d) => {
-          const its = itemsFor(d.iso);
-          const isToday = d.iso === todayISO();
-          return (
-            <View key={d.iso} style={{ marginBottom: spacing.lg }}>
-              <View style={styles.agendaHead}>
-                <Text style={styles.agendaDay}>{dayLabel(d.iso)}</Text>
-                <Muted>{d.num} {MON[isoToDate(d.iso).getMonth()]}</Muted>
-                {isToday ? <View style={styles.todayTag}><Text style={styles.todayTagText}>Today</Text></View> : null}
-              </View>
-              {its.length === 0 ? (
-                <Text style={styles.agendaEmpty}>Nothing planned</Text>
-              ) : (
-                its.map((it) => {
-                  const mine = app.isMine(it.authorId);
-                  const accent = mine ? colors.primary : colors.accent;
-                  const row = (
-                    <View style={[styles.weekItem, it.kind === 'moment' && styles.momentCard, it.kind === 'busy' && styles.busyCard]}>
-                      <Text style={styles.weekTime}>{minLabel(it.startMin)}</Text>
-                      {it.kind === 'busy' ? <Text style={{ fontSize: 14 }}>🗓️</Text> : it.icon ? <Text style={{ fontSize: 15 }}>{it.icon}</Text> : <View style={[styles.weekDot, { backgroundColor: accent }]} />}
-                      <Body style={{ flex: 1 }} >{it.title}</Body>
-                      <Text style={[styles.weekWho, { color: it.kind === 'busy' ? colors.textFaint : accent }]}>{mine ? 'You' : partner}</Text>
-                    </View>
-                  );
-                  return (
-                    <View key={it.id}>{mine ? <Pressable onPress={() => openEdit(it)} style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}>{row}</Pressable> : row}</View>
-                  );
-                })
-              )}
-            </View>
-          );
-        })
-      )}
-
-      <DateTimeModal
-        visible={pickerOpen}
-        mode="datetime"
-        allowPast
-        title="When?"
-        initial={whenTs}
-        onCancel={() => setPickerOpen(false)}
-        onConfirm={(ts) => {
-          setWhenTs(ts);
-          setPickerOpen(false);
-        }}
-      />
+        <DateTimeModal
+          visible={pickerOpen}
+          mode="datetime"
+          allowPast
+          title="When?"
+          initial={whenTs}
+          onCancel={() => setPickerOpen(false)}
+          onConfirm={(ts) => {
+            setWhenTs(ts);
+            setPickerOpen(false);
+          }}
+        />
+      </Sheet>
     </Screen>
+  );
+}
+
+/**
+ * Hold-to-promise: the propose-a-moment commitment control. Pressing fills the
+ * pill left-to-right over ~900ms (slow, linear: the user is deciding); letting
+ * go early snaps back in ~130ms (fast: the system is responding). Completing
+ * the fill commits. Under reduced motion it's a plain tap.
+ */
+function HoldToPromise({
+  label,
+  onCommit,
+  style,
+}: {
+  label: string;
+  onCommit: () => void;
+  style?: object;
+}) {
+  const fill = useRef(new Animated.Value(0)).current;
+  const [w, setW] = useState(0);
+  const committed = useRef(false);
+  const reduce = prefersReducedMotion();
+
+  const start = () => {
+    if (reduce) return;
+    committed.current = false;
+    Animated.timing(fill, { toValue: 1, duration: 900, easing: Easing.linear, useNativeDriver: true }).start(({ finished }) => {
+      if (finished && !committed.current) {
+        committed.current = true;
+        onCommit();
+        fill.setValue(0);
+      }
+    });
+  };
+  const cancel = () => {
+    if (committed.current) return;
+    Animated.timing(fill, { toValue: 0, duration: 130, easing: easeOut, useNativeDriver: true }).start();
+  };
+  const tx = fill.interpolate({ inputRange: [0, 1], outputRange: [-Math.max(w, 1), 0] });
+
+  return (
+    <Pressable
+      onPressIn={start}
+      onPressOut={cancel}
+      onPress={reduce ? onCommit : undefined}
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={reduce ? undefined : 'Press and hold to confirm'}
+      style={[styles.hold, style]}
+    >
+      <Text style={styles.holdLabelDark} numberOfLines={1}>{label}</Text>
+      {w > 0 ? (
+        // The fill window slides in; the inner counter-translate keeps the
+        // white label pinned in place, so the color sweeps across the text.
+        <Animated.View style={[StyleSheet.absoluteFill, styles.holdFill, { transform: [{ translateX: tx }] }]}>
+          <Animated.View style={[StyleSheet.absoluteFill, styles.holdFillInner, { transform: [{ translateX: Animated.multiply(tx, -1) }] }]}>
+            <Text style={styles.holdLabelLight} numberOfLines={1}>{label}</Text>
+          </Animated.View>
+        </Animated.View>
+      ) : null}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   todayBtn: { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
   todayText: { fontFamily: font.family.bold, color: colors.primary, fontSize: font.size.sm },
-
-  segment: { flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, padding: 4, marginBottom: spacing.md },
-  seg: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.pill, alignItems: 'center' },
-  segOn: { backgroundColor: colors.surface, ...shadow.soft },
-  segText: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft },
-  segTextOn: { color: colors.text },
 
   weekCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, ...shadow.soft },
   weekHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
@@ -478,7 +511,7 @@ const styles = StyleSheet.create({
   pillDots: { flexDirection: 'row', gap: 2, height: 6, marginTop: 3 },
   pdot: { width: 5, height: 5, borderRadius: 3 },
 
-  formTitle: { fontSize: font.size.md, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: spacing.sm },
+  formTitle: { fontSize: font.size.lg, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: spacing.sm, letterSpacing: font.tracking.heading },
   fieldLabel: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs, marginTop: spacing.xs },
   iconRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   iconChip: { width: 42, height: 42, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt, borderWidth: 1.5, borderColor: 'transparent' },
@@ -506,6 +539,22 @@ const styles = StyleSheet.create({
     letterSpacing: font.tracking.heading,
   },
 
+  hold: {
+    height: 54,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  holdFill: { backgroundColor: colors.primary, borderRadius: radius.pill },
+  holdFillInner: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
+  holdLabelDark: { fontSize: font.size.md, fontFamily: font.family.bold, color: colors.primaryDark, letterSpacing: 0.3 },
+  holdLabelLight: { fontSize: font.size.md, fontFamily: font.family.bold, color: colors.white, letterSpacing: 0.3 },
+
   itemRow: { flexDirection: 'row', alignItems: 'flex-start' },
   itemTime: { width: 66, fontSize: font.size.sm, fontFamily: font.family.bold, color: colors.textSoft, paddingTop: 14 },
   rail: { width: 22, alignSelf: 'stretch', alignItems: 'center' },
@@ -518,14 +567,4 @@ const styles = StyleSheet.create({
   itemHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   author: { fontSize: 11, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
   x: { fontSize: 22, color: colors.textFaint, paddingHorizontal: 4 },
-
-  agendaHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  agendaDay: { fontSize: font.size.lg, fontFamily: font.family.displaySemi, color: colors.text },
-  todayTag: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 2 },
-  todayTagText: { color: colors.white, fontSize: 10, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  agendaEmpty: { fontSize: font.size.sm, color: colors.textFaint, fontFamily: font.family.body, marginLeft: 4, marginBottom: spacing.sm },
-  weekItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(90,46,64,0.08)', padding: spacing.md, marginBottom: spacing.sm, ...shadow.soft },
-  weekTime: { width: 62, fontSize: font.size.xs, fontFamily: font.family.bold, color: colors.textSoft },
-  weekDot: { width: 10, height: 10, borderRadius: 5 },
-  weekWho: { fontSize: 10, fontFamily: font.family.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
 });

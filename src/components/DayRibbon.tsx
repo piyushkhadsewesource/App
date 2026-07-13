@@ -7,6 +7,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './ui';
+import GoldenBand from './GoldenBand';
 import { todayISO } from '../lib/date';
 import { freeAfterMin, goldenWindow, minLabel, nextBlock } from '../lib/ourDay';
 import { useApp } from '../state/AppContext';
@@ -25,6 +26,9 @@ export default function DayRibbon({ onOpen }: { onOpen: () => void }) {
     const theirs = items.filter((s) => !app.isMine(s.authorId));
     const moment = app.schedule.find((s) => s.date === today && s.kind === 'moment');
     return {
+      mine,
+      theirs,
+      nowMin,
       myNext: nextBlock(mine, nowMin),
       theirNext: theirs.length ? nextBlock(theirs, nowMin) : null,
       theirsShared: theirs.length > 0,
@@ -77,6 +81,17 @@ export default function DayRibbon({ onOpen }: { onOpen: () => void }) {
           line={state.theirNext ? `${minLabel(state.theirNext.startMin)} · ${state.theirNext.title}` : state.theirsShared ? 'done for the day' : 'nothing shared yet'}
         />
       </View>
+
+      {/* The day's shape at a glance: both lanes, the golden window glowing */}
+      {state.mineShared || state.theirsShared ? (
+        <GoldenBand
+          mine={state.mine}
+          theirs={state.theirs}
+          window={state.window}
+          nowMin={state.nowMin}
+          style={{ marginTop: spacing.md }}
+        />
+      ) : null}
 
       <Text style={styles.payoff}>{payoff}</Text>
     </Pressable>

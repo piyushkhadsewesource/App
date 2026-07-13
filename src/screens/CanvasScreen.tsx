@@ -4,6 +4,7 @@ import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react
 import { Alert } from '../lib/alert';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
 import FogReveal from '../components/FogReveal';
+import { Reveal } from '../components/Motion';
 import { Skeleton, useInitialHydrate } from '../components/Skeleton';
 import { hLight, hMedium, hSuccess } from '../lib/haptics';
 import {
@@ -19,7 +20,7 @@ import {
 import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
-import { spring as springs } from '../theme/motion';
+import { easeOut, prefersReducedMotion, spring as springs } from '../theme/motion';
 
 export default function CanvasScreen({ navigation }: any) {
   const app = useApp();
@@ -34,6 +35,27 @@ export default function CanvasScreen({ navigation }: any) {
   const [box, setBox] = useState(0); // measured grid side length (px)
   const [fogged, setFogged] = useState(false); // partner drew → the Fogged Window is up
   const [seenLoaded, setSeenLoaded] = useState(false);
+  // First-run teaching card: explain the lift-to-send once, then trust the hand.
+  const [hintSeen, setHintSeen] = useState(true);
+  useEffect(() => {
+    AsyncStorage.getItem('@tether/seen/canvasHint')
+      .then((v) => setHintSeen(v === '1'))
+      .catch(() => {});
+  }, []);
+  function dismissHint() {
+    setHintSeen(true);
+    AsyncStorage.setItem('@tether/seen/canvasHint', '1').catch(() => {});
+  }
+
+  // Undo, per stroke: each stroke records the cells it painted over (index →
+  // previous char). Undo reverts exactly those cells, so the partner's strokes
+  // elsewhere on the board are never touched. Local-session only, capped.
+  const strokeEditsRef = useRef<Map<number, string> | null>(null);
+  const undoStackRef = useRef<Map<number, string>[]>([]);
+  const [undoCount, setUndoCount] = useState(0);
+
+  // The frame breathes once when a stroke lands on the other phone.
+  const framePulse = useRef(new Animated.Value(0)).current;
 
   // The board + the "seen" record must both be ready before we paint anything,
   // so the fog decision compares against what the user actually last saw.
@@ -136,14 +158,27 @@ export default function CanvasScreen({ navigation }: any) {
     lastSyncedRef.current = p;
     if (!foggedRef.current) markSeen(p);
     void app.saveCanvas(p); // wrapped write, never rejects
+    // Mark the moment it lands on the other phone: one barely-there breath of
+    // the frame. Meaningful state (sent), so it stays quiet, not celebratory.
+    if (!prefersReducedMotion()) {
+      framePulse.setValue(0);
+      Animated.sequence([
+        Animated.timing(framePulse, { toValue: 1, duration: 120, easing: easeOut, useNativeDriver: true }),
+        Animated.spring(framePulse, { toValue: 0, useNativeDriver: true, ...springs.gentle }),
+      ]).start();
+    }
   };
   const flushRef = useRef(flushSave);
   flushRef.current = flushSave;
   useEffect(() => () => flushRef.current(), []);
 
   const paintIndex = (index: number) => {
+    const prev = pixelsRef.current[index];
     const next = paintAt(pixelsRef.current, index, colorRef.current);
     if (next === pixelsRef.current) return; // already that colour
+    // First touch of this cell in this stroke: remember what it painted over.
+    const edits = strokeEditsRef.current;
+    if (edits && !edits.has(index)) edits.set(index, prev);
     pixelsRef.current = next;
     setPixels(next);
     tickHaptic(45); // light tick per freshly-filled pixel
@@ -163,11 +198,35 @@ export default function CanvasScreen({ navigation }: any) {
   handlers.current.grant = (e) => {
     if (foggedRef.current) return;
     drawingRef.current = true;
+    strokeEditsRef.current = new Map();
     paintFromEvent(e);
   };
   handlers.current.move = (e) => paintFromEvent(e);
   handlers.current.release = () => {
     drawingRef.current = false;
+    const edits = strokeEditsRef.current;
+    strokeEditsRef.current = null;
+    if (edits && edits.size > 0) {
+      undoStackRef.current.push(edits);
+      if (undoStackRef.current.length > 20) undoStackRef.current.shift();
+      setUndoCount(undoStackRef.current.length);
+    }
+    flushSave();
+  };
+
+  // Revert my last stroke, cell by cell; everything the partner drew stays.
+  const undoStroke = () => {
+    const edits = undoStackRef.current.pop();
+    if (!edits) return;
+    setUndoCount(undoStackRef.current.length);
+    const chars = pixelsRef.current.split('');
+    edits.forEach((ch, i) => {
+      chars[i] = ch;
+    });
+    const next = chars.join('');
+    pixelsRef.current = next;
+    setPixels(next);
+    hLight();
     flushSave();
   };
   const responder = useRef(
@@ -201,6 +260,8 @@ export default function CanvasScreen({ navigation }: any) {
             lastSyncedRef.current = EMPTY_CANVAS;
             markSeen(EMPTY_CANVAS);
             setPixels(EMPTY_CANVAS);
+            undoStackRef.current = [];
+            setUndoCount(0);
             hSuccess();
             void app.clearCanvas();
           },
@@ -226,20 +287,38 @@ export default function CanvasScreen({ navigation }: any) {
 
   return (
     <Screen scroll>
-      <AppHeader title="Our Shared Canvas" subtitle="Draw together, in real time" onBack={() => navigation.goBack()} />
+      <AppHeader
+        title="Our Shared Canvas"
+        subtitle="Draw together, in real time"
+        onBack={() => navigation.goBack()}
+        right={
+          // Destructive, so deliberate to find: tucked in the header, never
+          // prime space. Confirmation still guards it.
+          <Pressable
+            onPress={confirmClear}
+            disabled={blank || fogged}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear the whole canvas"
+            style={[styles.clearBtn, (blank || fogged) && { opacity: 0.35 }]}
+          >
+            <Text style={{ fontSize: 15 }}>🗑️</Text>
+          </Pressable>
+        }
+      />
 
       {partnerDrawingNow ? (
-        <View style={styles.liveRow}>
+        <Reveal distance={4} style={styles.liveRow}>
           <LiveDot />
           <Text style={styles.liveText}>{partner} is drawing right now…</Text>
-        </View>
+        </Reveal>
       ) : (
         <Muted style={{ marginBottom: spacing.md }}>
           {fogged
             ? `Something new is waiting under the glass…`
             : lastBy
-              ? `Last touched by ${lastBy}. Draw, and it lands on ${partner}'s phone the moment you lift your finger.`
-              : `A blank page for the two of you. Draw, and it lands on ${partner}'s phone the moment you lift your finger.`}
+              ? `Last touched by ${lastBy}.`
+              : `A blank page for the two of you.`}
         </Muted>
       )}
 
@@ -247,7 +326,12 @@ export default function CanvasScreen({ navigation }: any) {
       {loading ? (
         <Skeleton style={{ width: '100%', aspectRatio: 1, borderRadius: radius.lg }} />
       ) : (
-        <View style={styles.gridWrap}>
+        <Animated.View
+          style={[
+            styles.gridWrap,
+            { transform: [{ scale: framePulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.006] }) }] },
+          ]}
+        >
           <View
             style={styles.grid}
             onLayout={(e) => setBox(e.nativeEvent.layout.width)}
@@ -266,7 +350,7 @@ export default function CanvasScreen({ navigation }: any) {
               <FogReveal box={box} partnerName={partner} onRevealed={onFogRevealed} />
             ) : null}
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Palette */}
@@ -279,14 +363,21 @@ export default function CanvasScreen({ navigation }: any) {
       </View>
 
       <View style={{ height: spacing.lg }} />
-      <Button label="Clear canvas" variant="outline" color={colors.danger} disabled={blank || fogged} onPress={confirmClear} />
+      {/* Undo owns the reachable slot: it removes the fear of drawing */}
+      <Button label="↶  Undo my stroke" variant="soft" disabled={undoCount === 0 || fogged} onPress={undoStroke} />
 
-      <Card tone="surface" style={{ marginTop: spacing.lg }}>
-        <Body>
-          Tap or drag to paint. Each stroke syncs to {partner} the moment you lift your finger,
-          one tidy write per stroke. 🎨
-        </Body>
-      </Card>
+      {/* Teach the lift-to-send once, then get out of the way */}
+      {!hintSeen ? (
+        <Card tone="surface" style={{ marginTop: spacing.lg }}>
+          <Body>
+            Tap or drag to paint. Your stroke lands on {partner}'s phone the moment you lift
+            your finger. 🎨
+          </Body>
+          <Pressable onPress={dismissHint} accessibilityRole="button" accessibilityLabel="Got it" hitSlop={8} style={{ marginTop: spacing.sm }}>
+            <Text style={styles.gotIt}>Got it</Text>
+          </Pressable>
+        </Card>
+      ) : null}
     </Screen>
   );
 }
@@ -295,6 +386,7 @@ export default function CanvasScreen({ navigation }: any) {
 function LiveDot() {
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) return; // the green dot alone carries the meaning
     const loop = Animated.loop(
       Animated.sequence([
         Animated.spring(pulse, { toValue: 1, useNativeDriver: true, ...springs.gentle }),
@@ -355,11 +447,19 @@ function Swatch({
         style={[
           styles.swatch,
           eraser ? styles.eraser : { backgroundColor: color },
-          selected && styles.swatchOn,
           { transform: [{ scale }] },
         ]}
       >
         {eraser ? <Text style={{ fontSize: 15 }}>⌫</Text> : null}
+        {/* The selection ring arrives WITH the spring (opacity rides the same
+            value), so nothing pops into existence around the swatch. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.ring,
+            { opacity: scale.interpolate({ inputRange: [1, 1.1], outputRange: [0, 1], extrapolate: 'clamp' }) },
+          ]}
+        />
       </Animated.View>
     </Pressable>
   );
@@ -408,6 +508,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadow.soft,
   },
-  swatchOn: { borderWidth: 3, borderColor: colors.text },
+  ring: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: colors.text,
+  },
   eraser: { backgroundColor: colors.surfaceAlt },
+  clearBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  gotIt: { color: colors.primary, fontFamily: font.family.semibold, fontSize: font.size.md },
 });

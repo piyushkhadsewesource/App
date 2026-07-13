@@ -381,8 +381,7 @@ mark "verify," check it before cutting.
 | "Together today" card (Home) | **Deprecate** | Pure navigation duplication of Us/Games/Deck |
 | Countdown zero-state card (Home, permanent) | **Deprecate** | Becomes a whisper candidate instead of a fixture |
 | Week mode (Our Day) | **Deprecate** | Week strip already navigates; agenda list is a second render of the same data |
-| Snakes & Ladders | **Deprecate** | Pure-luck dice game, no conversation, long sessions vs "under a minute" usage; Ludo covers board-night better (verify usage first) |
-| Ludo · TicTacToe | **Keep one long, one quick** | TicTacToe = 30-second play fits the usage pattern; Ludo = deliberate board night. Three board games is a portfolio, not a product |
+| Snakes & Ladders · Ludo · TicTacToe | **Keep (decided)** | Product owner call, July 2026: all three board games stay |
 | This or That · Would You Rather · Know Me | **Consolidate** | One "Questions" shell (the `ChoiceGame` chassis already generalizes); modes inside, one entry in Us |
 | Intimacy Deck vs Reveal vs "Ask each other" | **Consolidate** | Reveal stays the ONE daily Q&A anchor on Home; Deck lives inside Questions; the Home "Ask each other" tile goes with the Together card |
 | Countdown + Occasions | **Consolidate** | One "Our Dates" screen: reunion pinned as the hero, occasions beneath; one Home alert slot (today/imminent only) |
@@ -408,10 +407,8 @@ house just stops competing with the hearth.
 - **Phase 3 · The hooks** (Part 3), in retention order: Golden Hour → Morning
   Paper → Our Knock. (The Paper depends on the Home diet landing first.)
 
-**Decisions I need from you before any code:**
-
-1. Approve retiring the daily closeness number from Home (kept weekly in
-   Insights)?
-2. Approve the serif discipline trial (card titles → Inter) on Home?
-3. Which board games survive: cut Snakes only, or Snakes + one more?
-4. Green-light Phase 1 as scoped?
+**Decisions (resolved July 2026):** build approved. The daily closeness
+number retires from Home (weekly reflection lives in Insights); the serif
+discipline ships app-wide (Fraunces speaks, Inter labels); all three board
+games stay; Phases 1 and 2 implemented. Phase 3 (Golden Hour, Morning Paper,
+Our Knock) and the remaining IA consolidations are the next tranche.
