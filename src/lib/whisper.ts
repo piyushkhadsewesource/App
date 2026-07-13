@@ -27,6 +27,10 @@ export interface WhisperInput {
   futureCount: number;
   memoryCount: number;
   occasionCount: number;
+  /** Is a reunion date set? When false, whisper toward the countdown. */
+  meetingSet?: boolean;
+  /** Captured today's moment yet? When false, whisper toward the camera. */
+  momentDoneToday?: boolean;
 }
 
 const STALE_14D = 14 * DAY_MS;
@@ -77,6 +81,24 @@ function candidates(inp: WhisperInput, now: number): Whisper[] {
       title: 'Save your dates',
       text: 'Anniversaries and little milestones, remembered for you.',
       route: 'Occasions',
+    });
+  }
+  if (inp.meetingSet === false) {
+    out.push({
+      id: 'reunion',
+      emoji: '💞',
+      title: 'Set your reunion date',
+      text: 'Start a live countdown to the next time you’re together.',
+      route: 'Countdown',
+    });
+  }
+  if (inp.momentDoneToday === false) {
+    out.push({
+      id: 'moment',
+      emoji: '📸',
+      title: 'Capture today’s moment',
+      text: 'One photo a day builds the gallery you two keep.',
+      route: 'Moments',
     });
   }
   return out;

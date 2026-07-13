@@ -83,7 +83,7 @@ export default function GlassScreen({ navigation }: any) {
     ? `You're touching 🤍`
     : holding
       ? partnerHere
-        ? `${partner} is here — waiting for their thumb…`
+        ? `${partner} is here, waiting for their thumb…`
         : `Holding… ${partner} will feel it when they arrive`
       : partnerHolding
         ? `${partner}'s thumb is on the glass right now`
@@ -117,7 +117,7 @@ export default function GlassScreen({ navigation }: any) {
     if (!ok) {
       setTaps(kept);
       setRecording(true);
-      toast.show("Couldn't save — check your connection and try again", 2400);
+      toast.show("Couldn't save. Check your connection and try again", 2400);
     }
   };
 
@@ -214,7 +214,7 @@ export default function GlassScreen({ navigation }: any) {
           )}
           <Muted style={{ marginTop: 4 }}>
             {app.myHeartbeat
-              ? 'Tap to record it again — rhythms change with seasons.'
+              ? 'Tap to record it again. Rhythms change with seasons.'
               : 'Tap along with your pulse for a few seconds; they can hold it whenever they miss you.'}
           </Muted>
           {app.myHeartbeat ? <Waveform intervals={app.myHeartbeat.intervals} /> : null}

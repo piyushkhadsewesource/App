@@ -100,7 +100,7 @@ export default function DeckScreen({ navigation }: any) {
       toast.show('Answer shared 🤍');
     } else {
       setAnswer(a); // give the words back — nothing was lost
-      toast.show("Couldn't send — check your connection and try again");
+      toast.show("Couldn't send. Check your connection and try again");
     }
   }
 

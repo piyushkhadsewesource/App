@@ -77,12 +77,14 @@ function TabButton({
   icon?: (props: { focused: boolean; color: string; size: number }) => React.ReactNode;
   onPress: () => void;
 }) {
-  // The icon gently springs up and scales when its tab becomes active.
+  // The icon gently springs up and scales when its tab becomes active. Tabs
+  // are switched dozens of times a day, so the motion is snappy and small;
+  // bounce is reserved for rare moments, never navigation.
   const s = useRef(new Animated.Value(focused ? 1 : 0)).current;
   useEffect(() => {
-    Animated.spring(s, { toValue: focused ? 1 : 0, useNativeDriver: true, ...spring.bouncy }).start();
+    Animated.spring(s, { toValue: focused ? 1 : 0, useNativeDriver: true, ...spring.snappy }).start();
   }, [focused, s]);
-  const scale = s.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] });
+  const scale = s.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
   const lift = s.interpolate({ inputRange: [0, 1], outputRange: [0, -2] });
 
   return (

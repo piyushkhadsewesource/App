@@ -75,7 +75,7 @@ export default function SettingsScreen({ navigation }: any) {
       await AsyncStorage.setItem(ICS_URL_KEY, raw);
       setIcsSavedUrl(raw);
       hSuccess();
-      toast.show(n > 0 ? `Imported ${n} busy block${n === 1 ? '' : 's'} into Our Day 🗓️` : 'Linked — no events in the next 7 days', 3000);
+      toast.show(n > 0 ? `Imported ${n} busy block${n === 1 ? '' : 's'} into Our Day 🗓️` : 'Linked, no events in the next 7 days', 3000);
     } catch {
       Alert.alert(
         'Could not import',
@@ -106,7 +106,7 @@ export default function SettingsScreen({ navigation }: any) {
           hSuccess();
           toast.show('That face, everywhere in your space 🤍', 2600);
         } else {
-          toast.show("Couldn't save the photo — try again", 2400);
+          toast.show("Couldn't save the photo. Try again", 2400);
         }
       }
     } catch {
@@ -135,7 +135,7 @@ export default function SettingsScreen({ navigation }: any) {
 
   function confirmReset() {
     const message = app.cloud
-      ? 'This unpairs this phone and clears its local cache. Your shared cloud space stays intact — your partner is unaffected and can still access all your data. This can\'t be undone on this device.'
+      ? 'This unpairs this phone and clears its local cache. Your shared cloud space stays intact. Your partner is unaffected and can still access all your data. This can\'t be undone on this device.'
       : 'This clears your space on THIS phone (names, check-ins, memories, letters). This can\'t be undone.';
     Alert.alert('Reset everything?', message, [
       { text: 'Cancel', style: 'cancel' },
@@ -215,7 +215,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Avatar name={id?.name ?? '?'} size={56} uri={app.myProfile?.image} />
           <View style={{ flex: 1 }}>
             <Text style={styles.fieldLabel}>Your photo</Text>
-            <Muted>{app.myProfile ? 'Looking lovely. Tap to change it.' : `Add a photo — ${id?.partnerName ?? 'your partner'} sees it too.`}</Muted>
+            <Muted>{app.myProfile ? 'Looking lovely. Tap to change it.' : `Add a photo, ${id?.partnerName ?? 'your partner'} sees it too.`}</Muted>
           </View>
           <Button
             label={pickingPhoto ? '…' : app.myProfile ? 'Change' : 'Add'}

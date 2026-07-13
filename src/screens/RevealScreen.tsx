@@ -60,7 +60,7 @@ export default function RevealScreen({ navigation }: any) {
       setDraft('');
       toast.show(theirs ? 'Sealed. Now open theirs 🤍' : `Sealed until ${partner} answers 🤍`, 2600);
     } else {
-      toast.show("Couldn't seal it — check your connection and try again", 2400);
+      toast.show("Couldn't seal it. Check your connection and try again", 2400);
     }
   }
 
@@ -104,7 +104,7 @@ export default function RevealScreen({ navigation }: any) {
             </View>
           ) : (
             <Muted style={{ marginBottom: spacing.sm }}>
-              {partner} can't see your answer until they've written theirs. Be honest — that's the point.
+              {partner} can't see your answer until they've written theirs. Be honest, that's the point.
             </Muted>
           )}
           <Field

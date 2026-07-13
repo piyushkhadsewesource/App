@@ -68,7 +68,7 @@ export default function LensView({
       ) : (
         <FallbackBody
           title="True North needs a newer build"
-          sub={`${partnerName} is ${km.toLocaleString()} km to the ${cardinal16(bearing)} — the lens arrives with the next app update.`}
+          sub={`${partnerName} is ${km.toLocaleString()} km to the ${cardinal16(bearing)}, the lens arrives with the next app update.`}
           onClose={onClose}
         />
       )}
@@ -164,7 +164,7 @@ function TrueNorthBody({
 
   const hint =
     diff == null
-      ? `face the ${cardinal16(bearing)} — the needle wakes with the next build`
+      ? `face the ${cardinal16(bearing)}, the needle wakes with the next build`
       : locked
         ? ''
         : Math.abs(diff) <= 20

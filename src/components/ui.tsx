@@ -173,10 +173,11 @@ export function Button({
     </Text>
   );
 
-  // Spring the label inward on press for a satisfying, tactile tap. We use a
-  // plain Pressable (the most reliable touch target on device) and animate an
-  // inner view, rather than an animated Pressable, so onPress always fires and a
-  // caller's size/layout style still merges straight onto the visible box.
+  // Spring the WHOLE visible pill inward on press: the object under the finger
+  // is the button surface, so the gradient, background and label all move as
+  // one. A plain Pressable stays the touch target (the most reliable on
+  // device) and keeps layout styles; the visuals live on an inner animated
+  // fill that scales.
   const scale = useRef(new Animated.Value(1)).current;
   const press = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
   const pressProps = {
@@ -184,38 +185,38 @@ export function Button({
     disabled,
     onPressIn: () => {
       if (disabled) return;
-      press(0.96);
+      press(0.97);
       hLight(); // tactile detent on every button tap (no-op on web)
     },
     onPressOut: () => press(1),
   };
-  const inner = <Animated.View style={{ transform: [{ scale }] }}>{content}</Animated.View>;
 
-  if (variant === 'primary') {
-    const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
-    return (
-      <Pressable
-        {...pressProps}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !!disabled }}
-        style={[styles.button, shadow.soft, disabled ? { opacity: 0.45 } : null, style]}
-      >
-        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, styles.buttonFill]} />
-        {inner}
-      </Pressable>
-    );
-  }
-
-  const bg = variant === 'soft' ? colors.surfaceAlt : 'transparent';
+  const bg =
+    variant === 'primary' ? 'transparent' : variant === 'soft' ? colors.surfaceAlt : 'transparent';
   const border = variant === 'outline' ? { borderWidth: 1.5, borderColor: color } : null;
+  const gradientColors = color === colors.primary ? gradients.primary : ([color, color] as [string, string]);
+
   return (
     <Pressable
       {...pressProps}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
-      style={[styles.button, { backgroundColor: bg }, border, disabled ? { opacity: 0.45 } : null, style]}
+      style={[styles.button, variant === 'primary' ? shadow.soft : null, style]}
     >
-      {inner}
+      <Animated.View
+        style={[
+          styles.buttonSurface,
+          { backgroundColor: bg },
+          border,
+          disabled ? { opacity: 0.45 } : null,
+          { transform: [{ scale }] },
+        ]}
+      >
+        {variant === 'primary' ? (
+          <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, styles.buttonFill]} />
+        ) : null}
+        {content}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -308,7 +309,8 @@ export function Field({
     <View style={{ marginBottom: spacing.md }}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       <TextInput
-        placeholderTextColor={colors.textFaint}
+        // textSoft, not textFaint: placeholder text must clear 4.5:1 on paper.
+        placeholderTextColor={colors.textSoft}
         style={[styles.input, props.multiline ? styles.inputMultiline : null, style]}
         {...props}
       />
@@ -412,7 +414,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(90,46,64,0.06)',
   },
-  title: { fontSize: font.size.lg + 1, lineHeight: 24, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: font.tracking.heading },
+  // Serif discipline: Fraunces speaks (screen titles, section titles, payoff
+  // lines); Inter labels. Card titles are UI labels, so they set in Inter.
+  title: { fontSize: font.size.lg, lineHeight: 24, fontFamily: font.family.semibold, color: colors.text, letterSpacing: -0.2 },
   body: { fontSize: font.size.md, color: colors.text, lineHeight: 24, fontFamily: font.family.body, letterSpacing: font.tracking.body },
   muted: { fontSize: font.size.sm, color: colors.textSoft, lineHeight: 20, fontFamily: font.family.body, letterSpacing: font.tracking.label },
 
@@ -428,6 +432,11 @@ const styles = StyleSheet.create({
   button: {
     height: 54,
     borderRadius: radius.pill,
+  },
+  buttonSurface: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,

@@ -87,7 +87,7 @@ export default function CompassScreen({ navigation }: any) {
     ]);
     if (!coords) {
       setLocating(false);
-      toast.show("Couldn't get your location — type your city below instead", 2800);
+      toast.show("Couldn't get your location. Type your city below instead", 2800);
       return;
     }
     const name = (await reverseGeocode(coords.lat, coords.lon)) ?? 'Where I am';
@@ -97,7 +97,7 @@ export default function CompassScreen({ navigation }: any) {
       hSuccess();
       toast.show(`You're on the map: ${name} 🤍`, 2600);
     } else {
-      toast.show("Couldn't save — check your connection and try again", 2400);
+      toast.show("Couldn't save. Check your connection and try again", 2400);
     }
   }
 
@@ -108,7 +108,7 @@ export default function CompassScreen({ navigation }: any) {
     const hit = await geocodeCity(q);
     if (!hit) {
       setSearching(false);
-      toast.show("Couldn't find that city — try 'City, Country'", 2600);
+      toast.show("Couldn't find that city. Try 'City, Country'", 2600);
       return;
     }
     const ok = await app.savePlace(hit);
@@ -118,7 +118,7 @@ export default function CompassScreen({ navigation }: any) {
       setCity('');
       toast.show(`You're on the map: ${hit.name} 🤍`, 2600);
     } else {
-      toast.show("Couldn't save — check your connection and try again", 2400);
+      toast.show("Couldn't save. Check your connection and try again", 2400);
     }
   }
 
@@ -254,7 +254,7 @@ export default function CompassScreen({ navigation }: any) {
             {together || live ? (
               <View style={styles.liveRow}>
                 <View style={[styles.liveDot, { backgroundColor: together ? colors.primary : colors.good }]} />
-                <Muted>{together ? `Same city: ${theirs.name}` : 'live needle — turn, and it holds true'}</Muted>
+                <Muted>{together ? `Same city: ${theirs.name}` : 'live needle. Turn, and it holds true'}</Muted>
               </View>
             ) : (
               <Muted style={{ textAlign: 'center', marginTop: spacing.xs, paddingHorizontal: spacing.lg }}>
@@ -266,7 +266,7 @@ export default function CompassScreen({ navigation }: any) {
           {!together ? (
             <>
               <View style={{ height: spacing.md }} />
-              <Button label="True North — open the lens" icon="📷" onPress={() => setLensOpen(true)} />
+              <Button label="True North · open the lens" icon="📷" onPress={() => setLensOpen(true)} />
             </>
           ) : null}
 

@@ -109,7 +109,7 @@ export default function PulseScreen() {
       toast.show(myToday ? 'Pulse updated ✓' : 'Pulse shared 💛');
     } else {
       setEditing(true);
-      toast.show("Couldn't send — check your connection and try again");
+      toast.show("Couldn't send. Check your connection and try again");
     }
   }
 

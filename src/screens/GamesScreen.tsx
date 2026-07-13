@@ -86,7 +86,7 @@ export default function GamesScreen({ navigation }: any) {
             accessible
             accessibilityRole="button"
             accessibilityLabel={g.title}
-            style={({ pressed }) => (pressed ? { opacity: 0.94, transform: [{ scale: 0.99 }] } : null)}
+            style={({ pressed }) => (pressed ? { transform: [{ scale: 0.985 }] } : null)}
           >
             <LinearGradient colors={g.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, shadow.card]}>
               <View style={styles.badge}>

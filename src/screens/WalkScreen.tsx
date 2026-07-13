@@ -104,7 +104,7 @@ export default function WalkScreen({ navigation }: any) {
       hSuccess();
       toast.show('Your steps now walk toward each other on their own 🤍', 2800);
     } else {
-      toast.show("Couldn't read your steps — you can still log walks below", 2600);
+      toast.show("Couldn't read your steps. You can still log walks below", 2600);
     }
   }
 
@@ -125,7 +125,7 @@ export default function WalkScreen({ navigation }: any) {
       toast.show(`${kmFromSteps(steps).toFixed(1)} km closer to ${partner} 🤍`, 2600);
     } else {
       setMinutes(String(mins));
-      toast.show("Couldn't save — check your connection and try again", 2400);
+      toast.show("Couldn't save. Check your connection and try again", 2400);
     }
   }
 
