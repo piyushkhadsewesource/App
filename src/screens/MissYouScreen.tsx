@@ -17,6 +17,7 @@ import {
   Title,
 } from '../components/ui';
 import { useToast } from '../components/ToastHost';
+import KnockCard from '../components/KnockCard';
 import { shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
 import { hLight, hSuccess, hWarn } from '../lib/haptics';
@@ -346,6 +347,9 @@ export default function MissYouScreen() {
           <CrownMeter peek={peek} setPeek={setPeek} onCommit={sendMiss} />
           <Muted>Tap a heart, or drag across them like a dial. More hearts, more longing.</Muted>
         </Card>
+
+        {/* Our knock: haptic signatures, played with their hugs */}
+        <KnockCard />
 
         {/* Send a thought */}
         <SectionTitle>Send a little thought</SectionTitle>

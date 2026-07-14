@@ -7,6 +7,7 @@
 // module: no RN imports, so it's directly testable with node, like digest.js.
 // ─────────────────────────────────────────────────────────────────────────
 import { CheckIn, DeckResponse, ScheduleItem } from '../types/models';
+import { lanternFor } from './goldenHour';
 import { freeAfterMin, minLabel } from './ourDay';
 import { revealPromptId } from './reveal';
 
@@ -55,6 +56,12 @@ export function composeSnapshot(input: {
   const theirsToday = schedule.filter(
     (s) => s.date === todayISO && s.authorId === partnerId && s.kind !== 'moment',
   );
+  const mineToday = schedule.filter(
+    (s) => s.date === todayISO && s.authorId === meId && s.kind !== 'moment',
+  );
+  // The Golden Hour: the widget spends the day pointing at tonight's lantern,
+  // the strongest reason for both to come back at the same minute.
+  const lantern = lanternFor(mineToday, theirsToday, nowMin);
   const free = theirsToday.length > 0 ? freeAfterMin(theirsToday, nowMin) : null;
   const mood = checkins
     .filter((c) => c.authorId === partnerId && c.date === todayISO)
@@ -64,6 +71,8 @@ export function composeSnapshot(input: {
   if (theyAnswered && !iAnswered) line = `${partnerName}'s sealed answer is waiting ✉️`;
   else if (fogWaiting) line = `${partnerName} drew something for you 🎨`;
   else if (unseenPings > 0) line = `${unseenPings === 1 ? 'A hug' : `${unseenPings} hugs`} waiting from ${partnerName} 🤗`;
+  else if (lantern.kind === 'burning') line = `The lantern is burning until ${minLabel(lantern.end)} 🏮`;
+  else if (lantern.kind === 'waiting') line = `Tonight's lantern: ${minLabel(lantern.start)} 🏮`;
   else if (free != null && free > nowMin && free < 1440) line = `${partnerName} is free after ${minLabel(free)}`;
   else if (mood && MOOD_EMOJI[mood.mood]) line = `${partnerName} is feeling ${mood.mood} ${MOOD_EMOJI[mood.mood]}`;
   else line = `Thinking of ${partnerName}? Tell them 🤍`;

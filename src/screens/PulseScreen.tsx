@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
@@ -34,6 +35,7 @@ import { Mood } from '../types/models';
 export default function PulseScreen() {
   const app = useApp();
   const { meId, partnerId, checkins, identity } = app;
+  const navigation = useNavigation();
   const toast = useToast();
   const partnerName = identity?.partnerName ?? 'Partner';
   const today = todayISO();
@@ -352,6 +354,20 @@ export default function PulseScreen() {
           </Card>
         </>
       ) : null}
+
+      {/* The Companion reads these same check-ins, so it lives with them */}
+      <Card
+        tone="violet"
+        onPress={() => (navigation as any).navigate('Insights')}
+        style={{ marginTop: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
+      >
+        <Text style={{ fontSize: 26 }}>💜</Text>
+        <View style={{ flex: 1 }}>
+          <Title>Companion</Title>
+          <Muted style={{ marginTop: 2 }}>What your patterns say, kindly, and this week's weather</Muted>
+        </View>
+        <Text style={{ fontSize: 24, color: colors.accent }}>›</Text>
+      </Card>
     </Screen>
   );
 }

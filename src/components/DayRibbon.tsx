@@ -9,6 +9,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './ui';
 import GoldenBand from './GoldenBand';
 import { todayISO } from '../lib/date';
+import { lanternFor } from '../lib/goldenHour';
 import { freeAfterMin, goldenWindow, minLabel, nextBlock } from '../lib/ourDay';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -29,6 +30,7 @@ export default function DayRibbon({ onOpen }: { onOpen: () => void }) {
       mine,
       theirs,
       nowMin,
+      lantern: lanternFor(mine, theirs, nowMin),
       myNext: nextBlock(mine, nowMin),
       theirNext: theirs.length ? nextBlock(theirs, nowMin) : null,
       theirsShared: theirs.length > 0,
@@ -39,20 +41,26 @@ export default function DayRibbon({ onOpen }: { onOpen: () => void }) {
     };
   }, [app]);
 
-  // The one line that matters most, chosen by what's actually known.
+  // The one line that matters most, chosen by what's actually known. The
+  // lantern (the Golden Hour appointment) outranks the plain window copy:
+  // a promise reads warmer than a calculation.
   const payoff = state.moment
     ? state.moment.acceptedBy
       ? `💗 ${minLabel(state.moment.startMin)} is yours together`
       : `💗 A moment at ${minLabel(state.moment.startMin)} is waiting for a yes`
     : !state.theirsShared
       ? `${partner} hasn't shared today yet`
-      : state.window
-        ? state.theirFree != null
-          ? `${partner}'s free after ${minLabel(state.theirFree)} · both free ${minLabel(state.window.start)}–${minLabel(state.window.end)}`
-          : `${partner}'s day is clear · both free from ${minLabel(state.window.start)}`
-        : state.theirFree != null
-          ? `${partner} comes free around ${minLabel(state.theirFree)}`
-          : `${partner}'s day is clear 🤍`;
+      : state.lantern.kind === 'burning'
+        ? `🏮 The lantern is burning until ${minLabel(state.lantern.end)}, come be together`
+        : state.lantern.kind === 'waiting'
+          ? `🏮 Tonight's lantern: ${minLabel(state.lantern.start)}, both of you`
+          : state.window
+            ? state.theirFree != null
+              ? `${partner}'s free after ${minLabel(state.theirFree)} · both free ${minLabel(state.window.start)}–${minLabel(state.window.end)}`
+              : `${partner}'s day is clear · both free from ${minLabel(state.window.start)}`
+            : state.theirFree != null
+              ? `${partner} comes free around ${minLabel(state.theirFree)}`
+              : `${partner}'s day is clear 🤍`;
 
   return (
     <Pressable

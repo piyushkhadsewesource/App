@@ -103,6 +103,10 @@ interface AppValue {
   myHeartbeat: HeartbeatRecord | null;
   /** Partner's recorded pulse rhythm, or null if they haven't recorded one. */
   partnerHeartbeat: HeartbeatRecord | null;
+  /** My tapped knock signature (intervals in ms), or null. */
+  myKnock: HeartbeatRecord | null;
+  /** Partner's knock signature, or null if they haven't recorded one. */
+  partnerKnock: HeartbeatRecord | null;
   /** My shared city (for the compass), or null if not set. */
   myPlace: Place | null;
   /** Partner's shared city, or null if they haven't set one. */
@@ -145,6 +149,8 @@ interface AppValue {
   setTouchHolding(holding: boolean): Promise<void>;
   /** Save my tapped-out pulse rhythm (intervals in ms). Returns success. */
   saveHeartbeat(intervals: number[]): Promise<boolean>;
+  /** Save my knock signature (tap intervals in ms). Returns success. */
+  saveKnock(intervals: number[]): Promise<boolean>;
   /** Share/replace my compass city. Returns success. */
   savePlace(place: { name: string; lat: number; lon: number }): Promise<boolean>;
   /** Save/replace my profile photo (small data:image URI). Returns success. */
@@ -267,6 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [presence, setPresence] = useState<Presence[]>([]);
   const [touchArr, setTouchArr] = useState<TouchSignal[]>([]);
   const [heartbeats, setHeartbeats] = useState<HeartbeatRecord[]>([]);
+  const [knocks, setKnocks] = useState<HeartbeatRecord[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stepDays, setStepDays] = useState<StepDay[]>([]);
@@ -332,6 +339,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<Presence>('presence', setPresence),
         db.watch<TouchSignal>('touch', setTouchArr),
         db.watch<HeartbeatRecord>('heartbeats', setHeartbeats),
+        db.watch<HeartbeatRecord>('knocks', setKnocks),
         db.watch<Place>('places', setPlaces),
         db.watch<Profile>('profiles', setProfiles),
         db.watch<StepDay>('steps', setStepDays),
@@ -517,6 +525,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => heartbeats.find((h) => h.id !== meId && Array.isArray(h.intervals) && h.intervals.length > 0) ?? null,
     [heartbeats, meId],
   );
+  const myKnock = useMemo(
+    () => knocks.find((k) => k.id === meId && Array.isArray(k.intervals)) ?? null,
+    [knocks, meId],
+  );
+  const partnerKnock = useMemo(
+    () => knocks.find((k) => k.id !== meId && Array.isArray(k.intervals) && k.intervals.length > 0) ?? null,
+    [knocks, meId],
+  );
   const validPlace = (p: Place) => typeof p.lat === 'number' && typeof p.lon === 'number';
   const myPlace = useMemo(() => places.find((p) => p.id === meId && validPlace(p)) ?? null, [places, meId]);
   const partnerPlace = useMemo(() => places.find((p) => p.id !== meId && validPlace(p)) ?? null, [places, meId]);
@@ -595,6 +611,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     partnerTouchAt,
     myHeartbeat,
     partnerHeartbeat,
+    myKnock,
+    partnerKnock,
     myPlace,
     partnerPlace,
     myProfile,
@@ -746,6 +764,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .slice(0, 40);
       if (clean.length < 4) return false;
       return db.add('heartbeats', { id: meId, intervals: clean, updatedAt: now() });
+    },
+    async saveKnock(intervals) {
+      const db = dbRef.current;
+      if (!db || !meId) return false;
+      // A knock is short by nature: a few taps, humanly-spaced gaps.
+      const clean = (intervals ?? [])
+        .filter((n) => typeof n === 'number' && Number.isFinite(n))
+        .map((n) => Math.round(Math.max(80, Math.min(1500, n))))
+        .slice(0, 11);
+      if (clean.length < 1) return false;
+      return db.add('knocks', { id: meId, intervals: clean, updatedAt: now() });
     },
     async savePlace(place) {
       const db = dbRef.current;
@@ -1339,7 +1368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myPlace, partnerPlace, myProfile, partnerProfile, stepDays, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myKnock, partnerKnock, myPlace, partnerPlace, myProfile, partnerProfile, stepDays, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

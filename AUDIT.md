@@ -410,5 +410,17 @@ house just stops competing with the hearth.
 **Decisions (resolved July 2026):** build approved. The daily closeness
 number retires from Home (weekly reflection lives in Insights); the serif
 discipline ships app-wide (Fraunces speaks, Inter labels); all three board
-games stay; Phases 1 and 2 implemented. Phase 3 (Golden Hour, Morning Paper,
-Our Knock) and the remaining IA consolidations are the next tranche.
+games stay; Phases 1 and 2 implemented.
+
+**Phase 3 (delivered):** the Golden Hour (lantern over the golden window:
+Day Ribbon line, hearth ignition on live co-presence with a once-a-day
+celebration, widget countdown line), the Morning Paper (sealed overnight
+digest of partner activity, openable after 5am, one heavy-press seal), and
+Our Knock (recorded tap signatures in a `knocks` collection, played as
+haptics + ripples with arriving hugs; visual-only on the iOS PWA).
+Consolidations: question games grouped under "Ask each other" in the play
+hub; Countdown pinned inside "Our dates" (Occasions); Journal reachable from
+Vault; Companion reachable from Pulse; Reminders lives in Settings; the Us
+menu is down to 12 rows in 5 sections. Remaining ideas (ember constellation
+month view, lantern push notification, secret-knock seals) are logged for a
+future tranche.

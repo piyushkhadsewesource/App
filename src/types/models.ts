@@ -413,6 +413,7 @@ export const COLLECTIONS = [
   'presence',
   'touch',
   'heartbeats',
+  'knocks',
   'places',
   'profiles',
   'steps',

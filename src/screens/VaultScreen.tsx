@@ -100,6 +100,16 @@ export default function VaultScreen({ navigation }: any) {
     <Screen scroll>
       <AppHeader title="Memory vault" subtitle="Milestones and keepsakes" onBack={() => navigation.goBack()} />
 
+      {/* The journal lives with the keepsakes: your weeks, written back to you */}
+      <Card onPress={() => navigation.navigate('Journal')} style={styles.journalRow}>
+        <Text style={{ fontSize: 26 }}>📖</Text>
+        <View style={{ flex: 1 }}>
+          <Title>Our journal</Title>
+          <Muted style={{ marginTop: 2 }}>Your weeks together, written back to you</Muted>
+        </View>
+        <Text style={styles.journalChev}>›</Text>
+      </Card>
+
       {adding ? (
         <Card style={{ marginBottom: spacing.lg }}>
           <Text style={styles.formTitle}>{editingId ? 'Edit this memory' : 'Add a memory'}</Text>
@@ -196,6 +206,8 @@ export default function VaultScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  journalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
+  journalChev: { fontSize: 24, color: colors.textFaint },
   formTitle: { fontSize: font.size.md, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: spacing.sm },
   label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.sm, marginTop: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, height: 50, marginBottom: spacing.xs },

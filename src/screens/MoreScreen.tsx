@@ -42,8 +42,7 @@ const CLUSTERS: { title: string; tint: string; rows: Row[] }[] = [
     rows: [
       { route: 'Moments', emoji: '📸', label: 'Moments', sub: 'A photo a day, just for you two' },
       { route: 'Letters', emoji: '💌', label: 'Love letters', sub: 'Written now, delivered when you choose' },
-      { route: 'Vault', emoji: '🗂️', label: 'Memory vault', sub: 'The ones you never want to lose' },
-      { route: 'Journal', emoji: '📖', label: 'Our journal', sub: 'Your weeks, written back to you' },
+      { route: 'Vault', emoji: '🗂️', label: 'Memory vault', sub: 'Keepsakes, and your journal' },
       { route: 'Future', emoji: '✨', label: 'Future board', sub: 'Everything you’re walking toward' },
     ],
   },
@@ -52,8 +51,7 @@ const CLUSTERS: { title: string; tint: string; rows: Row[] }[] = [
     tint: colors.goodSoft,
     rows: [
       { route: 'Schedule', emoji: '🗓️', label: 'Our day', sub: 'Share your day, find the shared hour' },
-      { route: 'Countdown', emoji: '💞', label: 'Countdown', sub: 'Until you’re together again' },
-      { route: 'Occasions', emoji: '🎀', label: 'Special dates', sub: 'Anniversaries, remembered for you' },
+      { route: 'Occasions', emoji: '🎀', label: 'Our dates', sub: 'The reunion, anniversaries & special days' },
     ],
   },
   {
@@ -61,14 +59,12 @@ const CLUSTERS: { title: string; tint: string; rows: Row[] }[] = [
     tint: colors.accentSoft,
     rows: [
       { route: 'Issues', emoji: '🕊️', label: 'Clear the air', sub: 'Gentle repair, step by step' },
-      { route: 'Insights', emoji: '💜', label: 'Companion', sub: 'What your patterns say, kindly' },
     ],
   },
 ];
 
 const UTILITIES: Row[] = [
-  { route: 'Reminders', emoji: '🔔', label: 'Daily reminders', sub: 'Plan-your-day & photo nudges' },
-  { route: 'Settings', emoji: '⚙️', label: 'Settings', sub: 'Sync, names, calendar link & pairing' },
+  { route: 'Settings', emoji: '⚙️', label: 'Settings', sub: 'Sync, names, reminders & pairing' },
 ];
 
 /** A row that knows something is alive behind it right now. */

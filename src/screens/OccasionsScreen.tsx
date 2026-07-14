@@ -4,6 +4,7 @@ import { Alert } from '../lib/alert';
 import DateTimeModal from '../components/DateTimeModal';
 import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
 import { isoToDate, todayISO } from '../lib/date';
+import { countdownTo, shortCountdown } from '../lib/countdown';
 import { hLight } from '../lib/haptics';
 import { daysUntil, nextOccurrence, ordinal, sortByNext, untilLabel, yearsAt } from '../lib/occasions';
 import { useApp } from '../state/AppContext';
@@ -85,7 +86,27 @@ export default function OccasionsScreen({ navigation }: any) {
 
   return (
     <Screen scroll>
-      <AppHeader title="Dates to remember" subtitle="Anniversaries & special days" onBack={() => navigation.goBack()} />
+      <AppHeader title="Our dates" subtitle="The reunion, anniversaries & special days" onBack={() => navigation.goBack()} />
+
+      {/* The reunion, pinned: the one date the whole distance points at */}
+      <Card tone="violet" onPress={() => navigation.navigate('Countdown')} style={styles.reunion}>
+        <Text style={{ fontSize: 30 }}>💞</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.reunionTitle}>
+            {app.meeting
+              ? countdownTo(app.meeting.at).past
+                ? 'You’re together 💞'
+                : `Together again in ${shortCountdown(app.meeting.at)}`
+              : 'Set your reunion date'}
+          </Text>
+          <Muted style={{ marginTop: 2 }}>
+            {app.meeting
+              ? app.meeting.label || 'Tap for the live countdown.'
+              : 'Start a live countdown to the next time you’re together.'}
+          </Muted>
+        </View>
+        <Text style={styles.reunionChev}>›</Text>
+      </Card>
 
       {adding ? (
         <Card style={{ marginBottom: spacing.lg }}>
@@ -205,6 +226,10 @@ export default function OccasionsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  reunion: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
+  // The one date the distance points at: a voice moment, so it speaks Fraunces.
+  reunionTitle: { fontSize: font.size.lg, fontFamily: font.family.displaySemi, color: colors.text, letterSpacing: font.tracking.heading },
+  reunionChev: { fontSize: 24, color: colors.accent },
   formTitle: { fontSize: font.size.md, fontFamily: font.family.displaySemi, color: colors.text, marginBottom: spacing.sm },
   label: { fontSize: font.size.sm, fontFamily: font.family.semibold, color: colors.textSoft, marginBottom: spacing.xs, marginTop: spacing.sm },
   iconRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

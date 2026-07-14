@@ -13,7 +13,9 @@ import {
 } from '../components/ui';
 import DayRibbon from '../components/DayRibbon';
 import JointAvatar from '../components/JointAvatar';
+import { Celebrate } from '../components/Celebrate';
 import { Heartbeat } from '../components/Heartbeat';
+import MorningPaper from '../components/MorningPaper';
 import { Press, Reveal, SwipeAway } from '../components/Motion';
 import { CanvasMini } from '../components/CanvasMini';
 import { useToast } from '../components/ToastHost';
@@ -22,6 +24,9 @@ import { dismissWhisper, pickWhisper, Whisper } from '../lib/whisper';
 import { isBlank, normalizeCanvas } from '../lib/canvas';
 import { buildActivity, withinHours } from '../lib/activity';
 import { formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
+import { hearthIgnited, lanternFor } from '../lib/goldenHour';
+import { hSuccess } from '../lib/haptics';
+import { composePaper, markPaperOpened, paperOpened } from '../lib/morningPaper';
 import { moodMeta } from '../lib/mood';
 import { hasMomentToday } from '../lib/moments';
 import { countdownTo, shortCountdown } from '../lib/countdown';
@@ -172,6 +177,48 @@ export default function HomeScreen({ navigation }: any) {
     return memories.find((m) => m.date.slice(5) === md && m.date.slice(0, 4) !== today.slice(0, 4));
   }, [memories, today]);
 
+  // ── The Golden Hour: tonight's lantern over the golden window, and the
+  //    ignition when you're both truly here while it burns. ────────────────
+  const lantern = useMemo(() => {
+    const nowMin = new Date(now).getHours() * 60 + new Date(now).getMinutes();
+    const items = app.schedule.filter((s) => s.date === today && s.kind !== 'moment');
+    return lanternFor(
+      items.filter((s) => app.isMine(s.authorId)),
+      items.filter((s) => !app.isMine(s.authorId)),
+      nowMin,
+    );
+  }, [app, today, now]);
+  const ignited = hearthIgnited(lantern, partnerHereNow);
+  // Celebrate the ignition once per day: petals + a success thump, then quiet.
+  const [lanternPlay, setLanternPlay] = useState(false);
+  useEffect(() => {
+    if (!ignited) return;
+    let alive = true;
+    AsyncStorage.getItem(`@tether/lanternLit/${today}`)
+      .then((v) => {
+        if (!alive || v === '1') return;
+        AsyncStorage.setItem(`@tether/lanternLit/${today}`, '1').catch(() => {});
+        hSuccess();
+        if (!prefersReducedMotion()) setLanternPlay(true);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [ignited, today]);
+
+  // ── The Morning Paper: the night's partner activity, sealed until read. ──
+  const [paperSeen, setPaperSeen] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    paperOpened(today).then((v) => alive && setPaperSeen(v));
+    return () => {
+      alive = false;
+    };
+  }, [today]);
+  const paper = useMemo(() => composePaper(activity, now), [activity, now]);
+  const showPaper = !!paper && !paperSeen;
+
   // Shared-canvas preview for the Home entry (null/short-data safe).
   const canvasPixels = normalizeCanvas(app.canvas?.pixels);
   const canvasEmpty = isBlank(canvasPixels);
@@ -268,8 +315,11 @@ export default function HomeScreen({ navigation }: any) {
               }
             : null;
 
-  // ── The Hearth's one warm line: countdown > their weather > a quiet day.
-  const hearthLine = !hasSignal
+  // ── The Hearth's one warm line: the lantern (you're both here while it
+  //    burns) outranks everything; then countdown > their weather > quiet.
+  const hearthLine = ignited
+    ? 'The lantern is burning, and you’re both here 🤍'
+    : !hasSignal
     ? 'Your story starts now 🤍'
     : meeting
       ? countdownTo(meeting.at).past
@@ -285,6 +335,7 @@ export default function HomeScreen({ navigation }: any) {
   }
 
   return (
+    <>
     <Screen scroll>
       <AmbientBloom here={partnerHereNow} />
       <AppHeader
@@ -321,6 +372,16 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           </Card>
         </Reveal>
+      ) : null}
+
+      {/* The Morning Paper: the night, sealed until you break it */}
+      {showPaper && paper ? (
+        <MorningPaper
+          partnerName={partnerName}
+          items={paper.items}
+          onOpen={() => void markPaperOpened(paper.date)}
+          onNavigate={(route, params) => navigation.navigate(route, params)}
+        />
       ) : null}
 
       {/* The Hearth: both of you, present tense */}
@@ -524,6 +585,9 @@ export default function HomeScreen({ navigation }: any) {
         </Card>
       ) : null}
     </Screen>
+    {/* The Golden Hour ignition: petals, once per day, when you both arrive */}
+    <Celebrate play={lanternPlay} />
+    </>
   );
 }
 
