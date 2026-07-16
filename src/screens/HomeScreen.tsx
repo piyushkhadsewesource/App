@@ -26,6 +26,8 @@ import { buildActivity, withinHours } from '../lib/activity';
 import { formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { hearthIgnited, lanternFor } from '../lib/goldenHour';
 import { hSuccess } from '../lib/haptics';
+import { validKnock } from '../lib/knock';
+import KnockSeal from '../components/KnockSeal';
 import { composePaper, markPaperOpened, paperOpened } from '../lib/morningPaper';
 import { moodMeta } from '../lib/mood';
 import { hasMomentToday } from '../lib/moments';
@@ -189,10 +191,12 @@ export default function HomeScreen({ navigation }: any) {
     );
   }, [app, today, now]);
   const ignited = hearthIgnited(lantern, partnerHereNow);
-  // Celebrate the ignition once per day: petals + a success thump, then quiet.
+  // Celebrate the ignition once per day (petals + a success thump), and leave
+  // the ember: the synced, idempotent record that tonight you both came.
   const [lanternPlay, setLanternPlay] = useState(false);
   useEffect(() => {
     if (!ignited) return;
+    void app.lightEmber(today);
     let alive = true;
     AsyncStorage.getItem(`@tether/lanternLit/${today}`)
       .then((v) => {
@@ -205,6 +209,7 @@ export default function HomeScreen({ navigation }: any) {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ignited, today]);
 
   // ── The Morning Paper: the night's partner activity, sealed until read. ──
@@ -334,6 +339,24 @@ export default function HomeScreen({ navigation }: any) {
     toast.show(`Hug on its way to ${partnerName} 🤗`);
   }
 
+  // The secret-knock seal: when a gift waits AND they have a knock, the
+  // capsule asks you to answer their rhythm. Skipping always works — a
+  // feeling is never locked behind a game.
+  const [sealOpen, setSealOpen] = useState(false);
+  const sealKnock = app.partnerKnock && validKnock(app.partnerKnock.intervals) ? app.partnerKnock.intervals : null;
+  const openCapsule = () => {
+    if (!capsuleGift) {
+      toast.show(`Empty for now. Leave ${partnerName} something to find 🤍`, 2600);
+      return;
+    }
+    if (sealKnock) setSealOpen(true);
+    else navigation.navigate(capsuleGift.route);
+  };
+  const throughTheSeal = () => {
+    setSealOpen(false);
+    if (capsuleGift) navigation.navigate(capsuleGift.route);
+  };
+
   return (
     <>
     <Screen scroll>
@@ -343,13 +366,7 @@ export default function HomeScreen({ navigation }: any) {
         subtitle={`You & ${identity?.partnerName ?? 'your love'}`}
         right={
           <View style={styles.headerRight}>
-            <TimeCapsule
-              filled={!!capsuleGift}
-              onPress={() => {
-                if (capsuleGift) navigation.navigate(capsuleGift.route);
-                else toast.show(`Empty for now. Leave ${partnerName} something to find 🤍`, 2600);
-              }}
-            />
+            <TimeCapsule filled={!!capsuleGift} onPress={openCapsule} />
             <JointAvatar
               myName={identity?.name ?? '?'}
               partnerName={partnerName}
@@ -587,6 +604,17 @@ export default function HomeScreen({ navigation }: any) {
     </Screen>
     {/* The Golden Hour ignition: petals, once per day, when you both arrive */}
     <Celebrate play={lanternPlay} />
+    {/* The secret-knock seal on the Time Capsule */}
+    {sealKnock ? (
+      <KnockSeal
+        visible={sealOpen}
+        partnerName={partnerName}
+        intervals={sealKnock}
+        onSuccess={throughTheSeal}
+        onSkip={throughTheSeal}
+        onClose={() => setSealOpen(false)}
+      />
+    ) : null}
     </>
   );
 }

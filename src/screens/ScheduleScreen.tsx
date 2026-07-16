@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../lib/alert';
 import DateTimeModal from '../components/DateTimeModal';
+import EmberConstellation from '../components/EmberConstellation';
 import GoldenBand from '../components/GoldenBand';
 import Sheet from '../components/Sheet';
 import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
@@ -373,6 +374,9 @@ export default function ScheduleScreen({ navigation }: any) {
       ) : (
         dayItems.map(renderItem)
       )}
+
+      {/* The lantern month: quiet, only once it has something true to show */}
+      {app.embers.length > 0 ? <EmberConstellation embers={app.embers} /> : null}
 
       {/* Add / edit, in a sheet so the day behind never jumps */}
       <Sheet visible={adding} onClose={closeForm}>

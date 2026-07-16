@@ -52,3 +52,18 @@ export function playKnock(intervals: number[], onTap: (index: number) => void): 
 export function knockDuration(intervals: number[]): number {
   return intervals.reduce((a, b) => a + b, 0);
 }
+
+/**
+ * Does a tapped answer match a knock? Generous, human tolerance: this checks
+ * the RHYTHM (same number of taps, each gap within 40% or 150ms), never
+ * precision. Answering a knock should feel like recognition, not a test.
+ */
+export function matchKnock(expected: number[], actualTaps: number[]): boolean {
+  const actual = intervalsFromTaps(actualTaps);
+  if (actual.length !== expected.length) return false;
+  for (let i = 0; i < expected.length; i++) {
+    const tol = Math.max(150, expected[i] * 0.4);
+    if (Math.abs(actual[i] - expected[i]) > tol) return false;
+  }
+  return true;
+}

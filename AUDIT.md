@@ -421,6 +421,14 @@ haptics + ripples with arriving hugs; visual-only on the iOS PWA).
 Consolidations: question games grouped under "Ask each other" in the play
 hub; Countdown pinned inside "Our dates" (Occasions); Journal reachable from
 Vault; Companion reachable from Pulse; Reminders lives in Settings; the Us
-menu is down to 12 rows in 5 sections. Remaining ideas (ember constellation
-month view, lantern push notification, secret-knock seals) are logged for a
-future tranche.
+menu is down to 12 rows in 5 sections.
+
+**Phase 3b (delivered):** the ember constellation (a synced `embers`
+collection written idempotently on ignition; "The lantern month" renders on
+Our Day once the first ember exists, a picture that accumulates and can
+never break); the lantern-time local notification (one scheduled nudge at
+the window's opening minute, rescheduled as the day changes, permission
+never prompted); and the secret-knock seal (when the Time Capsule holds a
+gift and the partner has a knock, opening it asks you to answer their
+rhythm, generously matched, with "just open it" always one tap away). The
+strategy in this document is now fully implemented.

@@ -233,6 +233,52 @@ export async function refreshReminders(postedDates: string[], partnerName?: stri
   }
 }
 
+// ── The Golden Hour lantern ────────────────────────────────────────────────
+const LANTERN_CHANNEL = 'golden-hour';
+
+/**
+ * Keep exactly one local notification pointed at today's lantern minute (the
+ * moment the shared free window opens). Re-run whenever the schedule changes;
+ * pass null to clear it (window gone, day no longer shared, already burning).
+ * Never prompts: it only schedules when permission is already granted.
+ */
+export async function refreshLanternNotification(startMin: number | null, partnerName?: string): Promise<void> {
+  if (!supported) return;
+  try {
+    await cancelKind('lantern');
+    if (startMin == null) return;
+    if (!(await hasNotificationPermission())) return;
+    const base = new Date();
+    const when = new Date(
+      base.getFullYear(),
+      base.getMonth(),
+      base.getDate(),
+      Math.floor(startMin / 60),
+      startMin % 60,
+      0,
+      0,
+    );
+    if (when.getTime() <= Date.now() + 1000) return; // already burning or passed
+    if ((await remainingBudget()) <= 0) return;
+    await ensureChannel(LANTERN_CHANNEL, 'Golden hour');
+    const who = partnerName?.trim() || 'your love';
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🏮 The lantern is lit',
+        body: `You and ${who} are both free now. Come sit together for a minute.`,
+        data: { kind: 'lantern' },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: when,
+        channelId: LANTERN_CHANNEL,
+      },
+    });
+  } catch {
+    /* notifications unavailable */
+  }
+}
+
 // ── Daily plan reminders: "plan today" (morning) + "plan tomorrow" (evening) ──
 export interface PlanConfig {
   enabled: boolean;

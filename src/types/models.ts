@@ -136,6 +136,17 @@ export interface Meeting {
 }
 
 /**
+ * One ember per day the hearth ignited: you were BOTH in the app while the
+ * lantern burned. Written idempotently (id = `em:<date>`), so either phone
+ * can record it; embers accumulate as a constellation, never a streak.
+ */
+export interface Ember {
+  id: string;
+  date: ISODate;
+  at: Millis;
+}
+
+/**
  * A device's push token, stored in the shared space so the partner can be
  * reached even when the app is closed. One person can have several: a phone
  * (Expo token) and one or more browsers (FCM web token). The doc id is unique
@@ -414,6 +425,7 @@ export const COLLECTIONS = [
   'touch',
   'heartbeats',
   'knocks',
+  'embers',
   'places',
   'profiles',
   'steps',

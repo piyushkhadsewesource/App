@@ -10,7 +10,9 @@ import React, {
 } from 'react';
 import { AppState, Platform } from 'react-native';
 import { addDaysISO, now, todayISO } from '../lib/date';
+import { lanternFor } from '../lib/goldenHour';
 import { composeSnapshot } from '../lib/portalSnapshot';
+import { refreshLanternNotification } from '../services/notifications';
 import { publishPortalSnapshot } from '../widget/portal';
 import { createDb, Db, onSyncHealth, Unsubscribe } from '../services/db';
 import { cloudEnabled } from '../services/firebase';
@@ -31,6 +33,7 @@ import {
   CheckIn,
   DeckResponse,
   DeviceToken,
+  Ember,
   FeelingEntry,
   FutureCategory,
   FutureItem,
@@ -95,6 +98,8 @@ interface AppValue {
   occasions: Occasion[];
   issues: Issue[];
   issueSteps: IssueStep[];
+  /** Days the hearth ignited (both here while the lantern burned). */
+  embers: Ember[];
   /** Partner's last live heartbeat (ms), or null. Within ~2 min = in the app right now. */
   partnerSeenAt: number | null;
   /** Partner's last "thumb on the glass" signal (ms), 0/null when released. */
@@ -151,6 +156,8 @@ interface AppValue {
   saveHeartbeat(intervals: number[]): Promise<boolean>;
   /** Save my knock signature (tap intervals in ms). Returns success. */
   saveKnock(intervals: number[]): Promise<boolean>;
+  /** Record today's ember (idempotent; either phone may write it). */
+  lightEmber(date: string): Promise<void>;
   /** Share/replace my compass city. Returns success. */
   savePlace(place: { name: string; lat: number; lon: number }): Promise<boolean>;
   /** Save/replace my profile photo (small data:image URI). Returns success. */
@@ -274,6 +281,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [touchArr, setTouchArr] = useState<TouchSignal[]>([]);
   const [heartbeats, setHeartbeats] = useState<HeartbeatRecord[]>([]);
   const [knocks, setKnocks] = useState<HeartbeatRecord[]>([]);
+  const [embers, setEmbers] = useState<Ember[]>([]);
+  const embersRef = useRef<Ember[]>([]);
+  embersRef.current = embers;
   const [places, setPlaces] = useState<Place[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [stepDays, setStepDays] = useState<StepDay[]>([]);
@@ -340,6 +350,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.watch<TouchSignal>('touch', setTouchArr),
         db.watch<HeartbeatRecord>('heartbeats', setHeartbeats),
         db.watch<HeartbeatRecord>('knocks', setKnocks),
+        db.watch<Ember>('embers', setEmbers),
         db.watch<Place>('places', setPlaces),
         db.watch<Profile>('profiles', setProfiles),
         db.watch<StepDay>('steps', setStepDays),
@@ -578,6 +589,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity, meId, partnerId, checkins, schedule, deck, pings, canvasArr, meetings]);
 
+  // ── The Golden Hour nudge: keep one local notification pointed at today's
+  // lantern minute. Debounced like the widget; clears itself when the window
+  // moves, disappears, or is already burning. Never prompts for permission.
+  useEffect(() => {
+    if (!identity) return;
+    const t = setTimeout(() => {
+      try {
+        const today = todayISO();
+        const d = new Date();
+        const nowMin = d.getHours() * 60 + d.getMinutes();
+        const items = schedule.filter((s) => s.date === today && s.kind !== 'moment');
+        const lantern = lanternFor(
+          items.filter((s) => s.authorId === meId),
+          items.filter((s) => s.authorId !== meId),
+          nowMin,
+        );
+        void refreshLanternNotification(
+          lantern.kind === 'waiting' ? lantern.start : null,
+          identity.partnerName,
+        );
+      } catch {
+        /* never let the nudge path disturb the app */
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [identity, meId, schedule]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo<AppValue>(() => ({
     ready,
@@ -607,6 +645,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     occasions,
     issues,
     issueSteps,
+    embers,
     partnerSeenAt,
     partnerTouchAt,
     myHeartbeat,
@@ -669,6 +708,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOccasions([]);
       setIssues([]);
       setIssueSteps([]);
+      setEmbers([]);
       setIdentity(null);
     },
 
@@ -775,6 +815,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .slice(0, 11);
       if (clean.length < 1) return false;
       return db.add('knocks', { id: meId, intervals: clean, updatedAt: now() });
+    },
+    async lightEmber(date) {
+      const db = dbRef.current;
+      if (!db || !date) return;
+      // Idempotent by id, so both phones can record the same evening.
+      if (embersRef.current.some((e) => e.date === date)) return;
+      await db.add('embers', { id: `em:${date}`, date, at: now() });
     },
     async savePlace(place) {
       const db = dbRef.current;
@@ -1368,7 +1415,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await dbRef.current?.remove('issueSteps', id);
     },
   // Recreate only when actual state changes, not on every parent render.
-  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myKnock, partnerKnock, myPlace, partnerPlace, myProfile, partnerProfile, stepDays, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [ready, identity, syncTrouble, meId, partnerId, partnerSeenAt, partnerTouchAt, myHeartbeat, partnerHeartbeat, myKnock, partnerKnock, myPlace, partnerPlace, myProfile, partnerProfile, stepDays, checkins, feelings, pings, letters, memories, reasons, future, deck, moments, alerts, meetings, tokens, gameAnswers, ttt, wordle, snakes, ludo, canvasArr, schedule, occasions, issues, issueSteps, embers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

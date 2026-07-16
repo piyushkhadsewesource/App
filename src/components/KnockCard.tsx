@@ -127,7 +127,7 @@ export default function KnockCard() {
 }
 
 /** One ripple ring per knock-tap, expanding out of the door and fading. */
-function RippleBurst({ pulse }: { pulse: number }) {
+export function RippleBurst({ pulse }: { pulse: number }) {
   const v = useRef(new Animated.Value(1)).current;
   const first = useRef(true);
   useEffect(() => {
