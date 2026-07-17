@@ -15,6 +15,9 @@ export type Lantern =
   | { kind: 'burning'; start: number; end: number; minutesLeft: number }
   | { kind: 'passed'; start: number; end: number };
 
+/** The lantern is an EVENING ritual: the window is sought from 5pm on. */
+const LANTERN_FROM = 17 * 60;
+
 /**
  * Tonight's lantern, from both lanes of today's schedule. The lantern only
  * exists once BOTH people have shared their day (a window computed from one
@@ -22,9 +25,10 @@ export type Lantern =
  */
 export function lanternFor(mine: ScheduleItem[], theirs: ScheduleItem[], nowMin: number): Lantern {
   if (mine.length === 0 || theirs.length === 0) return { kind: 'none' };
-  // The window is computed from the start of the day so it stays the SAME
-  // window all day (an appointment can't drift as the day is consumed).
-  const w = goldenWindow(mine, theirs, 0);
+  // Anchored to a fixed evening baseline, so it is the SAME appointment all
+  // day (never drifting as the day is consumed), and always tonight's window,
+  // never a stray free stretch at 6am.
+  const w = goldenWindow(mine, theirs, LANTERN_FROM);
   if (!w) return { kind: 'none' };
   if (nowMin < w.start) return { kind: 'waiting', start: w.start, end: w.end, minutesUntil: w.start - nowMin };
   if (nowMin < w.end) return { kind: 'burning', start: w.start, end: w.end, minutesLeft: w.end - nowMin };
