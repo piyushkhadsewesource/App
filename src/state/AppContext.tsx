@@ -210,7 +210,7 @@ interface AppValue {
   rollLudo(): Promise<void>;
   moveLudo(tokenIndex: number): Promise<void>;
   addScheduleItem(data: { date: string; startMin: number; title: string; endMin?: number; icon?: string; note?: string; kind?: 'moment' | 'busy'; extId?: string }): Promise<void>;
-  updateScheduleItem(id: string, patch: { startMin?: number; title?: string; icon?: string; note?: string; date?: string; acceptedBy?: string }): Promise<void>;
+  updateScheduleItem(id: string, patch: { startMin?: number; endMin?: number | null; title?: string; icon?: string; note?: string; date?: string; acceptedBy?: string }): Promise<void>;
   /**
    * Replace my imported-calendar busy blocks inside [fromDate, toDate] with a
    * fresh set (ICS import). Ordinary plans are never touched. Returns how many
@@ -1234,6 +1234,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const clean: Record<string, unknown> = { updatedAt: now() };
       if (patch.title?.trim()) clean.title = clampReq(patch.title.trim(), 80);
       if (patch.startMin != null) clean.startMin = Math.max(0, Math.min(1439, Math.round(patch.startMin)));
+      // endMin: null clears it (back to the ~1 hour assumption).
+      if (patch.endMin !== undefined) {
+        clean.endMin = patch.endMin == null ? null : Math.max(0, Math.min(1439, Math.round(patch.endMin)));
+      }
       if (patch.date) clean.date = patch.date;
       if (patch.icon !== undefined) clean.icon = patch.icon ? patch.icon.slice(0, 4) : null;
       if (patch.note !== undefined) clean.note = patch.note.trim() ? clampReq(patch.note.trim(), 200) : null;

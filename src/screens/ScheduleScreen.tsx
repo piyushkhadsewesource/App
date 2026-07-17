@@ -70,8 +70,12 @@ export default function ScheduleScreen({ navigation }: any) {
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState<string | undefined>(undefined);
   const [whenTs, setWhenTs] = useState(() => dayAt(todayISO(), 9, 0));
+  // Optional end (minutes-of-day). Unset = the gentle ~1 hour assumption; set
+  // = the partner knows exactly when you come free, which is the whole point.
+  const [endMin, setEndMin] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [endPickerOpen, setEndPickerOpen] = useState(false);
 
   const itemsFor = (iso: string) => app.schedule.filter((s) => s.date === iso).sort((a, b) => a.startMin - b.startMin);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,6 +130,7 @@ export default function ScheduleScreen({ navigation }: any) {
     setIcon(undefined);
     setNote('');
     setWhenTs(dayAt(viewDate, 9, 0));
+    setEndMin(null);
     setAdding(true);
   };
   const openEdit = (it: ScheduleItem) => {
@@ -135,6 +140,7 @@ export default function ScheduleScreen({ navigation }: any) {
     setIcon(it.icon);
     setNote(it.note ?? '');
     setWhenTs(dayAt(it.date, Math.floor(it.startMin / 60), it.startMin % 60));
+    setEndMin(it.endMin != null && it.endMin > it.startMin ? it.endMin : null);
     setAdding(true);
   };
   const closeForm = () => {
@@ -143,6 +149,7 @@ export default function ScheduleScreen({ navigation }: any) {
     setTitle('');
     setIcon(undefined);
     setNote('');
+    setEndMin(null);
   };
 
   const save = async () => {
@@ -150,11 +157,13 @@ export default function ScheduleScreen({ navigation }: any) {
     const d = new Date(whenTs);
     const date = isoOf(d);
     const startMin = d.getHours() * 60 + d.getMinutes();
+    // An end that isn't after the start is treated as unset, never an error.
+    const end = endMin != null && endMin > startMin ? endMin : null;
     const id = editingId;
     closeForm();
     if (date !== viewDate) setViewDate(date);
-    if (id) await app.updateScheduleItem(id, { title: title.trim(), startMin, icon: icon ?? '', note, date });
-    else await app.addScheduleItem({ date, startMin, title: title.trim(), icon, note: note.trim() || undefined });
+    if (id) await app.updateScheduleItem(id, { title: title.trim(), startMin, endMin: end, icon: icon ?? '', note, date });
+    else await app.addScheduleItem({ date, startMin, endMin: end ?? undefined, title: title.trim(), icon, note: note.trim() || undefined });
   };
 
   const confirmDelete = (it: ScheduleItem) => {
@@ -207,6 +216,9 @@ export default function ScheduleScreen({ navigation }: any) {
             </Pressable>
           ) : null}
         </View>
+        {!isMoment && it.endMin != null && it.endMin > it.startMin ? (
+          <Muted style={{ marginTop: 2 }}>until {minLabel(it.endMin)}, then free</Muted>
+        ) : null}
         {it.note ? <Muted style={{ marginTop: 2 }}>{it.note}</Muted> : null}
         {isMoment ? (
           accepted ? (
@@ -403,6 +415,32 @@ export default function ScheduleScreen({ navigation }: any) {
           <Text style={styles.pickText}>{whenLabel(whenTs)}</Text>
           <Text style={styles.chev}>›</Text>
         </Pressable>
+        {/* The end time is what tells the partner when you come free; unset
+            falls back to the gentle ~1 hour assumption. */}
+        <Text style={styles.fieldLabel}>Until (optional)</Text>
+        <Pressable
+          onPress={() => setEndPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={endMin != null ? `Ends at ${minLabel(endMin)}. Tap to change.` : 'Set an end time'}
+          style={styles.pickRow}
+        >
+          <Text style={styles.pickIcon}>⏳</Text>
+          <Text style={[styles.pickText, endMin == null && styles.pickHint]}>
+            {endMin != null ? minLabel(endMin) : `About an hour · tap to set when you're free`}
+          </Text>
+          {endMin != null ? (
+            <Pressable
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Clear end time"
+              onPress={() => setEndMin(null)}
+            >
+              <Text style={styles.x}>×</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.chev}>›</Text>
+          )}
+        </Pressable>
         <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="Anything to add" />
         <Button label={editingId ? 'Save changes' : 'Add to plan'} onPress={save} />
         {editingItem ? (
@@ -426,6 +464,23 @@ export default function ScheduleScreen({ navigation }: any) {
           onConfirm={(ts) => {
             setWhenTs(ts);
             setPickerOpen(false);
+          }}
+        />
+        <DateTimeModal
+          visible={endPickerOpen}
+          mode="time"
+          allowPast
+          title="Free from when?"
+          initial={
+            endMin != null
+              ? dayAt(isoOf(new Date(whenTs)), Math.floor(endMin / 60), endMin % 60)
+              : whenTs + 60 * 60 * 1000
+          }
+          onCancel={() => setEndPickerOpen(false)}
+          onConfirm={(ts) => {
+            const d = new Date(ts);
+            setEndMin(d.getHours() * 60 + d.getMinutes());
+            setEndPickerOpen(false);
           }}
         />
       </Sheet>
@@ -523,6 +578,7 @@ const styles = StyleSheet.create({
   pickRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, height: 50, marginBottom: spacing.md },
   pickIcon: { fontSize: 18 },
   pickText: { flex: 1, fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
+  pickHint: { fontFamily: font.family.body, color: colors.textSoft },
   chev: { fontSize: 22, color: colors.textFaint },
 
   ritualCard: {
