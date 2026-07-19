@@ -127,6 +127,58 @@ export default function HomeScreen({ navigation }: any) {
   }
   const meeting = app.meeting;
 
+  // ── The pairing handshake. Onboarding sets @tether/awaitLink; until any
+  // partner-authored signal syncs in, Home says honestly that it's still
+  // looking — a typo'd code would otherwise leave two people alone in
+  // parallel spaces, each believing they're connected. The first real signal
+  // clears the flag and celebrates: the moment the app keeps its one promise.
+  const partnerEverSeen = useMemo(() => {
+    if (
+      app.partnerSeenAt != null ||
+      app.partnerProfile ||
+      app.partnerHeartbeat ||
+      app.partnerKnock ||
+      app.partnerPlace
+    )
+      return true;
+    const pools: Array<{ authorId?: string; fromId?: string }> = [
+      ...checkins,
+      ...app.feelings,
+      ...pings,
+      ...app.letters,
+      ...memories,
+      ...app.reasons,
+      ...app.future,
+      ...app.deck,
+      ...app.moments,
+      ...app.schedule,
+      ...app.occasions,
+      ...app.issues,
+    ];
+    return pools.some((d) => {
+      const a = d.authorId ?? d.fromId;
+      return !!a && a !== meId;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app, checkins, pings, memories, meId]);
+  const [awaitingLink, setAwaitingLink] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('@tether/awaitLink')
+      .then((v) => setAwaitingLink(v === '1'))
+      .catch(() => {});
+  }, []);
+  const [linkPlay, setLinkPlay] = useState(false);
+  useEffect(() => {
+    if (!awaitingLink || !partnerEverSeen) return;
+    setAwaitingLink(false);
+    AsyncStorage.removeItem('@tether/awaitLink').catch(() => {});
+    hSuccess();
+    toast.show(`You're linked, ${partnerName} is here 🤍`, 3800);
+    if (!prefersReducedMotion()) setLinkPlay(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingLink, partnerEverSeen]);
+  const showLinkWait = app.cloud && awaitingLink && !partnerEverSeen;
+
   const occToday = useMemo(() => occasionsOnThisDay(app.occasions), [app.occasions]);
   const anniToday = occToday[0] ?? null;
   // Tonight's Reveal: the daily blind-answer anchor. The tease is asymmetric
@@ -334,9 +386,27 @@ export default function HomeScreen({ navigation }: any) {
         ? `${partnerName} feels ${moodMeta(partnerLatest.mood).label.toLowerCase()} today`
         : 'A quiet day, side by side 🤍';
 
-  function sendFirstHug() {
-    app.sendPing('hug');
+  function sendHug() {
     toast.show(`Hug on its way to ${partnerName} 🤗`);
+    // Optimistic toast first; if the cloud write is rejected, say so honestly.
+    void app.sendPing('hug').then((ok) => {
+      if (!ok) toast.show(`Hmm, that hug didn't go through. Try again in a moment 🤍`, 3200);
+    });
+  }
+
+  // One-time hint for the Time Capsule the first time it actually glows —
+  // the orb is the least self-explanatory object on Home. Same seen-flag
+  // machinery as the heartbeat hint; never two coach marks at once.
+  const [capsuleHintSeen, setCapsuleHintSeen] = useState(true);
+  useEffect(() => {
+    AsyncStorage.getItem('@tether/seen/capsuleHint')
+      .then((v) => setCapsuleHintSeen(v === '1'))
+      .catch(() => {});
+  }, []);
+  const showCapsuleHint = !!capsuleGift && !capsuleHintSeen && !showActiveHint;
+  function dismissCapsuleHint() {
+    setCapsuleHintSeen(true);
+    AsyncStorage.setItem('@tether/seen/capsuleHint', '1').catch(() => {});
   }
 
   // The secret-knock seal: when a gift waits AND they have a knock, the
@@ -377,6 +447,20 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         }
       />
+
+      {/* The pairing handshake: honest until the first partner signal syncs */}
+      {showLinkWait ? (
+        <View style={styles.linkWait}>
+          <Text style={{ fontSize: 20 }}>🔗</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.linkWaitTitle}>Looking for {partnerName}'s space…</Text>
+            <Muted>
+              The moment {partnerName} opens Tether with your exact code, you'll see it here.
+              If this stays for long, double-check you both entered the same code.
+            </Muted>
+          </View>
+        </View>
+      ) : null}
 
       {/* The one alert (whisper principle: never a stack) */}
       {alert ? (
@@ -421,6 +505,16 @@ export default function HomeScreen({ navigation }: any) {
           />
         </View>
         <Text style={styles.hearthLine}>{hearthLine}</Text>
+        {/* The warmest action, one tap from the hearth, always. */}
+        <Pressable
+          onPress={sendHug}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Send ${partnerName} a hug`}
+          style={styles.hugPill}
+        >
+          <Text style={styles.hugPillText}>Send a hug 🤗</Text>
+        </Pressable>
         {partnerLatest?.date === today && partnerLatest.need ? (
           <View style={styles.needBox}>
             <Muted>{identity?.partnerName} needs today</Muted>
@@ -442,47 +536,67 @@ export default function HomeScreen({ navigation }: any) {
         </Pressable>
       ) : null}
 
+      {showCapsuleHint ? (
+        <Pressable onPress={dismissCapsuleHint} style={styles.coach} accessibilityRole="button" accessibilityLabel="Got it">
+          <Text style={{ fontSize: 18 }}>✨</Text>
+          <Text style={styles.coachText}>
+            The little orb by your avatars glows when {partnerName} leaves you something. Tap it to open. Tap here to dismiss.
+          </Text>
+        </Pressable>
+      ) : null}
+
       {/* Our day, front and center: both lanes + when you're both free */}
       <View style={{ marginTop: spacing.md }}>
         <DayRibbon onOpen={() => navigation.navigate('Schedule')} />
       </View>
 
-      {/* Tonight's Reveal: the daily anchor. The card's whole job is pull. */}
-      <Card
-        tone={!reveal.mine && reveal.theirs ? 'rose' : reveal.mine && reveal.theirs && !revealOpened ? 'gold' : 'surface'}
-        onPress={() => navigation.navigate('Reveal')}
-        style={styles.alert}
-      >
-        <Text style={styles.alertEmoji}>✉️</Text>
-        <View style={{ flex: 1 }}>
-          {!reveal.mine && reveal.theirs ? (
-            <>
-              <Title>{partnerName} answered tonight's question</Title>
-              <Muted>Their answer is sealed until you write yours.</Muted>
-            </>
-          ) : !reveal.mine ? (
-            <>
-              <Title>Tonight's Reveal</Title>
-              <Muted>"{questionForDate(today)}"</Muted>
-            </>
-          ) : !reveal.theirs ? (
-            <>
-              <Title>Yours is sealed 🤍</Title>
-              <Muted>It opens for you both when {partnerName} answers.</Muted>
-            </>
-          ) : !revealOpened ? (
-            <>
-              <Title>The envelope is ready</Title>
-              <Muted>Both answers are in. Hold to break the seal.</Muted>
-            </>
-          ) : (
-            <>
-              <Title>Tonight's answers 🤍</Title>
-              <Muted>Read them again. A new question arrives at midnight.</Muted>
-            </>
-          )}
-        </View>
-      </Card>
+      {/* Tonight's Reveal: the daily anchor. The card's whole job is pull —
+          so once tonight's seal is broken, the done state steps back to a
+          quiet row instead of holding full-card weight all evening. */}
+      {reveal.mine && reveal.theirs && revealOpened ? (
+        <Press
+          onPress={() => navigation.navigate('Reveal')}
+          scaleTo={0.985}
+          accessibilityRole="button"
+          accessibilityLabel="Tonight's answers, read them again"
+          style={[styles.doneRow, { marginBottom: spacing.md }]}
+        >
+          <Text style={{ fontSize: 18 }}>✉️</Text>
+          <Text style={styles.doneRowText}>Tonight's answers are open · read them again</Text>
+          <Text style={styles.doneRowChevron}>›</Text>
+        </Press>
+      ) : (
+        <Card
+          tone={!reveal.mine && reveal.theirs ? 'rose' : reveal.mine && reveal.theirs && !revealOpened ? 'gold' : 'surface'}
+          onPress={() => navigation.navigate('Reveal')}
+          style={styles.alert}
+        >
+          <Text style={styles.alertEmoji}>✉️</Text>
+          <View style={{ flex: 1 }}>
+            {!reveal.mine && reveal.theirs ? (
+              <>
+                <Title>{partnerName} answered tonight's question</Title>
+                <Muted>Their answer is sealed until you write yours.</Muted>
+              </>
+            ) : !reveal.mine ? (
+              <>
+                <Title>Tonight's Reveal</Title>
+                <Muted>"{questionForDate(today)}"</Muted>
+              </>
+            ) : !reveal.theirs ? (
+              <>
+                <Title>Yours is sealed 🤍</Title>
+                <Muted>It opens for you both when {partnerName} answers.</Muted>
+              </>
+            ) : (
+              <>
+                <Title>The envelope is ready</Title>
+                <Muted>Both answers are in. Hold to break the seal.</Muted>
+              </>
+            )}
+          </View>
+        </Card>
+      )}
 
       {/* What's new together (cross-feature activity feed) */}
       {recent.length > 0 ? (
@@ -561,17 +675,33 @@ export default function HomeScreen({ navigation }: any) {
         </SwipeAway>
       ) : null}
 
-      {/* Our shared canvas — a live thumbnail of the couple's drawing */}
-      <Card onPress={() => navigation.navigate('Canvas')} style={{ marginTop: spacing.md }}>
-        <View style={styles.canvasRow}>
-          <CanvasMini pixels={canvasPixels} size={62} />
-          <View style={{ flex: 1 }}>
-            <Title>Our shared canvas</Title>
-            <Muted style={{ marginTop: 4 }}>{canvasSub}</Muted>
+      {/* Our shared canvas — full card only when partner strokes are waiting
+          (that's the pull); a quiet row otherwise, so the evening stack stays
+          editorial. */}
+      {canvasPartnerNew ? (
+        <Card onPress={() => navigation.navigate('Canvas')} style={{ marginTop: spacing.md }}>
+          <View style={styles.canvasRow}>
+            <CanvasMini pixels={canvasPixels} size={62} />
+            <View style={{ flex: 1 }}>
+              <Title>Our shared canvas</Title>
+              <Muted style={{ marginTop: 4 }}>{canvasSub}</Muted>
+            </View>
+            <View style={styles.canvasDot} />
           </View>
-          {canvasPartnerNew ? <View style={styles.canvasDot} /> : <Text style={styles.actChevron}>›</Text>}
-        </View>
-      </Card>
+        </Card>
+      ) : (
+        <Press
+          onPress={() => navigation.navigate('Canvas')}
+          scaleTo={0.985}
+          accessibilityRole="button"
+          accessibilityLabel={`Our shared canvas. ${canvasSub}`}
+          style={[styles.doneRow, { marginTop: spacing.md }]}
+        >
+          <CanvasMini pixels={canvasPixels} size={30} />
+          <Text style={styles.doneRowText}>{canvasSub}</Text>
+          <Text style={styles.doneRowChevron}>›</Text>
+        </Press>
+      )}
 
       {/* On this day */}
       {onThisDay ? (
@@ -596,14 +726,15 @@ export default function HomeScreen({ navigation }: any) {
         <Card style={{ marginTop: spacing.lg }}>
           <Title>First steps together</Title>
           <Muted style={{ marginTop: 2, marginBottom: spacing.sm }}>A few taps and your space comes alive.</Muted>
-          <FirstStep emoji="🤗" label={`Send ${partnerName} a hug`} hint="They feel it on their phone right away" onPress={sendFirstHug} />
+          <FirstStep emoji="🤗" label={`Send ${partnerName} a hug`} hint="They feel it on their phone right away" onPress={sendHug} />
           <FirstStep emoji="💛" label="Share how you feel" hint="Your first daily check-in" onPress={() => navigation.navigate('Pulse')} />
           <FirstStep emoji="📸" label="Capture a moment" hint="One photo, shared just with them" onPress={() => navigation.navigate('Moments')} />
         </Card>
       ) : null}
     </Screen>
-    {/* The Golden Hour ignition: petals, once per day, when you both arrive */}
-    <Celebrate play={lanternPlay} />
+    {/* The Golden Hour ignition (petals, once per day, when you both arrive)
+        — and the once-ever moment the two phones first find each other. */}
+    <Celebrate play={lanternPlay || linkPlay} />
     {/* The secret-knock seal on the Time Capsule */}
     {sealKnock ? (
       <KnockSeal
@@ -871,5 +1002,47 @@ const styles = StyleSheet.create({
   actRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg + spacing.xs },
   actDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   actPartner: { backgroundColor: colors.accentSoft },
-  actChevron: { fontSize: 24, color: colors.primary },
+  // Chevrons are navigation, not accent: faint, matching the Us menu.
+  actChevron: { fontSize: 24, color: colors.textFaint },
+
+  // The pairing handshake pill (cloud mode, until the first partner signal).
+  linkWait: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  linkWaitTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
+
+  // One-tap hug from the hearth.
+  hugPill: {
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  hugPillText: { fontSize: font.size.sm, fontFamily: font.family.bold, color: colors.primaryDark },
+
+  // Quiet single-line rows for done/idle states (opened reveal, resting canvas).
+  doneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  doneRowText: { flex: 1, fontSize: font.size.sm, fontFamily: font.family.medium, color: colors.textSoft },
+  doneRowChevron: { fontSize: 20, color: colors.textFaint },
 });

@@ -369,9 +369,12 @@ export function LevelSelector({
 
 // ── Progress bar ───────────────────────────────────────────────────────────
 export function ProgressBar({ value, color = colors.primary }: { value: number; color?: string }) {
+  // Honest data: zero shows as truly empty; any real progress gets a visible
+  // 2% sliver so it never reads as nothing.
+  const width = value <= 0 ? 0 : Math.max(2, Math.min(100, value));
   return (
     <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${Math.max(2, Math.min(100, value))}%`, backgroundColor: color }]} />
+      <View style={[styles.progressFill, { width: `${width}%`, backgroundColor: color }]} />
     </View>
   );
 }
@@ -481,7 +484,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   levelLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs },
-  levelLabelText: { fontSize: font.size.xs, color: colors.textFaint, fontFamily: font.family.body },
+  // textSoft, not textFaint: these small anchor labels are meaning, not
+  // decoration, and must clear 4.5:1 on paper.
+  levelLabelText: { fontSize: font.size.xs, color: colors.textSoft, fontFamily: font.family.body },
 
   progressTrack: { height: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: radius.pill },

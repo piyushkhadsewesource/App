@@ -145,7 +145,10 @@ interface AppValue {
   }): Promise<boolean>;
   logFeeling(data: { mood: Mood; intensity: number; note?: string }): Promise<void>;
   removeFeeling(id: string): Promise<void>;
-  sendPing(type: PingType, message?: string): Promise<void>;
+  // Resolves false when the cloud write was rejected outright, so the caller
+  // can correct an already-shown optimistic toast. (Offline, the promise just
+  // stays pending with the queued write — callers never block on it.)
+  sendPing(type: PingType, message?: string): Promise<boolean>;
   markPingsSeen(): Promise<void>;
   // Ask for notification permission and register this device (native Expo token
   // or browser FCM token) into the shared space. Returns whether it succeeded.
@@ -194,7 +197,8 @@ interface AppValue {
   addDeckResponse(promptId: string, promptText: string, answer: string): Promise<boolean>;
   addMoment(data: { image: string; caption?: string; date?: string }): Promise<void>;
   removeMoment(id: string): Promise<void>;
-  sendSos(message?: string): Promise<void>;
+  /** False = the synced alert write was rejected (the push may still have gone out). */
+  sendSos(message?: string): Promise<boolean>;
   markAlertsSeen(): Promise<void>;
   setMeeting(at: number, label?: string): Promise<void>;
   clearMeeting(): Promise<void>;
@@ -753,8 +757,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async sendPing(type, message) {
       const db = dbRef.current;
-      if (!db) return;
-      await db.add('pings', {
+      if (!db) return false;
+      const ok = await db.add('pings', {
         id: genId('g_'),
         fromId: meId,
         type,
@@ -774,6 +778,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               : 'Is thinking of you 💭';
       const pingTokens = tokens.filter((t) => t.id !== meId).map((t) => t.token);
       if (pingTokens.length) void sendPush(pingTokens, who, body);
+      return ok;
     },
     async markPingsSeen() {
       const db = dbRef.current;
@@ -989,9 +994,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     async sendSos(message) {
       const db = dbRef.current;
-      if (!db) return;
+      if (!db) return false;
       const safeMessage = clamp(message, 500);
-      await db.add('alerts', {
+      const ok = await db.add('alerts', {
         id: genId('s_'),
         fromId: meId,
         createdAt: now(),
@@ -1000,10 +1005,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       // Also push to the partner's phone so it alarms even when the app is
       // closed. Fire-and-forget: never blocks or fails the SOS itself.
+      // The push fires regardless of the write result: for an emergency, every
+      // independent channel that might reach them should try.
       const partnerTokens = tokens.filter((t) => t.id !== meId).map((t) => t.token);
       if (partnerTokens.length) {
         void sendSosPush(partnerTokens, identity?.name ?? 'Your partner', safeMessage);
       }
+      return ok;
     },
     async markAlertsSeen() {
       const db = dbRef.current;

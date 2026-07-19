@@ -26,7 +26,7 @@ import { hasNotificationPermission } from '../services/permission';
 import { needsHomeScreenForPush, webNotificationsGranted } from '../services/webPush';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, spacing } from '../theme';
-import { spring } from '../theme/motion';
+import { prefersReducedMotion, spring } from '../theme/motion';
 import { PingType } from '../types/models';
 
 const PINGS: { type: PingType; emoji: string; label: string; sent: string; grad: readonly [string, string] }[] = [
@@ -58,6 +58,9 @@ function useBurst() {
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
   const fire = (emoji: string) => {
+    // Reduced motion: the toast + haptic already confirm the send; skip the
+    // firework rather than playing a jarring animation.
+    if (prefersReducedMotion()) return;
     const items = Array.from({ length: 9 }).map(() => {
       const v = new Animated.Value(0);
       const id = idRef.current++;
@@ -205,7 +208,11 @@ export default function MissYouScreen() {
     flash(`${sentMsg} 🤍`);
     // Fire the write without blocking: offline the cloud ack can hang, but the
     // ping lands locally at once and the cheerful toast should not wait on it.
-    void app.sendPing(type, message);
+    // If the write is rejected outright, correct the optimistic toast — a
+    // feeling sent into the void is worse than a moment of honesty.
+    void app.sendPing(type, message).then((ok) => {
+      if (!ok) toast.show(`Hmm, that didn't reach ${partnerName}. Check your connection and try again 🤍`, 3600);
+    });
   }
 
   function sendNote() {
@@ -219,23 +226,75 @@ export default function MissYouScreen() {
     send('miss', `Sent, you miss them ${level}/5`, '💗', `Missing you${' ❤️'.repeat(level)}`);
   }
 
+  // ── SOS undo window. Confirming arms a short countdown; the alert only
+  // fires when it reaches zero (or "Send now"). A mis-tap costs nothing; a
+  // real emergency skips the wait with one more tap. An alarm that cries wolf
+  // once is an alarm that gets ignored — this guards the trust.
+  const SOS_DELAY_S = 5;
+  const [sosLeft, setSosLeft] = useState(0); // seconds remaining; 0 = idle
+  const sosPending = useRef(false);
+  const sosTick = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clearSosTimer = () => {
+    if (sosTick.current) {
+      clearInterval(sosTick.current);
+      sosTick.current = null;
+    }
+  };
+
+  function fireSos() {
+    sosPending.current = false;
+    clearSosTimer();
+    setSosLeft(0);
+    // Fire the SOS without blocking (the alarm reaches the partner via live
+    // sync / push, never gated on the cloud ack). A rejected write still gets
+    // an honest correction — this is the one message that must never
+    // silently vanish.
+    hWarn(); // guarded: no-ops on web, matching the rest of the app
+    flash(`Emergency alert sent to ${partnerName} 🆘`, 2800);
+    void app.sendSos().then((ok) => {
+      if (!ok) toast.show(`Couldn't confirm it reached ${partnerName}. If it's urgent, call them.`, 4200);
+    });
+  }
+  function armSos() {
+    sosPending.current = true;
+    clearSosTimer();
+    setSosLeft(SOS_DELAY_S);
+    const deadline = Date.now() + SOS_DELAY_S * 1000;
+    sosTick.current = setInterval(() => {
+      const left = Math.ceil((deadline - Date.now()) / 1000);
+      if (left <= 0) fireSos();
+      else setSosLeft(left);
+    }, 250);
+  }
+  function cancelSos() {
+    sosPending.current = false;
+    clearSosTimer();
+    setSosLeft(0);
+    flash('Cancelled, nothing was sent 🤍', 2200);
+  }
+  // Leaving the screen mid-countdown still sends: the intent was confirmed,
+  // and quietly dropping a confirmed emergency would be the worse surprise.
+  useEffect(
+    () => () => {
+      if (sosPending.current) {
+        sosPending.current = false;
+        hWarn();
+        void app.sendSos();
+      }
+      clearSosTimer();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   function confirmSos() {
+    if (sosPending.current) return; // already counting down
     Alert.alert(
       'Send an emergency alert?',
-      `${partnerName}’s phone will sound a loud alarm and vibrate right away.`,
+      `${partnerName}’s phone will sound a loud alarm and vibrate. You’ll have ${SOS_DELAY_S} seconds to cancel.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send alert',
-          style: 'destructive',
-          onPress: () => {
-            // Confirm instantly; fire the SOS without blocking (the alarm reaches
-            // the partner via live sync / push, never gated on the cloud ack).
-            hWarn(); // guarded: no-ops on web, matching the rest of the app
-            flash(`Emergency alert sent to ${partnerName} 🆘`, 2800);
-            void app.sendSos();
-          },
-        },
+        { text: 'Send alert', style: 'destructive', onPress: armSos },
       ],
     );
   }
@@ -476,6 +535,32 @@ export default function MissYouScreen() {
 
       </Screen>
       {burst.node}
+      {/* The SOS countdown: armed, visible, and cancellable in one tap. */}
+      {sosLeft > 0 ? (
+        <View style={styles.sosBar} accessibilityLiveRegion="polite">
+          <Text style={styles.sosBarText} numberOfLines={2}>
+            🆘 Alerting {partnerName} in {sosLeft}s
+          </Text>
+          <Pressable
+            onPress={fireSos}
+            accessibilityRole="button"
+            accessibilityLabel="Send the alert now"
+            hitSlop={8}
+            style={styles.sosBarBtn}
+          >
+            <Text style={styles.sosBarNow}>Send now</Text>
+          </Pressable>
+          <Pressable
+            onPress={cancelSos}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel the alert"
+            hitSlop={8}
+            style={[styles.sosBarBtn, styles.sosBarCancel]}
+          >
+            <Text style={styles.sosBarCancelText}>Cancel</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -730,4 +815,30 @@ const styles = StyleSheet.create({
   },
   sosTitle: { fontSize: font.size.lg, fontFamily: font.family.bold, color: colors.danger },
   sosSub: { fontSize: font.size.sm, color: colors.textSoft, marginTop: 2 },
+
+  // The undo-send bar: floats above the tab bar, cancel is the easy reach.
+  sosBar: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.danger,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    ...{ elevation: 8 },
+  },
+  sosBarText: { flex: 1, color: colors.white, fontSize: font.size.md, fontFamily: font.family.bold },
+  sosBarBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  sosBarNow: { color: colors.white, fontSize: font.size.sm, fontFamily: font.family.semibold },
+  sosBarCancel: { backgroundColor: colors.white },
+  sosBarCancelText: { color: colors.danger, fontSize: font.size.sm, fontFamily: font.family.bold },
 });
