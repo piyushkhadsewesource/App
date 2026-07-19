@@ -28,6 +28,24 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Launch-site waitlist: anyone may add themselves exactly once per doc,
+    // no one can read, list, edit, or delete entries from the client. The
+    // website (website/) posts here over the Firestore REST API.
+    match /waitlist/{entry} {
+      allow create: if request.resource.data.size() <= 4
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 6
+        && request.resource.data.email.size() <= 200
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+[.][^@\\s]+$')
+        && (!('cities' in request.resource.data)
+            || (request.resource.data.cities is string
+                && request.resource.data.cities.size() <= 120))
+        && (!('source' in request.resource.data)
+            || (request.resource.data.source is string
+                && request.resource.data.source.size() <= 40));
+      allow read, update, delete: if false;
+    }
+
     // Everything inside one couple's space.
     match /spaces/{spaceId}/{document=**} {
       allow read: if validSpaceId(spaceId);
