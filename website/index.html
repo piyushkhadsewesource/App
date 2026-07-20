@@ -57,8 +57,11 @@
             <img src="assets/img/app-missyou.png" width="390" height="844" alt="" loading="lazy" />
           </div>
           <div class="phone">
-            <img src="assets/img/app-home.png" width="390" height="844"
-                 alt="Tether home screen: Good evening Piyush, Riya is active now, together again in 24 days, and a letter from Riya is ready." />
+            <video autoplay muted loop playsinline
+                   poster="assets/img/app-home.png" width="390" height="844"
+                   aria-label="A short screen recording of Tether: the home screen, a daily pulse check-in, and sending a hug from the When I miss you screen.">
+              <source src="assets/video/app-tour.webm" type="video/webm" />
+            </video>
           </div>
         </div>
       </div>
@@ -84,24 +87,52 @@
           <h2>Inside the app</h2>
           <p>Everything below syncs live between exactly two phones. These are real screens from the app we use every day.</p>
         </div>
-        <div class="bento" data-stagger>
-          <article class="cell cell-pulse reveal">
-            <div class="glyph" aria-hidden="true">💗</div>
-            <h3>The daily pulse</h3>
-            <p>One honest check-in a day: a feeling, a need, energy and stress. It becomes conversation starters, and an early warning when one of you has been struggling for days.</p>
-            <img class="cell-shot" src="assets/img/app-pulse.png" width="390" height="844" alt="The Pulse screen, asking how are you really, with feeling chips and energy dials." loading="lazy" />
-          </article>
-          <article class="cell cell-missyou reveal">
-            <div class="glyph" aria-hidden="true">🤍</div>
-            <h3>When I miss you</h3>
-            <p>A one-tap first-aid kit for the hard minutes: send a hug that buzzes their phone, a kiss, a reason you&rsquo;re loved. And an emergency alert that sounds their phone loudly the moment you truly need them.</p>
-            <div class="chip-row" aria-hidden="true">
-              <span class="chip chip-rose">Hug</span>
-              <span class="chip chip-gold">Kiss</span>
-              <span class="chip chip-violet">Miss you</span>
-              <span class="chip">Emergency alert</span>
+        <div class="tour">
+          <div class="tour-steps">
+            <div class="tour-step" data-shot="0">
+              <div class="glyph" aria-hidden="true">💗</div>
+              <h3>The daily pulse</h3>
+              <p>One honest check-in a day: a feeling, a need, energy and stress. It becomes conversation starters, and an early warning when one of you has been struggling for days.</p>
+              <img class="step-shot" src="assets/img/app-pulse.png" width="390" height="844" alt="" loading="lazy" />
             </div>
-          </article>
+            <div class="tour-step" data-shot="1">
+              <div class="glyph" aria-hidden="true">🤍</div>
+              <h3>When I miss you</h3>
+              <p>A one-tap first-aid kit for the hard minutes: send a hug that buzzes their phone, a kiss, a reason you&rsquo;re loved. And an emergency alert that sounds their phone loudly the moment you truly need them.</p>
+              <div class="chip-row" aria-hidden="true">
+                <span class="chip chip-rose">Hug</span>
+                <span class="chip chip-gold">Kiss</span>
+                <span class="chip chip-violet">Miss you</span>
+                <span class="chip">Emergency alert</span>
+              </div>
+              <img class="step-shot" src="assets/img/app-missyou.png" width="390" height="844" alt="" loading="lazy" />
+            </div>
+            <div class="tour-step" data-shot="2">
+              <div class="glyph" aria-hidden="true">🌅</div>
+              <h3>A home you share</h3>
+              <p>Good evening, the two of you. The morning paper of what happened while you slept, whether your person is free right now, what they need today, and the countdown to holding each other again.</p>
+              <img class="step-shot" src="assets/img/app-home.png" width="390" height="844" alt="" loading="lazy" />
+            </div>
+            <div class="tour-step" data-shot="3">
+              <div class="glyph" aria-hidden="true">📸</div>
+              <h3>A photo a day</h3>
+              <p>Moments is one photo from each of you, every day, collected into a calendar you can wander on the nights you miss each other most.</p>
+              <img class="step-shot" src="assets/img/app-moments.png" width="390" height="844" alt="" loading="lazy" />
+            </div>
+          </div>
+          <div class="tour-phone" aria-hidden="true">
+            <div class="phone">
+              <div class="tour-screen">
+                <img class="tour-shot active" src="assets/img/app-pulse.png" alt="" loading="lazy" />
+                <img class="tour-shot" src="assets/img/app-missyou.png" alt="" loading="lazy" />
+                <img class="tour-shot" src="assets/img/app-home.png" alt="" loading="lazy" />
+                <img class="tour-shot" src="assets/img/app-moments.png" alt="" loading="lazy" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bento" data-stagger>
           <article class="cell cell-glass reveal">
             <div class="glyph" aria-hidden="true">🫶</div>
             <h3>Through the glass</h3>
@@ -120,9 +151,8 @@
           <article class="cell cell-house reveal">
             <div class="glyph" aria-hidden="true">📖</div>
             <h3>The wider house</h3>
-            <p>A photo a day, delayed love letters, a memory vault, a reunion countdown, shared games, and a monthly scrapbook page written from your own check-ins.</p>
+            <p>Delayed love letters, a memory vault, a reunion countdown, shared games, and a monthly scrapbook page written from your own check-ins.</p>
             <div class="chip-row" aria-hidden="true">
-              <span class="chip">Moments</span>
               <span class="chip">Letters</span>
               <span class="chip">Vault</span>
               <span class="chip">Countdown</span>

@@ -18,6 +18,7 @@ website/
   assets/js         nav, staggered scroll reveals
   assets/fonts      self-hosted Fraunces + Inter (variable woff2)
   assets/img        real app screenshots, store logos, favicon, OG card
+  assets/video      real in-app screen recording (webm) for the hero phone
 ```
 
 ## Preview locally

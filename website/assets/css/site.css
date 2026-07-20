@@ -360,10 +360,12 @@ h3 { font-size: 22px; letter-spacing: -0.012em; }
   box-shadow: var(--shadow-hero);
   transform: rotate(-1.6deg);
 }
-.phone img {
+.phone img,
+.phone video {
   border-radius: 39px;
   width: 100%;
   height: auto;
+  display: block;
 }
 .phone::after {
   content: '';
@@ -476,10 +478,9 @@ h3 { font-size: 22px; letter-spacing: -0.012em; }
   border-color: #F3D9E2;
 }
 .cell-glass:hover { border-color: transparent; }
-.cell:hover .cell-shot { transform: scale(1.025); }
 .cell h3 { margin-bottom: 8px; }
 .cell p { color: var(--ink-soft); font-size: 15.5px; margin: 0; max-width: 42ch; }
-.cell .glyph {
+.glyph {
   width: 48px;
   height: 48px;
   border-radius: 14px;
@@ -490,34 +491,82 @@ h3 { font-size: 22px; letter-spacing: -0.012em; }
   margin-bottom: 16px;
   background: var(--surface-alt);
 }
-.cell-pulse .glyph,
 .cell-compass .glyph,
 .cell-day .glyph { background: var(--surface); }
 .cell-glass .glyph { background: rgba(255, 255, 255, 0.2); }
 
-.cell-pulse    { grid-column: span 5; grid-row: span 2; background: var(--violet-soft); border-color: #E2DBF6; }
-.cell-missyou  { grid-column: span 7; }
-.cell-glass    { grid-column: span 4; background: linear-gradient(135deg, var(--rose-dark), var(--violet-deep)); border: 0; }
-.cell-compass  { grid-column: span 3; background: var(--gold-soft); border-color: #F1E2C2; }
-.cell-day      { grid-column: span 7; background: var(--rose-soft); border-color: #F6D8E2; }
-.cell-house    { grid-column: span 5; }
+.cell-glass    { grid-column: span 7; background: linear-gradient(135deg, var(--rose-dark), var(--violet-deep)); border: 0; }
+.cell-compass  { grid-column: span 5; background: var(--gold-soft); border-color: #F1E2C2; }
+.cell-day      { grid-column: span 5; background: var(--rose-soft); border-color: #F6D8E2; }
+.cell-house    { grid-column: span 7; }
 
 .cell-glass h3, .cell-glass p { color: #fff; }
 .cell-glass p { opacity: 0.92; max-width: none; }
 
-.cell-pulse { padding-bottom: 0; }
-.cell-shot {
-  margin: 26px auto 0;
-  width: min(84%, 270px);
-  height: 400px;
+/* Scroll tour: steps on the left, a pinned phone whose screen follows along */
+.tour {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: clamp(32px, 5vw, 80px);
+  margin-bottom: clamp(48px, 6vw, 76px);
+}
+.tour-step {
+  min-height: 62vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 46ch;
+}
+.tour-step h3 { font-size: 26px; margin-bottom: 10px; }
+.tour-step p { color: var(--ink-soft); font-size: 16.5px; margin: 0; }
+.step-shot { display: none; }
+
+.tour-phone { position: relative; }
+.tour-phone .phone {
+  position: sticky;
+  top: clamp(90px, calc(50vh - 340px), 150px);
+  margin-inline: auto;
+  transform: none;
+  animation: none;
+}
+.tour-screen {
+  position: relative;
+  aspect-ratio: 390 / 844;
+  border-radius: 39px;
+  overflow: hidden;
+}
+.tour-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  object-position: top;
-  border-radius: 22px 22px 0 0;
-  box-shadow: 0 16px 44px rgba(80, 46, 64, 0.16);
-  border: 6px solid var(--ink);
-  border-bottom: 0;
-  transform-origin: bottom center;
-  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 39px;
+  opacity: 0;
+}
+.tour-shot.active { opacity: 1; }
+
+@media (min-width: 981px) and (prefers-reduced-motion: no-preference) {
+  .tour-step { opacity: 0.35; transition: opacity 0.45s ease; }
+  .tour-step.active { opacity: 1; }
+  .tour-shot { transform: scale(1.05); transition: opacity 0.5s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+  .tour-shot.active { transform: scale(1); }
+}
+
+@media (max-width: 980px) {
+  .tour { grid-template-columns: 1fr; }
+  .tour-phone { display: none; }
+  .tour-step { min-height: 0; padding: 26px 0; max-width: none; }
+  .step-shot {
+    display: block;
+    margin-top: 24px;
+    width: min(76%, 270px);
+    height: auto;
+    border-radius: 26px;
+    border: 6px solid var(--ink);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }

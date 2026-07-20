@@ -64,6 +64,24 @@
     });
   }
 
+  /* ── Feature tour: the sticky phone follows the step you're reading ─── */
+  var steps = document.querySelectorAll('.tour-step');
+  var shots = document.querySelectorAll('.tour-shot');
+  if (steps.length) {
+    steps[0].classList.add('active');
+    if ('IntersectionObserver' in window) {
+      var tourIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var idx = entry.target.getAttribute('data-shot');
+          steps.forEach(function (s) { s.classList.toggle('active', s === entry.target); });
+          shots.forEach(function (sh, i) { sh.classList.toggle('active', String(i) === idx); });
+        });
+      }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+      steps.forEach(function (s) { tourIO.observe(s); });
+    }
+  }
+
   var revealed = document.querySelectorAll('.reveal');
   if (reduceMotion || !('IntersectionObserver' in window)) {
     revealed.forEach(function (el) { el.classList.add('in'); });
