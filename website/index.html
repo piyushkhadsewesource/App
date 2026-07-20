@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tether · Close, across any distance</title>
-  <meta name="description" content="Tether is a private app for long-distance couples, built by Piyush Khadse and Riya Ray for themselves. It is opening to every couple who lives apart. Join the waitlist." />
+  <meta name="description" content="Tether is the private app for long-distance couples, made by Piyush Khadse and Riya Ray. One shared space for exactly two people, on Android, iPhone, and the web." />
   <meta property="og:title" content="Tether · Close, across any distance" />
-  <meta property="og:description" content="The private app two MBA students built to survive their own long distance, now opening to every couple who lives apart." />
+  <meta property="og:description" content="The private app two MBA students built to survive their own long distance, now ready for every couple who lives apart." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="assets/img/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -28,10 +28,10 @@
       <nav class="nav-links" id="nav-links">
         <a href="#story">Our story</a>
         <a href="#inside">Inside the app</a>
-        <a href="#plan">The plan</a>
+        <a href="#road">The road</a>
         <a href="#founders">Founders</a>
         <a href="#faq">FAQ</a>
-        <a class="btn btn-primary" href="#waitlist">Join the waitlist</a>
+        <a class="btn btn-primary" href="#get-started">Get the app</a>
       </nav>
     </div>
   </header>
@@ -43,15 +43,19 @@
       <div class="hero-glow" aria-hidden="true"></div>
       <div class="wrap hero-grid">
         <div>
-          <p class="hero-status cascade"><span class="pulse-dot" aria-hidden="true"></span>Private today. Opening to every couple in 2027.</p>
+          <p class="hero-status cascade"><span class="pulse-dot" aria-hidden="true"></span>Now live on Android, iPhone, and the web</p>
           <h1 class="cascade"><span class="em-rose">Close,</span> across any distance.</h1>
-          <p class="lede cascade">The private app we built to feel each other&rsquo;s days across the distance, now opening to every long-distance couple.</p>
+          <p class="lede cascade">We built Tether to feel each other&rsquo;s days while living apart. Now it&rsquo;s ready for the two of you.</p>
           <div class="hero-ctas cascade">
-            <a class="btn btn-primary" href="#waitlist">Join the waitlist</a>
-            <a class="btn btn-soft" href="#story">Read our story</a>
+            <a class="btn btn-primary" href="#get-started">Get the app</a>
+            <!-- TODO: confirm the deployed web-app URL before launch day -->
+            <a class="btn btn-soft" href="https://tether-aee5d.web.app">Open in your browser</a>
           </div>
         </div>
         <div class="hero-phone cascade">
+          <div class="phone phone-b" aria-hidden="true">
+            <img src="assets/img/app-missyou.png" width="390" height="844" alt="" loading="lazy" />
+          </div>
           <div class="phone">
             <img src="assets/img/app-home.png" width="390" height="844"
                  alt="Tether home screen: Good evening Piyush, Riya is active now, together again in 24 days, and a letter from Riya is ready." />
@@ -67,7 +71,7 @@
         <div class="prose">
           <p class="reveal">We are two MBA students in different cities, a night train apart. Like every long-distance couple, we had the video calls, the chats, the good-morning texts. And like every long-distance couple, we knew that none of it answers the real question: <em>how are you, really, right now?</em></p>
           <p class="reveal">So we built our own answer. Tether is one shared, private space for exactly two people. It carries a daily pulse of how each of us is feeling, a hug that buzzes in a pocket hundreds of kilometres away, a compass needle that points at the other person, and an alarm that sounds one phone the instant the other needs help. No feeds. No followers. No one else.</p>
-          <p class="reveal">Until now it has been ours alone, opened many times a day, usually for under a minute. It works. And every time we describe it to another couple living apart, we hear the same thing: <em>we want this too.</em> So we are opening the door.</p>
+          <p class="reveal">For a long time it was ours alone, opened many times a day, usually for under a minute. It works. And every time we described it to another couple living apart, we heard the same thing: <em>we want this too.</em> So we opened the door.</p>
           <p class="sign reveal">Piyush &amp; Riya</p>
         </div>
       </div>
@@ -78,14 +82,14 @@
       <div class="wrap">
         <div class="section-head reveal">
           <h2>Inside the app</h2>
-          <p>Everything below ships today and syncs live between exactly two phones. These are real screens from the app we use every day.</p>
+          <p>Everything below syncs live between exactly two phones. These are real screens from the app we use every day.</p>
         </div>
-        <div class="bento">
+        <div class="bento" data-stagger>
           <article class="cell cell-pulse reveal">
             <div class="glyph" aria-hidden="true">💗</div>
             <h3>The daily pulse</h3>
             <p>One honest check-in a day: a feeling, a need, energy and stress. It becomes conversation starters, and an early warning when one of you has been struggling for days.</p>
-            <img class="cell-shot" src="assets/img/app-pulse.png" width="390" height="844" alt="The Pulse screen, asking how are you really, with feeling chips and energy dials." />
+            <img class="cell-shot" src="assets/img/app-pulse.png" width="390" height="844" alt="The Pulse screen, asking how are you really, with feeling chips and energy dials." loading="lazy" />
           </article>
           <article class="cell cell-missyou reveal">
             <div class="glyph" aria-hidden="true">🤍</div>
@@ -135,7 +139,7 @@
       <div class="wrap inner">
         <h2 class="reveal">No feeds. No followers. No one else.</h2>
         <p class="lede reveal">Tether is not a social network. It is the opposite: one private space, two people, and design that serves the relationship instead of showing off.</p>
-        <div class="principles">
+        <div class="principles" data-stagger>
           <div class="principle reveal"><b>A space for exactly two</b><span>Everything in Tether is by one of you, for the other. There is no discover tab, no strangers, nothing public, ever.</span></div>
           <div class="principle reveal"><b>Quiet by default</b><span>One gentle nudge at a time. Tether whispers, it never nags, and it never manufactures urgency to win your attention.</span></div>
           <div class="principle reveal"><b>Honest data only</b><span>No fake liveness, no invented streaks. If it says your person is active now, they really are.</span></div>
@@ -143,37 +147,37 @@
       </div>
     </section>
 
-    <!-- The plan -->
-    <section class="section" id="plan">
+    <!-- The road -->
+    <section class="section" id="road">
       <div class="wrap">
         <div class="section-head reveal">
-          <span class="eyebrow">The expansion plan</span>
+          <span class="eyebrow">How we got here</span>
           <h2>From the two of us, to any two of you</h2>
-          <p>Tether is private today, and that is deliberate: it let us build something true before building something big. Here is how it opens up.</p>
+          <p>Tether stayed private for a long time, and that was deliberate: it let us build something true before building something big.</p>
         </div>
-        <ol class="timeline" role="list">
-          <li class="milestone is-now reveal">
-            <span class="when">Now · mid 2026</span>
+        <ol class="timeline reveal" role="list" data-stagger>
+          <li class="milestone reveal">
+            <span class="when">The beginning</span>
             <h3>Just us two</h3>
-            <p>Tether runs every day on two phones. Every feature is battle-tested on a real long-distance relationship before anyone else ever sees it.</p>
+            <p>Tether ran every day on two phones. Every feature was battle-tested on a real long-distance relationship before anyone else ever saw it.</p>
           </li>
           <li class="milestone reveal">
             <span class="when">Late 2026</span>
             <h3>First invited couples</h3>
-            <p>A small private beta with couples we know who live apart. Real feedback, honest conversations about what to charge, and hardening for many spaces instead of one.</p>
+            <p>A small private beta with couples we knew who lived apart. Real feedback, honest conversations, and hardening for many spaces instead of one.</p>
           </li>
           <li class="milestone reveal">
             <span class="when">Early 2027</span>
-            <h3>The waitlist becomes invites</h3>
-            <p>Invitations go out in waves, in the order people joined. Android arrives through Play Store beta; iPhone as an installable web app while we finish the App Store build.</p>
+            <h3>The waitlist became invites</h3>
+            <p>Invitations went out in waves, in the order people joined. The first couples shaped the app you are looking at now.</p>
           </li>
-          <li class="milestone reveal">
-            <span class="when">2027</span>
+          <li class="milestone is-now reveal">
+            <span class="when">Now</span>
             <h3>Open to everyone</h3>
-            <p>Tether in the app stores for every couple who lives apart, with the same promise it was born with: exactly two people, and nothing between them.</p>
+            <p>Tether is out in the world for every couple who lives apart, with the same promise it was born with: exactly two people, and nothing between them.</p>
           </li>
         </ol>
-        <p class="plan-note reveal">This is our plan, not a promise. We are two MBA students shipping between lectures, so the dates may drift a little. The direction will not.</p>
+        <p class="plan-note reveal">We are still two MBA students shipping between lectures. Tether will grow, but it will stay what it is: small, personal, and honest.</p>
       </div>
     </section>
 
@@ -184,7 +188,7 @@
           <h2>Made by the two of us</h2>
           <p>Tether&rsquo;s founders are also its first two users, which keeps us honest: every rough edge is one we feel ourselves the same evening.</p>
         </div>
-        <div class="founders-grid">
+        <div class="founders-grid" data-stagger>
           <article class="founder rose reveal">
             <div class="medal" aria-hidden="true">P</div>
             <h3>Piyush Khadse</h3>
@@ -198,37 +202,43 @@
             <p>Studies at the Indian Institute of Management Indore and shapes every feature before it ships, from the daily pulse to the games. Keeper of Tether&rsquo;s voice, and of its promise to stay quiet.</p>
           </article>
         </div>
-        <p class="founders-joint reveal">&ldquo;We are doing our MBAs in different cities. Tether is how we stay close. Making it yours is our next chapter.&rdquo;</p>
+        <p class="founders-joint reveal">&ldquo;We are doing our MBAs in different cities. Tether is how we stay close. Now it is yours too.&rdquo;</p>
       </div>
     </section>
 
-    <!-- Waitlist -->
-    <section class="section waitlist" id="waitlist">
+    <!-- Get started -->
+    <section class="section getstarted" id="get-started">
       <div class="wrap inner">
-        <h2 class="reveal">Be one of the first couples</h2>
-        <p class="lede reveal">Leave an email and we will invite you in waves, in the order people arrived, starting early 2027.</p>
-        <form class="wl-form reveal" id="wl-form" novalidate>
-          <div class="wl-field">
-            <label for="wl-email">Your email</label>
-            <input type="email" id="wl-email" name="email" required autocomplete="email" placeholder="you@example.com" />
+        <h2 class="reveal">Start tonight</h2>
+        <p class="lede reveal">Five minutes, two phones, one private code. That is all pairing takes.</p>
+        <div class="steps" data-stagger>
+          <div class="step reveal">
+            <span class="step-mark" aria-hidden="true">1</span>
+            <h3>Install it on both phones</h3>
+            <p>Android, iPhone, or straight in the browser. One of you installs first and invites the other.</p>
           </div>
-          <div class="wl-field">
-            <label for="wl-cities">Your two cities <span class="hint">(optional)</span></label>
-            <input type="text" id="wl-cities" name="cities" autocomplete="off" placeholder="Mumbai &amp; Indore" maxlength="120" />
+          <div class="step reveal">
+            <span class="step-mark" aria-hidden="true">2</span>
+            <h3>Enter the same code</h3>
+            <p>Your pairing code is the only key to your space. Share it with your person and no one else.</p>
           </div>
-          <div class="honeypot" aria-hidden="true">
-            <label for="wl-website">Leave this empty</label>
-            <input type="text" id="wl-website" name="website" tabindex="-1" autocomplete="off" />
+          <div class="step reveal">
+            <span class="step-mark" aria-hidden="true">3</span>
+            <h3>Feel close tonight</h3>
+            <p>Send the first hug, set your reunion countdown, and let the daily pulse do the rest.</p>
           </div>
-          <button class="btn btn-primary" type="submit" id="wl-submit">Join the waitlist</button>
-          <p class="wl-error" id="wl-error" role="alert"></p>
-          <p class="wl-small">One email when it is your turn. Nothing else, and never shared.</p>
-        </form>
-        <div class="wl-success" id="wl-success" role="status">
-          <div class="mark" aria-hidden="true">🤍</div>
-          <h3>You&rsquo;re on the list</h3>
-          <p>We will write to you when the door opens. Until then, hold on to each other.</p>
         </div>
+        <div class="cta-row reveal">
+          <!-- TODO: the Play Store listing URL matches the app id; verify it is live before launch day -->
+          <a class="btn btn-dark" href="https://play.google.com/store/apps/details?id=com.tether.app">
+            <img src="assets/img/googleplay.svg" alt="" width="20" height="20" /> Get it on Google Play
+          </a>
+          <!-- TODO: replace with the real App Store URL once the listing exists -->
+          <a class="btn btn-dark" href="https://apps.apple.com/app/tether">
+            <img src="assets/img/apple.svg" alt="" width="20" height="20" /> Download on the App Store
+          </a>
+        </div>
+        <p class="wl-small reveal">Or <a href="https://tether-aee5d.web.app">open Tether in your browser</a>, it works on any phone or laptop, no install needed.</p>
       </div>
     </section>
 
@@ -239,8 +249,8 @@
           <h2>Questions couples ask us</h2>
         </div>
         <details class="reveal">
-          <summary>When can we actually use it?</summary>
-          <p>A small invited beta starts late 2026, waitlist invitations go out in waves from early 2027, and the public launch follows later in 2027. Waitlist order is invitation order.</p>
+          <summary>How do we get set up?</summary>
+          <p>Install Tether on both phones, or open it in the browser. On the first screen, one of you starts your space and gets a private code; the other joins with that same code. From that moment everything syncs live between you two.</p>
         </details>
         <details class="reveal">
           <summary>Is it really private?</summary>
@@ -248,11 +258,11 @@
         </details>
         <details class="reveal">
           <summary>Which phones does it work on?</summary>
-          <p>Today Tether runs as a native Android app and as an installable web app on iPhone, from one codebase, with full parity between the two. Play Store and App Store releases are part of the launch plan.</p>
+          <p>Android and iPhone, and it runs fully in the browser on any phone or laptop, all from one codebase with the same features everywhere.</p>
         </details>
         <details class="reveal">
-          <summary>What will it cost?</summary>
-          <p>The beta will be free. For the public launch we are working out fair pricing together with our first couples; whatever we choose, staying close should never feel like a subscription trap.</p>
+          <summary>What does it cost?</summary>
+          <p>Tether is free to start. If we ever charge for anything, it will be fair, clearly explained, and easy to say no to. Staying close should never feel like a subscription trap.</p>
         </details>
         <details class="reveal">
           <summary>We&rsquo;re not long-distance. Can we still use it?</summary>
@@ -271,8 +281,8 @@
           <p class="tagline">Close, across any distance. 🤍</p>
         </div>
         <nav aria-label="Footer">
+          <a href="#get-started">Get the app</a>
           <a href="#story">Our story</a>
-          <a href="#plan">The plan</a>
           <a href="privacy.html">Privacy</a>
           <a href="terms.html">Terms</a>
           <a href="mailto:riyaray.we@gmail.com">Write to us</a>
