@@ -3,38 +3,49 @@
 //
 // Each partner shares a *city* (typed by hand, geocoded via Open-Meteo's free
 // API — never live GPS, so it's a direction, not a tracker). From the two
-// cities we compute the great-circle distance and initial bearing; the needle
-// swings there with spring inertia.
+// cities we compute the great-circle distance and initial bearing.
+//
+// The instrument is real: a graduated tick ring, an eight-point rose (rose
+// points for the cardinals, violet for the intercardinals — the two of them,
+// woven in), N/E/S/W with intercardinal letters, and a fixed lubber mark at
+// the top of the bezel. When live heading is available the whole card rotates
+// under the needle the way a real compass card does; without a sensor the
+// card rests north-up and the needle still shows the true bearing.
 //
 // Heading (which way the phone itself is facing) is best-effort, tiered:
 //   • Native + expo-sensors in the binary → live magnetometer heading.
 //   • Web with deviceorientation events    → live browser heading.
-//   • Neither                              → the dial is fixed north-up and the
-//     needle still shows the true bearing ("relative to north").
+//   • Neither                              → north-up card, honest bearing.
 // The sensors module is loaded inside try/catch so binaries built before it
 // was added degrade to north-up instead of crashing.
 // ─────────────────────────────────────────────────────────────────────────
 import { useIsFocused } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import LensView from '../components/LensView';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../components/ui';
 import { useToast } from '../components/ToastHost';
 import { hSuccess } from '../lib/haptics';
-import { geocodeCity, haversineKm, initialBearingDeg, reverseGeocode } from '../lib/geo';
+import { cardinal16, geocodeCity, haversineKm, initialBearingDeg, reverseGeocode } from '../lib/geo';
 import { useHeading } from '../lib/useHeading';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { spring } from '../theme/motion';
 
-// One quiet line under the instrument; rotates daily, never randomly mid-visit.
-const LINES = [
-  'Every kilometre of it is temporary.',
-  'Same sky. Same story. Different chairs.',
-  'If you started walking now, they’d meet you halfway.',
-  'The needle never wavers. Neither do you two.',
-  'Distance is just geography being dramatic.',
+// One quiet line engraved under the instrument; rotates daily, never randomly
+// mid-visit. Where a line uses a number, it's the real one — honest data only.
+const LINES: ReadonlyArray<(km: number) => string> = [
+  (km) => `Every one of those ${km.toLocaleString()} kilometres is temporary.`,
+  () => 'Same sky. Same story. Different chairs.',
+  (km) => `On foot: about ${Math.max(1, Math.round(km / 40)).toLocaleString()} days. They'd meet you halfway.`,
+  () => 'The needle never wavers. Neither do you two.',
+  (km) => `Light crosses it in ${(km / 299_792).toFixed(km > 3000 ? 2 : 3)} seconds. So does a goodnight.`,
+  (km) => `${Math.round(km * 1312).toLocaleString()} steps. You're already walking each other home.`,
 ];
+
+/** Shortest signed turn from one angle to another, safe for unwrapped values
+ *  (plain `% 360` goes negative in JS and would whip the needle a full turn). */
+const shortestDelta = (from: number, to: number) => ((((to - from) % 360) + 540) % 360) - 180;
 
 export default function CompassScreen({ navigation }: any) {
   const app = useApp();
@@ -48,6 +59,8 @@ export default function CompassScreen({ navigation }: any) {
   const [city, setCity] = useState('');
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
+  // "Moved?" editing is tucked behind a quiet link once you're on the map.
+  const [editing, setEditing] = useState(false);
 
   async function useMyLocation() {
     if (locating) return;
@@ -95,6 +108,7 @@ export default function CompassScreen({ navigation }: any) {
     setLocating(false);
     if (ok) {
       hSuccess();
+      setEditing(false);
       toast.show(`You're on the map: ${name} 🤍`, 2600);
     } else {
       toast.show("Couldn't save. Check your connection and try again", 2400);
@@ -116,6 +130,7 @@ export default function CompassScreen({ navigation }: any) {
     if (ok) {
       hSuccess();
       setCity('');
+      setEditing(false);
       toast.show(`You're on the map: ${hit.name} 🤍`, 2600);
     } else {
       toast.show("Couldn't save. Check your connection and try again", 2400);
@@ -137,6 +152,7 @@ export default function CompassScreen({ navigation }: any) {
   const [lensOpen, setLensOpen] = useState(false);
   const focused = useIsFocused();
   const heading = useHeading(focused && !lensOpen);
+  const live = heading != null;
 
   // Active-presence location model: refresh my pin ONCE per visit to this
   // screen — never a background watcher, never on other screens — and only
@@ -169,22 +185,33 @@ export default function CompassScreen({ navigation }: any) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── The needle: springs toward (bearing − heading), unwrapped so it never
-  //    whips the long way round when crossing north. ───────────────────────
-  const angle = useRef(new Animated.Value(0)).current;
-  const lastRef = useRef(0);
+  // ── The instrument's two rotations, both spring-tracked and unwrapped so
+  //    neither ever whips the long way round when crossing north. ──────────
+  // The needle springs toward (bearing − heading)…
+  const needleAngle = useRef(new Animated.Value(0)).current;
+  const needleLast = useRef(0);
   useEffect(() => {
     if (!ready) return;
     const target = (bearing - (heading ?? 0) + 360) % 360;
-    const delta = ((target - lastRef.current + 540) % 360) - 180;
-    const next = lastRef.current + delta;
-    lastRef.current = next;
-    Animated.spring(angle, { toValue: next, useNativeDriver: true, ...spring.gentle }).start();
-  }, [bearing, heading, ready, angle]);
-  const rotate = angle.interpolate({ inputRange: [-3600, 3600], outputRange: ['-3600deg', '3600deg'] });
+    const next = needleLast.current + shortestDelta(needleLast.current, target);
+    needleLast.current = next;
+    Animated.spring(needleAngle, { toValue: next, useNativeDriver: true, ...spring.gentle }).start();
+  }, [bearing, heading, ready, needleAngle]);
+  const needleRotate = needleAngle.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] });
 
-  const line = LINES[Math.floor(Date.now() / 86_400_000) % LINES.length];
-  const live = heading != null;
+  // …and the card rotates by −heading, like a real compass card under glass.
+  const cardAngle = useRef(new Animated.Value(0)).current;
+  const cardLast = useRef(0);
+  useEffect(() => {
+    if (!ready) return;
+    const target = live ? -(heading as number) : 0;
+    const next = cardLast.current + shortestDelta(cardLast.current, target);
+    cardLast.current = next;
+    Animated.spring(cardAngle, { toValue: next, useNativeDriver: true, ...spring.gentle }).start();
+  }, [heading, live, ready, cardAngle]);
+  const cardRotate = cardAngle.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] });
+
+  const line = LINES[Math.floor(Date.now() / 86_400_000) % LINES.length](km);
 
   return (
     <Screen scroll>
@@ -218,27 +245,43 @@ export default function CompassScreen({ navigation }: any) {
               <View style={styles.haloOuter} />
               <View style={styles.haloInner} />
               <View style={styles.dial}>
-                <View style={styles.dialInnerRing} />
-                {(['N', 'E', 'S', 'W'] as const).map((c, i) => (
-                  <Text
-                    key={c}
-                    style={[
-                      styles.cardinal,
-                      i === 0 && styles.cardN,
-                      i === 1 && styles.cardE,
-                      i === 2 && styles.cardS,
-                      i === 3 && styles.cardW,
-                    ]}
-                  >
-                    {c}
-                  </Text>
-                ))}
+                {/* The rotating card: ticks, rose, letters — one instrument. */}
+                <Animated.View style={[styles.compassCard, { transform: [{ rotate: cardRotate }] }]}>
+                  <RoseStar />
+                  <TickRing />
+                  <View style={styles.dialInnerRing} />
+                  {(['N', 'E', 'S', 'W'] as const).map((c, i) => (
+                    <Text
+                      key={c}
+                      style={[
+                        styles.cardinal,
+                        i === 0 && styles.cardN,
+                        i === 1 && styles.cardE,
+                        i === 2 && styles.cardS,
+                        i === 3 && styles.cardW,
+                      ]}
+                    >
+                      {c}
+                    </Text>
+                  ))}
+                  {INTERCARDINALS.map(([c, sx, sy]) => (
+                    <Text
+                      key={c}
+                      style={[styles.intercardinal, { transform: [{ translateX: sx * IC_OFF }, { translateY: sy * IC_OFF }] }]}
+                    >
+                      {c}
+                    </Text>
+                  ))}
+                </Animated.View>
+
                 {together ? (
                   <Text style={styles.togetherMark}>🤍</Text>
                 ) : (
-                  <Animated.View style={[styles.needleWrap, { transform: [{ rotate }] }]}>
+                  <Animated.View style={[styles.needleWrap, { transform: [{ rotate: needleRotate }] }]}>
                     <View style={styles.needleNorth} />
+                    <View style={styles.needleSpine} />
                     <View style={styles.needleSouth} />
+                    <View style={styles.needleWeight} />
                   </Animated.View>
                 )}
                 {/* The hub holds the heart — every direction starts from it. */}
@@ -246,11 +289,15 @@ export default function CompassScreen({ navigation }: any) {
                   <Text style={styles.hubHeart}>🤍</Text>
                 </View>
               </View>
+              {/* Lubber mark: fixed to the bezel, it's the top of YOUR phone. */}
+              <View style={styles.lubber} />
             </View>
 
-            <Text style={styles.reading}>
-              {together ? '0 km. Look up.' : `${partner} · ${km.toLocaleString()} km · that way`}
+            <Text style={styles.km}>{together ? '0 km' : `${km.toLocaleString()} km`}</Text>
+            <Text style={styles.kmSub}>
+              {together ? 'Look up.' : `to ${partner} · ${cardinal16(bearing)} · ${Math.round(bearing)}°`}
             </Text>
+
             {together || live ? (
               <View style={styles.liveRow}>
                 <View style={[styles.liveDot, { backgroundColor: together ? colors.primary : colors.good }]} />
@@ -261,6 +308,8 @@ export default function CompassScreen({ navigation }: any) {
                 relative to north (hold your phone flat, top facing north)
               </Muted>
             )}
+
+            {!together ? <Text style={styles.engraving}>{line}</Text> : null}
           </View>
 
           {!together ? (
@@ -269,14 +318,6 @@ export default function CompassScreen({ navigation }: any) {
               <Button label="True North · open the lens" icon="📷" onPress={() => setLensOpen(true)} />
             </>
           ) : null}
-
-          <Card tone="surface" style={{ marginTop: spacing.lg }}>
-            <Body style={{ fontStyle: 'italic', textAlign: 'center' }}>{line}</Body>
-          </Card>
-
-          <Muted style={{ marginTop: spacing.lg, textAlign: 'center' }}>
-            {my.name} → {theirs.name}
-          </Muted>
 
           <LensView
             visible={lensOpen}
@@ -291,23 +332,107 @@ export default function CompassScreen({ navigation }: any) {
 
       {my ? (
         <>
-          <View style={{ height: spacing.lg }} />
-          <Card>
-            <Muted>Moved? Update where you are any time.</Muted>
-            <View style={{ height: spacing.sm }} />
-            <Button label={locating ? 'Finding you…' : '📍 Use my current location'} variant="soft" disabled={locating} onPress={useMyLocation} />
-            <View style={{ height: spacing.sm }} />
-            <Field value={city} onChangeText={setCity} placeholder={my.name} autoCapitalize="words" />
-            <Button label={searching ? 'Finding it…' : 'Update my city'} variant="ghost" disabled={!city.trim() || searching} onPress={shareCity} />
-          </Card>
+          <Pressable
+            onPress={() => setEditing((e) => !e)}
+            accessibilityRole="button"
+            accessibilityLabel={editing ? 'Close location update' : 'Update where you are'}
+            hitSlop={8}
+            style={styles.routeRow}
+          >
+            <Text style={styles.routeText} numberOfLines={1}>
+              {theirs ? `${my.name} → ${theirs.name}` : my.name}
+            </Text>
+            <Text style={styles.routeLink}>{editing ? 'Done' : 'Moved? Update'}</Text>
+          </Pressable>
+          {editing ? (
+            <Card>
+              <Button label={locating ? 'Finding you…' : '📍 Use my current location'} variant="soft" disabled={locating} onPress={useMyLocation} />
+              <View style={{ height: spacing.sm }} />
+              <Field value={city} onChangeText={setCity} placeholder={my.name} autoCapitalize="words" />
+              <Button label={searching ? 'Finding it…' : 'Update my city'} variant="ghost" disabled={!city.trim() || searching} onPress={shareCity} />
+            </Card>
+          ) : null}
         </>
       ) : null}
     </Screen>
   );
 }
 
-const DIAL = 240;
+const DIAL = 248;
 const HALO = DIAL + 48; // outermost decorative ring
+const IC_OFF = Math.round((DIAL / 2 - 30) * Math.SQRT1_2); // intercardinal radius
+
+const INTERCARDINALS: ReadonlyArray<readonly [string, number, number]> = [
+  ['NE', 1, -1],
+  ['SE', 1, 1],
+  ['SW', -1, 1],
+  ['NW', -1, -1],
+];
+
+/** The graduated ring: a tick every 6°, a heavier one every 30°. Static. */
+function TickRing() {
+  return (
+    <>
+      {Array.from({ length: 60 }, (_, i) => {
+        const major = i % 5 === 0;
+        return (
+          <View
+            key={i}
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { alignItems: 'center', transform: [{ rotate: `${i * 6}deg` }] }]}
+          >
+            <View
+              style={{
+                marginTop: 6,
+                width: major ? 2 : 1,
+                height: major ? 10 : 5,
+                borderRadius: 1,
+                backgroundColor: major ? colors.textSoft : 'rgba(168,159,155,0.55)',
+              }}
+            />
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
+/** The rose itself: eight points radiating from the hub — rose-tinted for the
+ *  cardinals, violet for the intercardinals. The two of them, woven in. */
+function RoseStar() {
+  const long = Math.round(DIAL * 0.36);
+  const short = Math.round(DIAL * 0.24);
+  return (
+    <>
+      {Array.from({ length: 8 }, (_, i) => {
+        const cardinalPt = i % 2 === 0;
+        const len = cardinalPt ? long : short;
+        return (
+          <View
+            key={i}
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { alignItems: 'center', transform: [{ rotate: `${i * 45}deg` }] }]}
+          >
+            <View
+              style={{
+                position: 'absolute',
+                top: DIAL / 2 - len,
+                width: 0,
+                height: 0,
+                borderLeftWidth: cardinalPt ? 7 : 5,
+                borderRightWidth: cardinalPt ? 7 : 5,
+                borderBottomWidth: len,
+                borderLeftColor: 'transparent',
+                borderRightColor: 'transparent',
+                borderBottomColor: cardinalPt ? 'rgba(232,99,140,0.14)' : 'rgba(124,107,214,0.10)',
+              }}
+            />
+          </View>
+        );
+      })}
+    </>
+  );
+}
 
 const styles = StyleSheet.create({
   dialWrap: {
@@ -348,14 +473,20 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: '#FBF6F1',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compassCard: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dialInnerRing: {
     position: 'absolute',
-    width: DIAL - 32,
-    height: DIAL - 32,
-    borderRadius: (DIAL - 32) / 2,
+    width: DIAL - 40,
+    height: DIAL - 40,
+    borderRadius: (DIAL - 40) / 2,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(168,159,155,0.45)',
   },
@@ -363,12 +494,32 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontFamily: font.family.displaySemi,
     fontSize: font.size.md,
+    color: colors.textSoft,
+  },
+  cardN: { top: 19, alignSelf: 'center', color: colors.primary },
+  cardE: { right: 21, top: DIAL / 2 - 10 },
+  cardS: { bottom: 19, alignSelf: 'center' },
+  cardW: { left: 21, top: DIAL / 2 - 10 },
+  intercardinal: {
+    position: 'absolute',
+    fontFamily: font.family.semibold,
+    fontSize: 10,
+    letterSpacing: font.tracking.caps,
     color: colors.textFaint,
   },
-  cardN: { top: 10, alignSelf: 'center', color: colors.textSoft },
-  cardE: { right: 12, top: DIAL / 2 - 10 },
-  cardS: { bottom: 10, alignSelf: 'center' },
-  cardW: { left: 12, top: DIAL / 2 - 10 },
+  lubber: {
+    position: 'absolute',
+    top: (HALO - DIAL) / 2 - 1,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 9,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'rgba(90,46,64,0.55)',
+    zIndex: 3,
+  },
   hub: {
     position: 'absolute',
     width: 44,
@@ -394,7 +545,7 @@ const styles = StyleSheet.create({
   needleWrap: {
     position: 'absolute',
     width: 4,
-    height: DIAL - 64,
+    height: DIAL - 72,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -403,29 +554,83 @@ const styles = StyleSheet.create({
     top: 0,
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderBottomWidth: (DIAL - 64) / 2,
+    borderLeftWidth: 4.5,
+    borderRightWidth: 4.5,
+    borderBottomWidth: (DIAL - 72) / 2,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderBottomColor: colors.primary,
   },
+  needleSpine: {
+    position: 'absolute',
+    top: 10,
+    width: 1.5,
+    height: (DIAL - 72) / 2 - 14,
+    backgroundColor: 'rgba(199,65,107,0.55)',
+  },
   needleSouth: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 4,
     width: 3,
-    height: (DIAL - 64) / 2 - 6,
+    height: (DIAL - 72) / 2 - 10,
     borderRadius: 2,
     backgroundColor: 'rgba(90,46,64,0.25)',
   },
+  needleWeight: {
+    position: 'absolute',
+    bottom: 0,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: 'rgba(90,46,64,0.4)',
+  },
   togetherMark: { fontSize: 44 },
-  reading: {
+  km: {
     marginTop: spacing.lg,
-    fontFamily: font.family.displaySemi,
-    fontSize: font.size.xl,
+    fontFamily: font.family.display,
+    fontSize: font.size.huge,
+    lineHeight: 44,
     color: colors.text,
-    letterSpacing: font.tracking.heading,
+    letterSpacing: font.tracking.display,
+    textAlign: 'center',
+  },
+  kmSub: {
+    marginTop: 2,
+    fontFamily: font.family.medium,
+    fontSize: font.size.sm,
+    color: colors.textSoft,
+    letterSpacing: font.tracking.label,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
+  },
+  engraving: {
+    marginTop: spacing.lg,
+    fontFamily: font.family.body,
+    fontStyle: 'italic',
+    fontSize: font.size.sm,
+    lineHeight: 20,
+    color: colors.textSoft,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  routeText: {
+    flexShrink: 1,
+    fontFamily: font.family.body,
+    fontSize: font.size.sm,
+    color: colors.textSoft,
+    letterSpacing: font.tracking.label,
+  },
+  routeLink: {
+    fontFamily: font.family.semibold,
+    fontSize: font.size.sm,
+    color: colors.primaryDark,
   },
 });

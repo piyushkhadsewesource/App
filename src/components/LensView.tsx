@@ -162,6 +162,9 @@ function TrueNorthBody({
   }, [diff, guideAngle]);
   const guideRotate = guideAngle.interpolate({ inputRange: [-90, 90], outputRange: ['-90deg', '90deg'] });
 
+  // Degrees still owed, rounded to 5 so the caption reads steady instead of
+  // flickering with every sensor tick.
+  const owed = diff == null ? 0 : Math.max(5, Math.round(Math.abs(diff) / 5) * 5);
   const hint =
     diff == null
       ? `face the ${cardinal16(bearing)}, the needle wakes with the next build`
@@ -170,8 +173,8 @@ function TrueNorthBody({
         : Math.abs(diff) <= 20
           ? 'almost…'
           : diff < 0
-            ? '‹ turn left'
-            : 'turn right ›';
+            ? `‹ turn left · ${owed}°`
+            : `turn right · ${owed}° ›`;
 
   if (!permission?.granted) {
     return (
