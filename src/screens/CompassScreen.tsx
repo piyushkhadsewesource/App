@@ -26,6 +26,7 @@ import LensView from '../components/LensView';
 import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../components/ui';
 import { useToast } from '../components/ToastHost';
 import { hSuccess } from '../lib/haptics';
+import { useNow } from '../lib/useNow';
 import { cardinal16, geocodeCity, haversineKm, initialBearingDeg, reverseGeocode } from '../lib/geo';
 import { useHeading } from '../lib/useHeading';
 import { useApp } from '../state/AppContext';
@@ -46,6 +47,24 @@ const LINES: ReadonlyArray<(km: number) => string> = [
 /** Shortest signed turn from one angle to another, safe for unwrapped values
  *  (plain `% 360` goes negative in JS and would whip the needle a full turn). */
 const shortestDelta = (from: number, to: number) => ((((to - from) % 360) + 540) % 360) - 180;
+
+/**
+ * A hedged, honest sense of the sky where they are — from the sun's position
+ * by longitude, never a fabricated clock (the app's rule: no invented numbers).
+ * Longitude gives real solar time; we translate only into day / night / the
+ * two thresholds, always softened with "probably", because latitude and season
+ * move the true daylight hours around. Returns null when there's no place yet.
+ */
+function theirSky(lon: number, nowMs: number): { emoji: string; text: string } {
+  const d = new Date(nowMs);
+  const utcHours = d.getUTCHours() + d.getUTCMinutes() / 60;
+  const solar = (((utcHours + lon / 15) % 24) + 24) % 24; // local solar hour 0–24
+  if (solar >= 5 && solar < 7) return { emoji: '🌅', text: 'sunrise, probably, where they are' };
+  if (solar >= 7 && solar < 17) return { emoji: '☀️', text: "it's daytime where they are" };
+  if (solar >= 17 && solar < 19) return { emoji: '🌇', text: 'near sunset where they are' };
+  if (solar >= 19 && solar < 22) return { emoji: '🌆', text: 'evening where they are' };
+  return { emoji: '🌙', text: "it's night where they are" };
+}
 
 export default function CompassScreen({ navigation }: any) {
   const app = useApp();
@@ -153,6 +172,11 @@ export default function CompassScreen({ navigation }: any) {
   const focused = useIsFocused();
   const heading = useHeading(focused && !lensOpen);
   const live = heading != null;
+
+  // Their sky: refreshed a couple of times an hour (the sun moves slowly), only
+  // while this screen is mounted. A warm "what's it like over there" glance.
+  const now = useNow(90_000);
+  const sky = ready && !together && theirs ? theirSky(theirs!.lon, now) : null;
 
   // Active-presence location model: refresh my pin ONCE per visit to this
   // screen — never a background watcher, never on other screens — and only
@@ -308,6 +332,13 @@ export default function CompassScreen({ navigation }: any) {
                 relative to north (hold your phone flat, top facing north)
               </Muted>
             )}
+
+            {sky ? (
+              <View style={styles.sky}>
+                <Text style={styles.skyEmoji}>{sky.emoji}</Text>
+                <Text style={styles.skyText}>{sky.text}</Text>
+              </View>
+            ) : null}
 
             {!together ? <Text style={styles.engraving}>{line}</Text> : null}
           </View>
@@ -602,6 +633,26 @@ const styles = StyleSheet.create({
     letterSpacing: font.tracking.label,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
+  },
+  sky: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentSoft, // partner lives in violet
+  },
+  skyEmoji: { fontSize: font.size.md },
+  skyText: {
+    fontFamily: font.family.medium,
+    fontSize: font.size.sm,
+    // A deeper violet than colors.accent so 13px text clears 4.5:1 on the
+    // violet-soft chip (accent itself lands ~3.5:1); keeps the partner-violet
+    // identity. Mirrors the palette's goldDeep / goodDeep / mutedDeep pattern.
+    color: '#5D4BC0',
+    letterSpacing: font.tracking.label,
   },
   engraving: {
     marginTop: spacing.lg,
