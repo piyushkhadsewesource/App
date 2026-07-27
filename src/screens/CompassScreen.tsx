@@ -27,7 +27,15 @@ import { AppHeader, Body, Button, Card, Field, Muted, Screen } from '../componen
 import { useToast } from '../components/ToastHost';
 import { hSuccess } from '../lib/haptics';
 import { useNow } from '../lib/useNow';
-import { cardinal16, geocodeCity, haversineKm, initialBearingDeg, reverseGeocode } from '../lib/geo';
+import {
+  cardinal16,
+  geocodeCity,
+  haversineKm,
+  initialBearingDeg,
+  reverseGeocode,
+  shortestTurnDeg,
+  skyAtLongitude,
+} from '../lib/geo';
 import { useHeading } from '../lib/useHeading';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -38,33 +46,21 @@ import { spring } from '../theme/motion';
 const LINES: ReadonlyArray<(km: number) => string> = [
   (km) => `Every one of those ${km.toLocaleString()} kilometres is temporary.`,
   () => 'Same sky. Same story. Different chairs.',
-  (km) => `On foot: about ${Math.max(1, Math.round(km / 40)).toLocaleString()} days. They'd meet you halfway.`,
+  // ~40 km is a long day's walk. Singular is reachable (the needle only rests
+  // under 25 km), so "1 days" has to be impossible.
+  (km) => {
+    const days = Math.max(1, Math.round(km / 40));
+    return `On foot: about ${days.toLocaleString()} day${days === 1 ? '' : 's'}. They'd meet you halfway.`;
+  },
   () => 'The needle never wavers. Neither do you two.',
-  (km) => `Light crosses it in ${(km / 299_792).toFixed(km > 3000 ? 2 : 3)} seconds. So does a goodnight.`,
+  // Light takes tens of milliseconds to cross a continent — seconds would round
+  // to a meaningless "0.02", so this reads in ms, the unit the number lives in.
+  (km) => {
+    const ms = (km / 299_792) * 1000;
+    return `Light crosses it in ${ms < 10 ? ms.toFixed(1) : Math.round(ms).toLocaleString()} milliseconds. So does a goodnight.`;
+  },
   (km) => `${Math.round(km * 1312).toLocaleString()} steps. You're already walking each other home.`,
 ];
-
-/** Shortest signed turn from one angle to another, safe for unwrapped values
- *  (plain `% 360` goes negative in JS and would whip the needle a full turn). */
-const shortestDelta = (from: number, to: number) => ((((to - from) % 360) + 540) % 360) - 180;
-
-/**
- * A hedged, honest sense of the sky where they are — from the sun's position
- * by longitude, never a fabricated clock (the app's rule: no invented numbers).
- * Longitude gives real solar time; we translate only into day / night / the
- * two thresholds, always softened with "probably", because latitude and season
- * move the true daylight hours around. Returns null when there's no place yet.
- */
-function theirSky(lon: number, nowMs: number): { emoji: string; text: string } {
-  const d = new Date(nowMs);
-  const utcHours = d.getUTCHours() + d.getUTCMinutes() / 60;
-  const solar = (((utcHours + lon / 15) % 24) + 24) % 24; // local solar hour 0–24
-  if (solar >= 5 && solar < 7) return { emoji: '🌅', text: 'sunrise, probably, where they are' };
-  if (solar >= 7 && solar < 17) return { emoji: '☀️', text: "it's daytime where they are" };
-  if (solar >= 17 && solar < 19) return { emoji: '🌇', text: 'near sunset where they are' };
-  if (solar >= 19 && solar < 22) return { emoji: '🌆', text: 'evening where they are' };
-  return { emoji: '🌙', text: "it's night where they are" };
-}
 
 export default function CompassScreen({ navigation }: any) {
   const app = useApp();
@@ -176,7 +172,7 @@ export default function CompassScreen({ navigation }: any) {
   // Their sky: refreshed a couple of times an hour (the sun moves slowly), only
   // while this screen is mounted. A warm "what's it like over there" glance.
   const now = useNow(90_000);
-  const sky = ready && !together && theirs ? theirSky(theirs!.lon, now) : null;
+  const sky = ready && !together && theirs ? skyAtLongitude(theirs!.lon, now) : null;
 
   // Active-presence location model: refresh my pin ONCE per visit to this
   // screen — never a background watcher, never on other screens — and only
@@ -217,7 +213,7 @@ export default function CompassScreen({ navigation }: any) {
   useEffect(() => {
     if (!ready) return;
     const target = (bearing - (heading ?? 0) + 360) % 360;
-    const next = needleLast.current + shortestDelta(needleLast.current, target);
+    const next = needleLast.current + shortestTurnDeg(needleLast.current, target);
     needleLast.current = next;
     Animated.spring(needleAngle, { toValue: next, useNativeDriver: true, ...spring.gentle }).start();
   }, [bearing, heading, ready, needleAngle]);
@@ -229,7 +225,7 @@ export default function CompassScreen({ navigation }: any) {
   useEffect(() => {
     if (!ready) return;
     const target = live ? -(heading as number) : 0;
-    const next = cardLast.current + shortestDelta(cardLast.current, target);
+    const next = cardLast.current + shortestTurnDeg(cardLast.current, target);
     cardLast.current = next;
     Animated.spring(cardAngle, { toValue: next, useNativeDriver: true, ...spring.gentle }).start();
   }, [heading, live, ready, cardAngle]);

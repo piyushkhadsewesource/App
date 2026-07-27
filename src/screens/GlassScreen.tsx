@@ -33,6 +33,7 @@ import { AppHeader, Body, Button, Card, Muted, Screen, SectionTitle } from '../c
 import { useToast } from '../components/ToastHost';
 import { formatRelative } from '../lib/date';
 import { hLight, hMedium, hSuccess } from '../lib/haptics';
+import { BEAT_MAX_MS, BEAT_MIN_MS, bpmOf, isPlausibleBeat, plausibleIntervals } from '../lib/heartbeat';
 import { useNow } from '../lib/useNow';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
@@ -44,19 +45,8 @@ const HOLD_FRESH_MS = 6_000;
 const HOLD_REFRESH_MS = 2_500;
 /** Diameter of the warmth bloom that follows my finger. */
 const BLOOM = 150;
-
-/** Humanly-plausible beat gaps only, or null when there's nothing usable. */
-function plausibleIntervals(arr?: number[] | null): number[] | null {
-  const safe = (arr ?? []).filter((n) => typeof n === 'number' && n >= 250 && n <= 2500);
-  return safe.length >= 2 ? safe : null;
-}
-
-/** Median-based beats-per-minute — robust against one mistimed tap. */
-function bpmOf(intervals: number[]): number | null {
-  if (intervals.length === 0) return null;
-  const sorted = [...intervals].sort((a, b) => a - b);
-  return Math.round(60_000 / sorted[Math.floor(sorted.length / 2)]);
-}
+/** The calm resting rhythm the glass falls back to when they've left none. */
+const DEFAULT_BEAT_MS = 880;
 
 export default function GlassScreen({ navigation }: any) {
   const app = useApp();
@@ -119,19 +109,34 @@ export default function GlassScreen({ navigation }: any) {
     endHold();
   };
 
-  // Warmth blooms in when you're touching together, and the glass beats a
-  // lub-dub for as long as you both hold — at their true recorded rhythm when
-  // they've left one, a calm resting default when they haven't.
   const warm = useRef(new Animated.Value(0)).current;
   const beatV = useRef(new Animated.Value(1)).current; // 1 = halo faded out
+
+  // Their rhythm, keyed by its VALUES rather than its object identity: a
+  // re-delivered snapshot carrying the same numbers must not count as a
+  // change, or the beat below would restart underneath a resting thumb.
+  const rhythmKey = useMemo(() => {
+    const safe = plausibleIntervals(app.partnerHeartbeat?.intervals);
+    return safe ? safe.join(',') : '';
+  }, [app.partnerHeartbeat]);
   const partnerRhythm = useMemo(
-    () => plausibleIntervals(app.partnerHeartbeat?.intervals),
-    [app.partnerHeartbeat],
+    () => (rhythmKey ? rhythmKey.split(',').map(Number) : null),
+    [rhythmKey],
   );
+
+  // The warmth, and the single success haptic at the moment you find each
+  // other. Keyed on `together` alone, so nothing else can ever re-fire it.
   useEffect(() => {
     Animated.spring(warm, { toValue: together ? 1 : 0, useNativeDriver: true, ...spring.gentle }).start();
+    if (together) hSuccess();
+  }, [together, warm]);
+
+  // The shared heartbeat: a lub-dub for as long as you both hold, at their
+  // true recorded rhythm when they've left one, a calm resting beat when they
+  // haven't. Clamped to what a haptic engine can render as a pulse rather than
+  // a buzz — a very fast recorded rhythm still reads as a heartbeat here.
+  useEffect(() => {
     if (!together) return;
-    hSuccess(); // the moment you find each other
     let dub: ReturnType<typeof setTimeout> | null = null;
     let next: ReturnType<typeof setTimeout> | null = null;
     let idx = 0;
@@ -140,7 +145,7 @@ export default function GlassScreen({ navigation }: any) {
       dub = setTimeout(() => hLight(), 140); // …the second half of the lub-dub
       beatV.setValue(0);
       Animated.timing(beatV, { toValue: 1, duration: 700, easing: easeOut, useNativeDriver: true }).start();
-      const gap = partnerRhythm ? partnerRhythm[idx++ % partnerRhythm.length] : 880;
+      const gap = partnerRhythm ? partnerRhythm[idx++ % partnerRhythm.length] : DEFAULT_BEAT_MS;
       next = setTimeout(beat, Math.min(2_000, Math.max(450, gap)));
     };
     beat();
@@ -148,7 +153,7 @@ export default function GlassScreen({ navigation }: any) {
       if (dub) clearTimeout(dub);
       if (next) clearTimeout(next);
     };
-  }, [together, partnerRhythm, warm, beatV]);
+  }, [together, partnerRhythm, beatV]);
 
   // Seconds together: counted honestly from the moment both thumbs met. Long
   // holds get their number back as a small keepsake toast on release.
@@ -204,7 +209,7 @@ export default function GlassScreen({ navigation }: any) {
   const saveRhythm = async () => {
     const intervals = taps.slice(1).map((t, i) => t - taps[i]);
     // Validate locally first so "not enough beats" feedback is instant.
-    const plausible = intervals.filter((n) => n >= 250 && n <= 2500);
+    const plausible = intervals.filter(isPlausibleBeat);
     if (plausible.length < 4) {
       toast.show('Keep tapping with your pulse a little longer', 2200);
       return;
@@ -558,12 +563,13 @@ function Ripple({ x, y, onDone }: { x: number; y: number; onDone: () => void }) 
  * interval between beats. A keepsake you can see, not decoration.
  */
 function Waveform({ intervals }: { intervals: number[] }) {
-  const safe = intervals.filter((n) => typeof n === 'number' && n >= 250 && n <= 2500).slice(0, 18);
+  const safe = intervals.filter(isPlausibleBeat).slice(0, 18);
   if (safe.length === 0) return null;
+  const span = BEAT_MAX_MS - BEAT_MIN_MS;
   return (
     <View style={styles.waveRow}>
       {safe.map((ms, i) => (
-        <View key={i} style={[styles.waveBar, { width: 6 + ((ms - 250) / 2250) * 18 }]} />
+        <View key={i} style={[styles.waveBar, { width: 6 + ((ms - BEAT_MIN_MS) / span) * 18 }]} />
       ))}
     </View>
   );

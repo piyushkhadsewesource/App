@@ -41,6 +41,50 @@ export function cardinal16(bearing: number): string {
 }
 
 /**
+ * Shortest signed turn from one angle to another, in degrees (−180…180].
+ *
+ * Exists because JavaScript's `%` keeps the sign of the dividend, so the
+ * obvious `(to - from) % 360` goes negative and a needle tracking it would
+ * whip the long way round every time it crossed north. The extra +540/−180
+ * folds the result into the short arc regardless of sign or winding, which
+ * lets callers accumulate an unwrapped angle that springs smoothly forever.
+ */
+export function shortestTurnDeg(from: number, to: number): number {
+  return ((((to - from) % 360) + 540) % 360) - 180;
+}
+
+/** What the sky is probably doing somewhere, from the sun's position. */
+export interface SkyState {
+  emoji: string;
+  text: string;
+}
+
+/**
+ * A hedged, honest sense of the sky at a longitude — derived from where the
+ * sun actually is, never from a fabricated local clock (the house rule: no
+ * invented numbers). Longitude gives real *solar* time, which is genuinely
+ * knowable; we then say only day / night / near the edges, and hedge the
+ * transitions, because latitude and season move true sunrise and sunset by
+ * hours and we refuse to state what we can't know.
+ *
+ * `nowMs` is injected rather than read from the clock so this stays pure and
+ * testable.
+ */
+export function skyAtLongitude(lon: number, nowMs: number): SkyState | null {
+  if (typeof lon !== 'number' || !Number.isFinite(lon)) return null;
+  const d = new Date(nowMs);
+  if (Number.isNaN(d.getTime())) return null;
+  const utcHours = d.getUTCHours() + d.getUTCMinutes() / 60;
+  // Wrapped into 0–24 so longitudes past the date line behave.
+  const solar = (((utcHours + lon / 15) % 24) + 24) % 24;
+  if (solar >= 5 && solar < 7) return { emoji: '🌅', text: 'sunrise, probably, where they are' };
+  if (solar >= 7 && solar < 17) return { emoji: '☀️', text: "it's daytime where they are" };
+  if (solar >= 17 && solar < 19) return { emoji: '🌇', text: 'near sunset where they are' };
+  if (solar >= 19 && solar < 22) return { emoji: '🌆', text: 'evening where they are' };
+  return { emoji: '🌙', text: "it's night where they are" };
+}
+
+/**
  * Coarse city name for a coordinate via BigDataCloud's free keyless
  * reverse-geocoder (CORS-friendly, works on native and web). Null on any
  * failure — callers fall back to a generic label rather than erroring.
