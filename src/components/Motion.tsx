@@ -34,23 +34,28 @@ export function Press({
   accessibilityRole?: AccessibilityRole;
   accessibilityLabel?: string;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const to = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
+  // One driver for both transforms keeps them exactly in sync: 0 = at rest,
+  // 1 = fully pressed. Scale alone reads as a zoom; scale plus a ~1.5px sink
+  // reads as pressing INTO the surface, which is what makes a tap feel physical.
+  const p = useRef(new Animated.Value(0)).current;
+  const scale = p.interpolate({ inputRange: [0, 1], outputRange: [1, scaleTo] });
+  const sink = p.interpolate({ inputRange: [0, 1], outputRange: [0, 1.5] });
+  const to = (v: number) => Animated.spring(p, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
   return (
     <Pressable
       disabled={disabled}
       hitSlop={hitSlop}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
-      onPressIn={() => !disabled && to(scaleTo)}
-      onPressOut={() => to(1)}
+      onPressIn={() => !disabled && to(1)}
+      onPressOut={() => to(0)}
       onPress={(e) => {
         if (disabled) return;
         if (haptic) hLight();
         onPress?.(e);
       }}
     >
-      <Animated.View style={[{ transform: [{ scale }] }, style]}>{children}</Animated.View>
+      <Animated.View style={[{ transform: [{ scale }, { translateY: sink }] }, style]}>{children}</Animated.View>
     </Pressable>
   );
 }

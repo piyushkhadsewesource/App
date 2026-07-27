@@ -98,6 +98,36 @@ if (!html.includes('tether-web-fixes')) {
        with accessibilityRole="button") shows a pointer cursor on hover.
        Disabled buttons keep the default arrow. */
     [role="button"] { cursor: pointer; }
+
+    /* Type that holds its shape: iOS inflates font sizes on rotation unless
+       told otherwise, which silently breaks a carefully set type scale. */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+    /* Selection in the brand's own rose rather than the browser's blue. */
+    ::selection { background: rgba(232, 99, 140, 0.22); }
+
+    /* Keyboard users get a real focus ring; pointer users never see it.
+       React Native Web strips outlines by default, which leaves keyboard
+       navigation completely invisible. */
+    :focus-visible {
+      outline: 2px solid rgba(232, 99, 140, 0.9);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    /* Motion is optional. The app's own animations already check the setting
+       in JS (src/theme/motion.ts); this is the CSS backstop for anything the
+       renderer or a library animates on its own. Transitions collapse to
+       instant rather than being removed, so nothing is ever left mid-flight
+       or invisible. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
     [role="button"][aria-disabled="true"] { cursor: default; }
 
     /* Desktop: centre the mobile-sized app with a dark surround instead of

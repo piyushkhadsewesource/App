@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Text, View } from 'react-native';
+import { prefersReducedMotion } from './src/theme/motion';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SosOverlay from './src/components/SosOverlay';
 import { ToastProvider, useToast } from './src/components/ToastHost';
@@ -185,6 +186,7 @@ function Root() {
 function BootHeart() {
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) return; // reduced motion: hold still
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breathe, { toValue: 1, duration: 1100, useNativeDriver: true }),

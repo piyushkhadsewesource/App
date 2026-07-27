@@ -9,7 +9,7 @@ import { formatDate, isoToDate, toISODate } from '../lib/date';
 import { genPairingCode } from '../services/identity';
 import { useApp } from '../state/AppContext';
 import { colors, font, gradients, radius, shadow, spacing } from '../theme';
-import { easeOut } from '../theme/motion';
+import { easeOut, prefersReducedMotion } from '../theme/motion';
 
 type PairMode = 'create' | 'join';
 
@@ -36,6 +36,7 @@ export default function OnboardingScreen() {
   // A slow, living breath on the hero heart so the first screen feels alive.
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) return; // reduced motion: hold still
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breathe, { toValue: 1, duration: 1900, easing: easeOut, useNativeDriver: true }),

@@ -178,17 +178,21 @@ export function Button({
   // one. A plain Pressable stays the touch target (the most reliable on
   // device) and keeps layout styles; the visuals live on an inner animated
   // fill that scales.
-  const scale = useRef(new Animated.Value(1)).current;
-  const press = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
+  // 0 = at rest, 1 = pressed. The label scales down AND sinks a hair, so the
+  // tap reads as physical depression rather than as a zoom.
+  const pv = useRef(new Animated.Value(0)).current;
+  const scale = pv.interpolate({ inputRange: [0, 1], outputRange: [1, 0.96] });
+  const sink = pv.interpolate({ inputRange: [0, 1], outputRange: [0, 1.5] });
+  const press = (v: number) => Animated.spring(pv, { toValue: v, useNativeDriver: true, ...spring.snappy }).start();
   const pressProps = {
     onPress,
     disabled,
     onPressIn: () => {
       if (disabled) return;
-      press(0.97);
+      press(1);
       hLight(); // tactile detent on every button tap (no-op on web)
     },
-    onPressOut: () => press(1),
+    onPressOut: () => press(0),
   };
 
   const bg =
@@ -209,7 +213,7 @@ export function Button({
           { backgroundColor: bg },
           border,
           disabled ? { opacity: 0.45 } : null,
-          { transform: [{ scale }] },
+          { transform: [{ scale }, { translateY: sink }] },
         ]}
       >
         {variant === 'primary' ? (

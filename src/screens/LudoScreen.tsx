@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { prefersReducedMotion } from '../theme/motion';
 import { Celebrate } from '../components/Celebrate';
 import Dice from '../components/Dice';
 import { AppHeader, Body, Button, Card, Muted, Screen } from '../components/ui';
@@ -99,6 +100,7 @@ export default function LudoScreen({ navigation }: any) {
   // Pulse for movable tokens.
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) return; // reduced motion: hold still
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 620, useNativeDriver: true }),

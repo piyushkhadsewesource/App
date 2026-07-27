@@ -24,6 +24,15 @@ not drift it toward generic AI defaults, and do not swap the serif.
   use sine ease and may be slow.
 - Web = iOS Safari PWA: never rely on ScrollView momentum events for state
   (they don't fire) — taps commit state, wheels are native-only (see TimeDial).
+- **Press is physical**: tappables scale down AND sink ~1.5px (`Press`,
+  `Button`). Scale alone reads as a zoom; scale plus a sink reads as pressing
+  into the surface. Press-in is immediate, release settles with a spring.
+- **Every ambient loop must be guarded.** Any `Animated.loop` needs a
+  `prefersReducedMotion()` early-return, resting at a sensible value (the
+  skeleton rests bright, the heartbeat rests still-but-visible). An unguarded
+  loop pulses forever for someone who asked their device for less motion.
+  `scripts/setup-pwa.mjs` ships a CSS backstop for anything the renderer
+  animates on its own.
 
 ## Conventions
 

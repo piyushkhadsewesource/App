@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import { prefersReducedMotion } from '../theme/motion';
 import { colors, radius } from '../theme';
 
 /**
@@ -25,6 +26,10 @@ export function useInitialHydrate(ms = 650): boolean {
 export function Skeleton({ height, style }: { height?: number; style?: StyleProp<ViewStyle> }) {
   const pulse = useRef(new Animated.Value(0.5)).current;
   useEffect(() => {
+    if (prefersReducedMotion()) {
+      pulse.setValue(1); // rest bright rather than mid-shimmer
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),

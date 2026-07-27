@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleProp, ViewStyle } from 'react-native';
+import { prefersReducedMotion } from '../theme/motion';
 
 export function Heartbeat({
   children,
@@ -17,8 +18,8 @@ export function Heartbeat({
 }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!active) {
-      v.setValue(0);
+    if (!active || prefersReducedMotion()) {
+      v.setValue(0); // still, but present: colour and copy carry it
       return;
     }
     // lub-dub ... rest. Two quick thumps then a pause, like a real heartbeat.
