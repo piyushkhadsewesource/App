@@ -32,6 +32,12 @@ export interface ActivityEvent {
   at: number;
   route: string;
   params?: Record<string, unknown>;
+  /** Back-to-back events with the same key, by the same person, fold into one row. */
+  groupKey?: string;
+  /** The folded row's text for `n` events (n ≥ 2). */
+  groupText?: (n: number) => string;
+  /** How many events this row stands for (set by `collapseRuns`). */
+  count?: number;
 }
 
 export interface ActivitySources {
@@ -60,6 +66,10 @@ function pingWord(t: PingType): string {
   return t === 'kiss' ? 'a kiss' : t === 'hug' ? 'a hug' : t === 'miss' ? 'a "miss you"' : 'a thought';
 }
 
+function pingPlural(t: PingType, n: number): string {
+  return t === 'kiss' ? `${n} kisses` : t === 'hug' ? `${n} hugs` : t === 'miss' ? `"miss you" ${n} times` : `${n} thoughts`;
+}
+
 function trim(s: string | undefined, n = 60): string {
   const t = (s ?? '').trim();
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
@@ -85,13 +95,13 @@ export function buildActivity(s: ActivitySources): ActivityEvent[] {
     push({ id: `me_${m.id}`, actorId: m.authorId, icon: m.emoji || '⭐️', at: m.createdAt, route: 'Vault', text: `${who(m.authorId)} saved a memory: ${trim(m.title)}` });
   }
   for (const r of s.reasons) {
-    push({ id: `re_${r.id}`, actorId: r.authorId, icon: '💗', at: r.createdAt, route: 'MissYou', text: `${who(r.authorId)} added a reason they love you` });
+    push({ id: `re_${r.id}`, actorId: r.authorId, icon: '💗', at: r.createdAt, route: 'MissYou', text: `${who(r.authorId)} added a reason they love you`, groupKey: 'reason', groupText: (n) => `${who(r.authorId)} added ${n} reasons they love you` });
   }
   for (const f of s.future) {
     push({ id: `fu_${f.id}`, actorId: f.authorId, icon: f.done ? '✅' : '✨', at: f.createdAt, route: 'Future', text: `${who(f.authorId)} ${f.done ? 'ticked off' : 'added'} a dream: ${trim(f.text)}` });
   }
   for (const d of s.deck) {
-    push({ id: `dk_${d.id}`, actorId: d.authorId, icon: '🃏', at: d.createdAt, route: 'Deck', text: `${who(d.authorId)} answered a closeness question` });
+    push({ id: `dk_${d.id}`, actorId: d.authorId, icon: '🃏', at: d.createdAt, route: 'Deck', text: `${who(d.authorId)} answered a closeness question`, groupKey: 'deck', groupText: (n) => `${who(d.authorId)} answered ${n} closeness questions` });
   }
   for (const it of s.schedule) {
     push({ id: `sc_${it.id}`, actorId: it.authorId, icon: it.icon || '🗓️', at: it.updatedAt ?? it.createdAt, route: 'Schedule', text: `${who(it.authorId)} planned ${trim(it.title)}` });
@@ -119,7 +129,7 @@ export function buildActivity(s: ActivitySources): ActivityEvent[] {
     }
   }
   for (const p of s.pings) {
-    push({ id: `pg_${p.id}`, actorId: p.fromId, icon: pingIcon(p.type), at: p.createdAt, route: 'MissYou', text: `${who(p.fromId)} sent ${pingWord(p.type)}` });
+    push({ id: `pg_${p.id}`, actorId: p.fromId, icon: pingIcon(p.type), at: p.createdAt, route: 'MissYou', text: `${who(p.fromId)} sent ${pingWord(p.type)}`, groupKey: `ping_${p.type}`, groupText: (n) => `${who(p.fromId)} sent ${pingPlural(p.type, n)}` });
   }
   for (const w of s.wordle) {
     push({
@@ -155,4 +165,23 @@ export function buildActivity(s: ActivitySources): ActivityEvent[] {
 export function withinHours(events: ActivityEvent[], hours: number): ActivityEvent[] {
   const cut = Date.now() - hours * 3_600_000;
   return events.filter((e) => e.at >= cut);
+}
+
+/**
+ * Fold back-to-back repeats into one row ("Riya added 3 reasons they love you")
+ * so a burst of small gestures doesn't push everything else off the feed. Only
+ * neighbours fold: anything in between keeps the timeline honest.
+ */
+export function collapseRuns(events: ActivityEvent[]): ActivityEvent[] {
+  const out: ActivityEvent[] = [];
+  for (const e of events) {
+    const last = out[out.length - 1];
+    if (last && e.groupKey && last.groupKey === e.groupKey && last.actorId === e.actorId) {
+      const n = (last.count ?? 1) + 1;
+      out[out.length - 1] = { ...last, count: n, text: e.groupText ? e.groupText(n) : last.text };
+    } else {
+      out.push(e);
+    }
+  }
+  return out;
 }

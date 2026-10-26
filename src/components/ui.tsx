@@ -357,7 +357,7 @@ export function LevelSelector({
               },
             ]}
           >
-            <Text style={{ color: n <= value ? colors.white : colors.textFaint, fontFamily: font.family.bold }}>
+            <Text style={{ color: n <= value ? colors.white : colors.textSoft, fontFamily: font.family.bold }}>
               {n}
             </Text>
           </Pressable>
@@ -485,7 +485,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   levelLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs },
-  levelLabelText: { fontSize: font.size.xs, color: colors.textFaint, fontFamily: font.family.body },
+  // textSoft: these name what the numbers mean, so they must stay readable.
+  levelLabelText: { fontSize: font.size.xs, color: colors.textSoft, fontFamily: font.family.body },
 
   progressTrack: { height: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: radius.pill },

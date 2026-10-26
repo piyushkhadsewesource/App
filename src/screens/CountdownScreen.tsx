@@ -134,7 +134,7 @@ export default function CountdownScreen({ navigation }: any) {
             <Text style={styles.whenChevron}>›</Text>
           </Pressable>
 
-          <Field label="What are you counting down to? (optional)" value={label} onChangeText={setLabel} placeholder="e.g. Together again, your visit, going home…" />
+          <Field label="What are you counting down to? (optional)" value={label} onChangeText={setLabel} placeholder="e.g. Your visit, going home…" />
           <Button label="Start the countdown" onPress={save} />
           {meeting ? (
             <>

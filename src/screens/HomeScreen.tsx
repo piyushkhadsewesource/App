@@ -22,7 +22,7 @@ import { useToast } from '../components/ToastHost';
 import { questionForDate, revealAnswers, revealPromptId } from '../lib/reveal';
 import { dismissWhisper, pickWhisper, Whisper } from '../lib/whisper';
 import { isBlank, normalizeCanvas } from '../lib/canvas';
-import { buildActivity, withinHours } from '../lib/activity';
+import { buildActivity, collapseRuns, withinHours } from '../lib/activity';
 import { formatRelative, greeting, isoToDate, todayISO } from '../lib/date';
 import { hearthIgnited, lanternFor } from '../lib/goldenHour';
 import { hSuccess } from '../lib/haptics';
@@ -102,6 +102,8 @@ export default function HomeScreen({ navigation }: any) {
   );
   const recent = useMemo(() => withinHours(activity, 36), [activity]);
   const partnerNew = useMemo(() => recent.filter((e) => !e.mine).length, [recent]);
+  // The feed's rows: a burst of the same gesture reads as one line, not five.
+  const feedRows = useMemo(() => collapseRuns(recent).slice(0, 6), [recent]);
   // Presence, two tiers. Live: their app is open right now (heartbeat within
   // ~2 min) — the warmest signal we have, "we're in here together". Recent:
   // they did something in the last hour. Either makes the pulse face beat;
@@ -499,7 +501,7 @@ export default function HomeScreen({ navigation }: any) {
             What’s new together
           </SectionTitle>
           <Card style={styles.feedCard}>
-            {recent.slice(0, 6).map((e, i) => (
+            {feedRows.map((e, i) => (
               // Each row cascades in with a staggered reveal for a buttery feed.
               <Reveal key={e.id} delay={i * 55}>
                 <Press
@@ -512,10 +514,8 @@ export default function HomeScreen({ navigation }: any) {
                   <Text style={{ fontSize: 22 }}>{e.icon}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.actText} numberOfLines={2}>{e.text}</Text>
-                    <Muted>
-                      {formatRelative(e.at)}
-                      {!e.mine ? ' · tap to respond' : ''}
-                    </Muted>
+                    {/* The chevron already says "tap"; the meta line is just when. */}
+                    <Muted>{formatRelative(e.at)}</Muted>
                   </View>
                   {!e.mine ? <Text style={styles.actChevron}>›</Text> : null}
                 </Press>

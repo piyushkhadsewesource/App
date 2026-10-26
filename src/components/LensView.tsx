@@ -278,8 +278,8 @@ function WebDial({
       </View>
       <Text style={styles.webKm}>{km.toLocaleString()} km away</Text>
       <Text style={styles.webSub}>
-        {partnerName} is to the {cardinal16(bearing)}. The full lens — camera, live needle, the
-        reveal — lives on your phone. Here, just know: that way, and closer every day. 🤍
+        {partnerName} is to the {cardinal16(bearing)}. The full lens (camera, live needle, the
+        reveal) lives on your phone. Here, just know: that way, and closer every day. 🤍
       </Text>
       <CloseButton onClose={onClose} dark={false} />
     </View>
