@@ -49,7 +49,9 @@ export default function DayRibbon({ onOpen }: { onOpen: () => void }) {
       ? `💗 ${minLabel(state.moment.startMin)} is yours together`
       : `💗 A moment at ${minLabel(state.moment.startMin)} is waiting for a yes`
     : !state.theirsShared
-      ? `${partner} hasn't shared today yet`
+      ? state.mineShared
+        ? `${partner} hasn't shared today yet`
+        : `Share your day and find when you're both free`
       : state.lantern.kind === 'burning'
         ? `🏮 The lantern is burning until ${minLabel(state.lantern.end)}, come be together`
         : state.lantern.kind === 'waiting'
@@ -79,14 +81,14 @@ export default function DayRibbon({ onOpen }: { onOpen: () => void }) {
           name={me}
           photo={app.myProfile?.image}
           color={colors.primary}
-          line={state.myNext ? `${minLabel(state.myNext.startMin)} · ${state.myNext.title}` : state.mineShared ? 'done for the day' : 'nothing shared yet'}
+          line={state.myNext ? `${minLabel(state.myNext.startMin)} · ${state.myNext.title}` : state.mineShared ? 'done for the day' : 'not shared yet'}
         />
         <View style={styles.laneRule} />
         <Lane
           name={partner}
           photo={app.partnerProfile?.image}
           color={colors.accent}
-          line={state.theirNext ? `${minLabel(state.theirNext.startMin)} · ${state.theirNext.title}` : state.theirsShared ? 'done for the day' : 'nothing shared yet'}
+          line={state.theirNext ? `${minLabel(state.theirNext.startMin)} · ${state.theirNext.title}` : state.theirsShared ? 'done for the day' : 'not shared yet'}
         />
       </View>
 
@@ -112,7 +114,7 @@ function Lane({ name, photo, color, line }: { name: string; photo?: string | nul
       <Avatar name={name} size={26} uri={photo} color={color} />
       <View style={{ flex: 1 }}>
         <Text style={[styles.laneWho, { color }]} numberOfLines={1}>{name}</Text>
-        <Text style={styles.laneLine} numberOfLines={1}>{line}</Text>
+        <Text style={styles.laneLine} numberOfLines={2}>{line}</Text>
       </View>
     </View>
   );

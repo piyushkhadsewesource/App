@@ -7,7 +7,9 @@ export const colors = {
 
   text: '#2E2A2A',
   textSoft: '#6F6663',
-  textFaint: '#A89F9B',
+  // Deep enough to clear 3:1 on paper (tab labels, hints, chevrons); the old
+  // #A89F9B sat at ~2.4:1 and washed out in daylight.
+  textFaint: '#8F8581',
 
   primary: '#E8638C', // rose
   primarySoft: '#FCE8EE',

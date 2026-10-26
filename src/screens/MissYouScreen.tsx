@@ -18,7 +18,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/ToastHost';
 import KnockCard from '../components/KnockCard';
-import { shortCountdown } from '../lib/countdown';
+import { countdownTo, reunionLabel, shortCountdown } from '../lib/countdown';
 import { formatRelative } from '../lib/date';
 import { hLight, hSuccess, hWarn } from '../lib/haptics';
 import { isWebPushConfigured } from '../config';
@@ -300,10 +300,14 @@ export default function MissYouScreen() {
             <Text style={{ fontSize: 28 }}>💞</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.reunionTitle}>
-                {meeting ? `Together again in ${shortCountdown(meeting.at)}` : 'Set your reunion date'}
+                {meeting
+                  ? countdownTo(meeting.at).past
+                    ? 'You’re together 💞'
+                    : `Together again in ${shortCountdown(meeting.at)}`
+                  : 'Set your reunion date'}
               </Text>
               <Text style={styles.reunionSub}>
-                {meeting ? meeting.label || 'Hold on, it gets closer every day.' : 'A date to count down to makes the distance smaller.'}
+                {meeting ? reunionLabel(meeting.label, meeting.at) : 'A date to count down to makes the distance smaller.'}
               </Text>
             </View>
             <Text style={styles.reunionChev}>›</Text>

@@ -85,6 +85,11 @@ export default function PulseScreen() {
   const [logMood, setLogMood] = useState<Mood>('content');
   const [logIntensity, setLogIntensity] = useState(6);
   const [logNote, setLogNote] = useState('');
+  // While the day's pulse form is open it already asks for a mood, so the
+  // quick logger folds into one row instead of stacking a second, identical
+  // mood grid underneath. It's always one tap away for a feeling in a hurry.
+  const [quickOpen, setQuickOpen] = useState(false);
+  const showLogger = !editing || quickOpen;
   const myFeelings = useMemo(() => todaysFeelings(app.feelings, meId), [app.feelings, meId]);
   const partnerFeelings = useMemo(() => todaysFeelings(app.feelings, partnerId), [app.feelings, partnerId]);
   // One shared ribbon of today's feelings from both of you, newest first.
@@ -159,7 +164,7 @@ export default function PulseScreen() {
             <Field
               value={need}
               onChangeText={setNeed}
-              placeholder="e.g. a little patience, or just to hear your voice"
+              placeholder="e.g. just to hear your voice"
             />
             <SectionLabel>Energy</SectionLabel>
             <LevelSelector value={energy} onChange={setEnergy} lowLabel="Drained" highLabel="Energised" color={colors.good} />
@@ -225,35 +230,46 @@ export default function PulseScreen() {
         shifts, and you’ll both watch today unfold together.
       </Muted>
 
-      <Card>
-        <SectionLabel>How do you feel right now?</SectionLabel>
-        <View style={styles.wheel}>
-          {MOODS.map((m) => {
-            const active = m.key === logMood;
-            return (
-              <Pressable
-                key={m.key}
-                onPress={() => { hLight(); setLogMood(m.key); }}
-                accessibilityRole="button"
-                accessibilityLabel={m.label}
-                accessibilityState={{ selected: active }}
-                style={[styles.moodChip, { backgroundColor: active ? m.color : m.soft, borderColor: active ? m.color : 'transparent' }]}
-              >
-                <Text style={{ fontSize: 18 }}>{m.emoji}</Text>
-                <Text style={[styles.moodLabel, { color: active ? colors.white : colors.text }]}>{m.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      {!showLogger ? (
+        <Card onPress={() => setQuickOpen(true)} style={styles.quickRow}>
+          <Text style={{ fontSize: 22 }}>🫧</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.quickTitle}>Just a quick feeling instead?</Text>
+            <Text style={styles.quickSub}>Log one now, share the full pulse later</Text>
+          </View>
+          <Text style={styles.quickChev}>›</Text>
+        </Card>
+      ) : (
+        <Card>
+          <SectionLabel>How do you feel right now?</SectionLabel>
+          <View style={styles.wheel}>
+            {MOODS.map((m) => {
+              const active = m.key === logMood;
+              return (
+                <Pressable
+                  key={m.key}
+                  onPress={() => { hLight(); setLogMood(m.key); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={m.label}
+                  accessibilityState={{ selected: active }}
+                  style={[styles.moodChip, { backgroundColor: active ? m.color : m.soft, borderColor: active ? m.color : 'transparent' }]}
+                >
+                  <Text style={{ fontSize: 18 }}>{m.emoji}</Text>
+                  <Text style={[styles.moodLabel, { color: active ? colors.white : colors.text }]}>{m.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        <View style={{ height: spacing.md }} />
-        <SectionLabel>How strong is it?</SectionLabel>
-        <IntensityPicker value={logIntensity} color={moodMeta(logMood).color} onChange={setLogIntensity} />
+          <View style={{ height: spacing.md }} />
+          <SectionLabel>How strong is it?</SectionLabel>
+          <IntensityPicker value={logIntensity} color={moodMeta(logMood).color} onChange={setLogIntensity} />
 
-        <View style={{ height: spacing.md }} />
-        <Field value={logNote} onChangeText={setLogNote} placeholder={`What’s behind this ${moodMeta(logMood).label.toLowerCase()} feeling? (optional)`} />
-        <Button label="Log this feeling" icon={moodMeta(logMood).emoji} color={moodMeta(logMood).color} onPress={logNow} />
-      </Card>
+          <View style={{ height: spacing.md }} />
+          <Field value={logNote} onChangeText={setLogNote} placeholder="What’s behind it? (optional)" />
+          <Button label="Log this feeling" icon={moodMeta(logMood).emoji} color={moodMeta(logMood).color} onPress={logNow} />
+        </Card>
+      )}
 
       {/* The shared ribbon, both of you, newest first */}
       <Card style={{ marginTop: spacing.md }}>
@@ -536,5 +552,9 @@ const styles = StyleSheet.create({
   whoTagText: { fontSize: 11, fontFamily: font.family.bold },
   miniRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 4, height: 16 },
   miniBar: { width: 5, borderRadius: 2 },
+  quickRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  quickTitle: { fontSize: font.size.md, fontFamily: font.family.semibold, color: colors.text },
+  quickSub: { fontSize: font.size.sm, color: colors.textSoft, fontFamily: font.family.body, marginTop: 2 },
+  quickChev: { fontSize: 24, color: colors.textSoft },
   feelX: { fontSize: 22, color: colors.textFaint, paddingHorizontal: 4 },
 });

@@ -56,6 +56,11 @@ function dayScore(c: CheckIn): number {
   return moodMeta(c.mood).valence * 2 + c.affection - c.stress;
 }
 
+/** "once", "twice", "5 times": a journal reads like a letter, not a log. */
+function times(n: number): string {
+  return n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`;
+}
+
 export function generateReport(input: Input): Report {
   const target = monthKey(input.monthISO ?? todayISO());
   const label = monthLabel((input.monthISO ?? todayISO()).slice(0, 7) + '-01');
@@ -90,9 +95,9 @@ export function generateReport(input: Input): Report {
   const hard = [...monthCheckins].sort((a, b) => dayScore(a) - dayScore(b))[0];
 
   const sentence =
-    `In ${label}, you checked in ${monthCheckins.length} time${monthCheckins.length === 1 ? '' : 's'}, ` +
+    `In ${label}, you checked in ${times(monthCheckins.length)}, ` +
     `saved ${memories.length} memor${memories.length === 1 ? 'y' : 'ies'}, ` +
-    `and reached for each other ${pings.length + letters.length} time${pings.length + letters.length === 1 ? '' : 's'}, ` +
+    `and reached for each other ${times(pings.length + letters.length)}, ` +
     `proof the distance didn’t get the last word.`;
 
   const sections: ReportSection[] = [];
@@ -100,7 +105,7 @@ export function generateReport(input: Input): Report {
   sections.push({
     heading: 'Your emotional weather',
     body:
-      (myMood ? `${input.meName} moved mostly through ${myMood.emoji} ${myMood.label.toLowerCase()} days. ` : `${input.meName} didn’t check in much this month. `) +
+      (myMood ? `You moved mostly through ${myMood.emoji} ${myMood.label.toLowerCase()} days. ` : `You didn’t check in much this month. `) +
       (theirMood ? `${input.partnerName} leaned ${theirMood.emoji} ${theirMood.label.toLowerCase()}. ` : `${input.partnerName} was quieter here. `) +
       `Average closeness ran about ${avgAff.toFixed(1)} out of 5.`,
   });

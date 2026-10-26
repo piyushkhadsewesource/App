@@ -4,7 +4,7 @@ import { Alert } from '../lib/alert';
 import DateTimeModal from '../components/DateTimeModal';
 import { AppHeader, Body, Button, Card, EmptyState, Field, Muted, Screen } from '../components/ui';
 import { isoToDate, todayISO } from '../lib/date';
-import { countdownTo, shortCountdown } from '../lib/countdown';
+import { countdownTo, reunionLabel, shortCountdown } from '../lib/countdown';
 import { hLight } from '../lib/haptics';
 import { daysUntil, nextOccurrence, ordinal, sortByNext, untilLabel, yearsAt } from '../lib/occasions';
 import { useApp } from '../state/AppContext';
@@ -101,7 +101,7 @@ export default function OccasionsScreen({ navigation }: any) {
           </Text>
           <Muted style={{ marginTop: 2 }}>
             {app.meeting
-              ? app.meeting.label || 'Tap for the live countdown.'
+              ? reunionLabel(app.meeting.label, app.meeting.at)
               : 'Start a live countdown to the next time you’re together.'}
           </Muted>
         </View>
@@ -111,7 +111,7 @@ export default function OccasionsScreen({ navigation }: any) {
       {adding ? (
         <Card style={{ marginBottom: spacing.lg }}>
           <Text style={styles.formTitle}>{editingId ? 'Edit this date' : 'Add a date'}</Text>
-          <Field label="What are we celebrating?" value={title} onChangeText={setTitle} placeholder="e.g. Our anniversary, Riya's birthday" />
+          <Field label="What are we celebrating?" value={title} onChangeText={setTitle} placeholder="e.g. Our anniversary, a birthday" />
 
           <Text style={styles.label}>Pick an icon</Text>
           <View style={styles.iconRow}>
